@@ -1,0 +1,510 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================
+// FOYDALANUVCHILAR
+// ========================
+model Foydalanuvchi {
+  id           String   @id @default(cuid())
+  ism          String
+  login        String   @unique
+  parolHash    String
+  rol          Rol      @default(KASSIR)
+  faol         Boolean  @default(true)
+  telefon      String?
+  yaratilgan   DateTime @default(now())
+  yangilangan  DateTime @updatedAt
+
+  sotuvlar     Sotuv[]
+  omborlar     OmborHarakati[]
+  xarajatlar   Xarajat[]
+  xaridlar     Xarid[]
+  nasiyaTolovlar NasiyaTolov[]
+  qaytarishlar Qaytarish[]
+
+  @@map("foydalanuvchilar")
+}
+
+enum Rol {
+  ADMIN
+  KASSIR
+  OMBORCHI
+}
+
+// ========================
+// KATEGORIYALAR
+// ========================
+model Kategoriya {
+  id          String   @id @default(cuid())
+  nomi        String   @unique
+  tavsif      String?
+  yaratilgan  DateTime @default(now())
+
+  tovarlar    Tovar[]
+
+  @@map("kategoriyalar")
+}
+
+// ========================
+// TOVARLAR
+// ========================
+model Tovar {
+  id            String    @id @default(cuid())
+  nomi          String
+  kategoriyaId  String
+  shtrixKod     String?   @unique
+  kelishNarxi   Decimal   @db.Decimal(12, 2)
+  sotishNarxi   Decimal   @db.Decimal(12, 2)
+  birlik        Birlik    @default(DONA)
+  minimalQoldiq Int       @default(5)
+  rasmUrl       String?
+  holati        TovarHolati @default(FAOL)
+  yaratilgan    DateTime  @default(now())
+  yangilangan   DateTime  @updatedAt
+
+  kategoriya       Kategoriya         @relation(fields: [kategoriyaId], references: [id])
+  omborHarakati    OmborHarakati[]
+  sotuvTarkibi     SotuvTarkibi[]
+  qaytarishTarkibi QaytarishTarkibi[]
+  sherikdanOlishlar SherikdanOlish[]
+
+  @@map("tovarlar")
+}
+
+enum Birlik {
+  DONA
+  KG
+  LITR
+  METR
+  PACHKA
+  QUTI
+}
+
+enum TovarHolati {
+  FAOL
+  ARXIVLANGAN
+}
+
+// ========================
+// OMBOR HARAKATI
+// ========================
+model OmborHarakati {
+  id              String         @id @default(cuid())
+  tovarId         String
+  turi            HarakatTuri
+  miqdor          Decimal        @db.Decimal(12, 3)
+  narx            Decimal        @db.Decimal(12, 2)
+  taminotchiId    String?
+  sotuvId         String?
+  izoh            String?
+  sana            DateTime       @default(now())
+  foydalanuvchiId String
+
+  tovar           Tovar          @relation(fields: [tovarId], references: [id])
+  taminotchi      Taminotchi?    @relation(fields: [taminotchiId], references: [id])
+  sotuv           Sotuv?         @relation(fields: [sotuvId], references: [id])
+  foydalanuvchi   Foydalanuvchi  @relation(fields: [foydalanuvchiId], references: [id])
+
+  @@map("ombor_harakati")
+}
+
+enum HarakatTuri {
+  KIRIM
+  CHIQIM
+  QAYTARISH
+  YOQOTISH
+}
+
+// ========================
+// MIJOZLAR
+// ========================
+model Mijoz {
+  id          String   @id @default(cuid())
+  ism         String
+  telefon     String?
+  manzil      String?
+  izoh        String?
+  maxsus_kod  String?  @unique
+  telegram_id String?  @unique
+  yaratilgan  DateTime @default(now())
+
+  sotuvlar        Sotuv[]
+  nasiyalar       Nasiya[]
+  bildirishnomlar BildirishnomLog[]
+
+  @@map("mijozlar")
+}
+
+// ========================
+// SOTUV
+// ========================
+model Sotuv {
+  id             String      @id @default(cuid())
+  chekRaqami     String      @unique
+  mijozId        String?
+  jamiSumma      Decimal     @db.Decimal(12, 2)
+  chegirma       Decimal     @default(0) @db.Decimal(12, 2)
+  yakuniySumma   Decimal     @db.Decimal(12, 2)
+  tolovUsuli     TolovUsuli  @default(NAQD)
+  naqdTolangan   Decimal     @default(0) @db.Decimal(12, 2)
+  kartaTolangan  Decimal     @default(0) @db.Decimal(12, 2)
+  kassirId       String
+  holati         SotuvHolati @default(YAKUNLANGAN)
+  sana           DateTime    @default(now())
+
+  sherikDokonId  String?
+
+  mijoz          Mijoz?          @relation(fields: [mijozId], references: [id])
+  kassir         Foydalanuvchi   @relation(fields: [kassirId], references: [id])
+  sherikDokon    SherikDokon?    @relation(fields: [sherikDokonId], references: [id])
+  tarkiblar      SotuvTarkibi[]
+  nasiya         Nasiya?
+  omborHarakati  OmborHarakati[]
+  qaytarishlar       Qaytarish[]
+  sherikdanOlishlar  SherikdanOlish[]
+
+  @@map("sotuvlar")
+}
+
+enum TolovUsuli {
+  NAQD
+  KARTA
+  ARALASH
+  NASIYA
+  SHERIK
+}
+
+enum SotuvHolati {
+  YAKUNLANGAN
+  BEKOR_QILINGAN
+}
+
+// ========================
+// SOTUV TARKIBI
+// ========================
+model SotuvTarkibi {
+  id          String   @id @default(cuid())
+  sotuvId     String
+  tovarId     String
+  miqdor      Decimal  @db.Decimal(12, 3)
+  birlikNarxi Decimal  @db.Decimal(12, 2)
+  chegirma    Decimal  @default(0) @db.Decimal(12, 2)
+  jami        Decimal  @db.Decimal(12, 2)
+
+  sotuv       Sotuv    @relation(fields: [sotuvId], references: [id])
+  tovar       Tovar    @relation(fields: [tovarId], references: [id])
+
+  @@map("sotuv_tarkibi")
+}
+
+// ========================
+// NASIYA
+// ========================
+model Nasiya {
+  id          String       @id @default(cuid())
+  sotuvId     String       @unique
+  mijozId     String
+  jamiQarz    Decimal      @db.Decimal(12, 2)
+  tolangan    Decimal      @default(0) @db.Decimal(12, 2)
+  qoldiq      Decimal      @db.Decimal(12, 2)
+  muddat      DateTime?
+  holati      NasiyaHolati @default(OCHIQ)
+  sana        DateTime     @default(now())
+
+  sotuv       Sotuv        @relation(fields: [sotuvId], references: [id])
+  mijoz       Mijoz        @relation(fields: [mijozId], references: [id])
+  tolovlar    NasiyaTolov[]
+  bildirishnomlar BildirishnomLog[]
+
+  @@map("nasiyalar")
+}
+
+enum NasiyaHolati {
+  OCHIQ
+  YOPILGAN
+  MUDDATI_OTGAN
+}
+
+// ========================
+// NASIYA TO'LOV
+// ========================
+model NasiyaTolov {
+  id                String        @id @default(cuid())
+  nasiyaId          String
+  summa             Decimal       @db.Decimal(12, 2)
+  tolovUsuli        TolovUsuli    @default(NAQD)
+  qabulQiluvchiId   String
+  izoh              String?
+  sana              DateTime      @default(now())
+
+  nasiya            Nasiya        @relation(fields: [nasiyaId], references: [id])
+  qabulQiluvchi     Foydalanuvchi @relation(fields: [qabulQiluvchiId], references: [id])
+
+  @@map("nasiya_tolovlar")
+}
+
+// ========================
+// TA'MINOTCHILAR
+// ========================
+model Taminotchi {
+  id            String   @id @default(cuid())
+  nomi          String
+  kontaktShaxs  String?
+  telefon       String?
+  manzil        String?
+  izoh          String?
+  yaratilgan    DateTime @default(now())
+
+  xaridlar      Xarid[]
+  omborHarakati OmborHarakati[]
+
+  @@map("taminotchilar")
+}
+
+// ========================
+// XARID (TA'MINOTCHIDAN)
+// ========================
+model Xarid {
+  id              String        @id @default(cuid())
+  taminotchiId    String
+  jamiSumma       Decimal       @db.Decimal(12, 2)
+  tolangan        Decimal       @default(0) @db.Decimal(12, 2)
+  qoldiqQarz      Decimal       @db.Decimal(12, 2)
+  izoh            String?
+  sana            DateTime      @default(now())
+  foydalanuvchiId String
+
+  taminotchi      Taminotchi    @relation(fields: [taminotchiId], references: [id])
+  foydalanuvchi   Foydalanuvchi @relation(fields: [foydalanuvchiId], references: [id])
+  tarkiblar       XaridTarkibi[]
+
+  @@map("xaridlar")
+}
+
+// ========================
+// XARID TARKIBI
+// ========================
+model XaridTarkibi {
+  id          String  @id @default(cuid())
+  xaridId     String
+  tovarNomi   String
+  miqdor      Decimal @db.Decimal(12, 3)
+  birlikNarxi Decimal @db.Decimal(12, 2)
+  jami        Decimal @db.Decimal(12, 2)
+
+  xarid       Xarid   @relation(fields: [xaridId], references: [id])
+
+  @@map("xarid_tarkibi")
+}
+
+// ========================
+// XARAJATLAR
+// ========================
+model Xarajat {
+  id              String           @id @default(cuid())
+  kategoriya      XarajatKategoriya
+  summa           Decimal          @db.Decimal(12, 2)
+  izoh            String?
+  sana            DateTime         @default(now())
+  foydalanuvchiId String
+
+  foydalanuvchi   Foydalanuvchi    @relation(fields: [foydalanuvchiId], references: [id])
+
+  @@map("xarajatlar")
+}
+
+enum XarajatKategoriya {
+  IJARA
+  MAOSH
+  TRANSPORT
+  KOMMUNAL
+  BOSHQA
+}
+
+// ========================
+// SOZLAMALAR (SETTINGS)
+// ========================
+model Sozlama {
+  id         String   @id @default(cuid())
+  kalit      String   @unique
+  qiymat     String
+  yangilangan DateTime @updatedAt
+
+  @@map("sozlamalar")
+}
+
+// ========================
+// SHERIK DO'KONLAR (PARTNER STORES - credit sales)
+// ========================
+model SherikDokon {
+  id         String   @id @default(cuid())
+  nomi       String
+  telefon    String?
+  manzil     String?
+  izoh       String?
+  yaratilgan DateTime @default(now())
+
+  sotuvlar   Sotuv[]
+  tolovlar   SherikDokonTolov[]
+
+  @@map("sherik_dokonlar")
+}
+
+model SherikDokonTolov {
+  id            String      @id @default(cuid())
+  sherikDokonId String
+  summa         Decimal     @db.Decimal(12, 2)
+  izoh          String?
+  sana          DateTime    @default(now())
+
+  sherikDokon   SherikDokon @relation(fields: [sherikDokonId], references: [id])
+
+  @@map("sherik_dokon_tolovlar")
+}
+
+// ========================
+// AGENTLAR (product loan tracking, was Sheriklar)
+// ========================
+model Sherik {
+  id         String   @id @default(cuid())
+  ism        String
+  telefon    String?
+  telefon2   String?
+  manzil     String?
+  tavsif     String?
+  faol       Boolean  @default(true)
+  yaratilgan DateTime @default(now())
+
+  qarzlar    SherikQarz[]
+  sherikdanOlishlar      SherikdanOlish[]
+  sherikdanOlishTolovlar SherikdanOlishTolov[]
+
+  @@map("sheriklar")
+}
+
+// ========================
+// SHERIK QARZLARI (PRODUCT LOANS)
+// ========================
+model SherikQarz {
+  id         String           @id @default(cuid())
+  sherikId   String
+  izoh       String?
+  holati     SherikQarzHolati @default(OCHIQ)
+  yaratilgan DateTime         @default(now())
+
+  sherik    Sherik              @relation(fields: [sherikId], references: [id])
+  tarkiblar SherikQarzTarkibi[]
+
+  @@map("sherik_qarzlar")
+}
+
+// ========================
+// SHERIKDAN OLISH (sotuv vaqtida stock yetishmaganda)
+// ========================
+model SherikdanOlish {
+  id         String   @id @default(cuid())
+  sotuvId    String
+  sherikId   String
+  tovarId    String
+  miqdor     Decimal  @db.Decimal(12, 3)
+  narx       Decimal  @db.Decimal(12, 2)
+  jami       Decimal  @db.Decimal(12, 2)
+  izoh       String?
+  yaratilgan DateTime @default(now())
+
+  sotuv   Sotuv  @relation(fields: [sotuvId], references: [id])
+  sherik  Sherik @relation(fields: [sherikId], references: [id])
+  tovar   Tovar  @relation(fields: [tovarId], references: [id])
+
+  tolovlar SherikdanOlishTolov[]
+  @@map("sherikdan_olish")
+}
+
+model SherikdanOlishTolov {
+  id                String   @id @default(cuid())
+  sherikdanOlishId  String?
+  sherikId          String
+  summa             Decimal  @db.Decimal(12, 2)
+  turi              String   // "PUL" | "TOVAR"
+  izoh              String?
+  yaratilgan        DateTime @default(now())
+
+  sherikdanOlish SherikdanOlish? @relation(fields: [sherikdanOlishId], references: [id])
+  sherik         Sherik           @relation(fields: [sherikId], references: [id])
+  @@map("sherikdan_olish_tolov")
+}
+
+model SherikQarzTarkibi {
+  id           String     @id @default(cuid())
+  sherikQarzId String
+  tovarNomi    String
+  miqdor       Decimal    @db.Decimal(12, 3)
+  birlik       String     @default("dona")
+  qaytarilgan  Decimal    @default(0) @db.Decimal(12, 3)
+
+  sherikQarz SherikQarz @relation(fields: [sherikQarzId], references: [id])
+
+  @@map("sherik_qarz_tarkibi")
+}
+
+enum SherikQarzHolati {
+  OCHIQ
+  QISMAN
+  YOPILGAN
+}
+
+// ========================
+// QAYTARISH
+// ========================
+model Qaytarish {
+  id         String   @id @default(cuid())
+  aslSotuvId String
+  kassirId   String
+  jamiSumma  Decimal  @db.Decimal(12, 2)
+  sabab      String?
+  yaratilgan DateTime @default(now())
+
+  aslSotuv  Sotuv          @relation(fields: [aslSotuvId], references: [id])
+  kassir    Foydalanuvchi  @relation(fields: [kassirId], references: [id])
+  tarkiblar QaytarishTarkibi[]
+
+  @@map("qaytarishlar")
+}
+
+model QaytarishTarkibi {
+  id          String   @id @default(cuid())
+  qaytarishId String
+  tovarId     String
+  miqdor      Decimal  @db.Decimal(12, 3)
+  birlikNarxi Decimal  @db.Decimal(12, 2)
+  jami        Decimal  @db.Decimal(12, 2)
+
+  qaytarish Qaytarish @relation(fields: [qaytarishId], references: [id])
+  tovar     Tovar     @relation(fields: [tovarId], references: [id])
+
+  @@map("qaytarish_tarkibi")
+}
+
+// ========================
+// BILDIRISHNOM LOG
+// ========================
+model BildirishnomLog {
+  id         String   @id @default(cuid())
+  nasiyaId   String
+  mijozId    String
+  xabarTuri  String   // "3_kun", "2_kun", "1_kun", "muddati_otgan"
+  yuborildi  Boolean  @default(false)
+  xato       String?
+  sana       DateTime @default(now())
+
+  nasiya     Nasiya   @relation(fields: [nasiyaId], references: [id])
+  mijoz      Mijoz    @relation(fields: [mijozId], references: [id])
+
+  @@map("bildirishnom_loglar")
+}

@@ -1,0 +1,38 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { auth } from '@/lib/auth'
+import bcrypt from 'bcryptjs'
+
+export async function GET() {
+  try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ xato: "Ruxsat yo'q" }, { status: 401 })
+    const foydalanuvchilar = await prisma.foydalanuvchi.findMany({
+      select: { id: true, ism: true, login: true, rol: true, faol: true, telefon: true, yaratilgan: true },
+      orderBy: { yaratilgan: 'asc' },
+    })
+    return NextResponse.json(foydalanuvchilar)
+  } catch {
+    return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session || (session.user as any)?.rol !== 'ADMIN') {
+      return NextResponse.json({ xato: "Ruxsat yo'q" }, { status: 403 })
+    }
+    const { ism, login, parol, rol, telefon } = await req.json()
+    const mavjud = await prisma.foydalanuvchi.findUnique({ where: { login } })
+    if (mavjud) return NextResponse.json({ xato: 'Bu login band' }, { status: 400 })
+    const parolHash = await bcrypt.hash(parol, 10)
+    const user = await prisma.foydalanuvchi.create({
+      data: { ism, login, parolHash, rol, telefon: telefon || null },
+      select: { id: true, ism: true, login: true, rol: true, faol: true, telefon: true },
+    })
+    return NextResponse.json(user)
+  } catch {
+    return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
+  }
+}
