@@ -58,6 +58,16 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #9CA3AF;
 }
+.dark ::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #525252;
+}
 
 /* iOS safe area */
 .safe-area-inset-bottom {
@@ -96,6 +106,9 @@ body {
 .table-zebra tbody tr:nth-child(even) {
   background-color: #F9FAFB;
 }
+.dark .table-zebra tbody tr:nth-child(even) {
+  background-color: #171717;
+}
 
 /* Skeleton loader */
 @keyframes shimmer {
@@ -107,6 +120,10 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 6px;
+}
+.dark .skeleton {
+  background: linear-gradient(90deg, #262626 25%, #333 50%, #262626 75%);
+  background-size: 200% 100%;
 }
 
 /* Print uchun — chek (thermal receipt 80mm) */

@@ -549,7 +549,7 @@ export default function TovarlarPage() {
             <div className="p-5 text-center space-y-4" id="barcode-print-area">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{barcodeTovar.nomi}</p>
               {barcodeTovar.shtrixKod ? (
-                <div className="flex justify-center bg-white rounded-xl p-4">
+                <div className="flex justify-center bg-white dark:bg-neutral-800 rounded-xl p-4">
                   <Barcode value={barcodeTovar.shtrixKod} width={1.5} height={60} fontSize={12} />
                 </div>
               ) : (

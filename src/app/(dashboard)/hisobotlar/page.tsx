@@ -284,19 +284,13 @@ export default function HisobotlarPage() {
           <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5">
             <h2 className="text-gray-900 dark:text-gray-100 font-semibold mb-4">Nasiya holati</h2>
             <div className="grid grid-cols-3 gap-4">
-              <div
-                className="text-center p-3 rounded-xl"
-                style={{ backgroundColor: '#FEF3C7' }}
-              >
-                <p className="text-amber-700 text-sm font-medium">Ochiq nasiyalar</p>
-                <p className="text-amber-700 font-bold text-2xl mt-1">{data.ochiqNasiyalar}</p>
+              <div className="text-center p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40">
+                <p className="text-amber-700 dark:text-amber-400 text-sm font-medium">Ochiq nasiyalar</p>
+                <p className="text-amber-700 dark:text-amber-400 font-bold text-2xl mt-1">{data.ochiqNasiyalar}</p>
               </div>
-              <div
-                className="text-center p-3 rounded-xl"
-                style={{ backgroundColor: '#FEE2E2' }}
-              >
-                <p className="text-red-600 text-sm font-medium">Muddati o&apos;tgan</p>
-                <p className="text-red-600 font-bold text-2xl mt-1">{data.muddatiOtgan}</p>
+              <div className="text-center p-3 rounded-xl bg-red-50 dark:bg-red-950/40">
+                <p className="text-red-600 dark:text-red-400 text-sm font-medium">Muddati o&apos;tgan</p>
+                <p className="text-red-600 dark:text-red-400 font-bold text-2xl mt-1">{data.muddatiOtgan}</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-neutral-800 rounded-xl">
                 <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">Umumiy qarz</p>
