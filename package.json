@@ -12,7 +12,8 @@
     "db:studio": "prisma studio",
     "bot": "ts-node --compiler-options {\"module\":\"CommonJS\"} src/bot/index.ts",
     "scheduler": "ts-node --compiler-options {\"module\":\"CommonJS\"} src/bot/scheduler.ts",
-    "dev:all": "concurrently \"npm run dev\" \"npm run bot\" \"npm run scheduler\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run bot\" \"npm run scheduler\"",
+    "db:clean": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/clean.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
