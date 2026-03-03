@@ -3,11 +3,11 @@ module.exports = {
     {
       name: 'qaqnus222',
       script: 'node_modules/.bin/next',
-      args: 'start -p 3000',
+      args: 'start -p 3001',
       cwd: '/var/www/qaqnus222',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: 3001,
       },
     },
   ],
