@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag } from 'lucide-react'
+import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag, Banknote, Clock } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 import ViewToggle from '@/components/ViewToggle'
@@ -16,6 +16,14 @@ interface XaridTarkibi {
   jami: number
 }
 
+interface XaridTolov {
+  id: string
+  summa: number
+  tolovUsuli: string
+  izoh: string | null
+  sana: string
+}
+
 interface Xarid {
   id: string
   sana: string
@@ -25,6 +33,7 @@ interface Xarid {
   izoh: string | null
   taminotchi: { id: string; nomi: string } | null
   tarkiblar: XaridTarkibi[]
+  tolovlar: XaridTolov[]
   foydalanuvchi: { ism: string }
 }
 
@@ -42,6 +51,9 @@ export default function XaridlarPage() {
   const [danFilter, setDanFilter] = useState('')
   const [gachaFilter, setGachaFilter] = useState('')
   const [kengaytirilgan, setKengaytirilgan] = useState<string | null>(null)
+  const [tolovModal, setTolovModal] = useState<Xarid | null>(null)
+  const [tolovForm, setTolovForm] = useState({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
+  const [tolovSaqlanmoqda, setTolovSaqlanmoqda] = useState(false)
 
   // Form state
   const [form, setForm] = useState({
@@ -127,6 +139,31 @@ export default function XaridlarPage() {
       yuklash()
     } finally {
       setSaqlanmoqda(false)
+    }
+  }
+
+  function openTolovModal(x: Xarid) {
+    setTolovModal(x)
+    setTolovForm({ summa: String(x.qoldiqQarz), tolovUsuli: 'NAQD', izoh: '' })
+  }
+
+  async function tolovQilish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!tolovModal) return
+    setTolovSaqlanmoqda(true)
+    try {
+      const res = await fetch(`/api/xaridlar/${tolovModal.id}/tolov`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tolovForm)
+      })
+      if (res.ok) {
+        toast.success("To'lov qabul qilindi!")
+        setTolovModal(null)
+        yuklash()
+      } else toast.error('Xatolik yuz berdi')
+    } finally {
+      setTolovSaqlanmoqda(false)
     }
   }
 
@@ -217,12 +254,23 @@ export default function XaridlarPage() {
                         {x.qoldiqQarz > 0 ? formatSum(x.qoldiqQarz) : '—'}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
-                        <button
-                          onClick={() => setKengaytirilgan(kengaytirilgan === x.id ? null : x.id)}
-                          className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition"
-                        >
-                          {kengaytirilgan === x.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          {x.qoldiqQarz > 0 && (
+                            <button
+                              onClick={() => openTolovModal(x)}
+                              className="p-1.5 text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-950/30 rounded-lg transition"
+                              title="Qarz to'lash"
+                            >
+                              <Banknote size={15} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setKengaytirilgan(kengaytirilgan === x.id ? null : x.id)}
+                            className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition"
+                          >
+                            {kengaytirilgan === x.id ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {kengaytirilgan === x.id && (
@@ -237,6 +285,19 @@ export default function XaridlarPage() {
                               </div>
                             ))}
                             {x.izoh && <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Izoh: {x.izoh}</p>}
+                            {x.tolovlar && x.tolovlar.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-gray-200 dark:border-neutral-700">
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1"><Clock size={12} /> To&apos;lovlar tarixi</p>
+                                {x.tolovlar.map(t => (
+                                  <div key={t.id} className="flex items-center justify-between text-sm gap-4">
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">{formatSana(t.sana)}</span>
+                                    <span className="text-xs text-gray-400">{t.tolovUsuli === 'NAQD' ? 'Naqd' : 'Karta'}</span>
+                                    {t.izoh && <span className="text-gray-400 text-xs flex-1 truncate">{t.izoh}</span>}
+                                    <span className="text-green-600 font-semibold">{formatSum(t.summa)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -300,8 +361,85 @@ export default function XaridlarPage() {
                 )}
               </div>
               {x.izoh && <p className="text-gray-400 dark:text-gray-600 text-xs mt-2 italic">{x.izoh}</p>}
+              {x.qoldiqQarz > 0 && (
+                <button
+                  onClick={() => openTolovModal(x)}
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-xl text-xs font-medium hover:bg-green-100 dark:hover:bg-green-950/50 transition"
+                >
+                  <Banknote size={14} />
+                  Qarz to&apos;lash
+                </button>
+              )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Qarz to'lash modal */}
+      {tolovModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-sm">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Banknote size={18} className="text-green-600" />
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz to&apos;lash</h3>
+              </div>
+              <button onClick={() => setTolovModal(null)} className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={tolovQilish} className="p-5 space-y-4">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                <p>Ta&apos;minotchi: <span className="font-medium text-gray-900 dark:text-gray-100">{tolovModal.taminotchi?.nomi || "Noma'lum"}</span></p>
+                <p>Qoldiq qarz: <span className="font-bold text-red-600">{formatSum(tolovModal.qoldiqQarz)}</span></p>
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">To&apos;lov summasi *</label>
+                <MoneyInput
+                  value={tolovForm.summa}
+                  onChange={v => setTolovForm(f => ({ ...f, summa: v }))}
+                  placeholder="0"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">To&apos;lov usuli</label>
+                <select
+                  value={tolovForm.tolovUsuli}
+                  onChange={e => setTolovForm(f => ({ ...f, tolovUsuli: e.target.value }))}
+                  className={inputCls}
+                >
+                  <option value="NAQD">Naqd</option>
+                  <option value="KARTA">Karta</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Izoh</label>
+                <input
+                  value={tolovForm.izoh}
+                  onChange={e => setTolovForm(f => ({ ...f, izoh: e.target.value }))}
+                  placeholder="Qo'shimcha ma'lumot..."
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setTolovModal(null)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium"
+                >
+                  Bekor
+                </button>
+                <button
+                  type="submit"
+                  disabled={tolovSaqlanmoqda}
+                  className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition"
+                >
+                  {tolovSaqlanmoqda ? "Saqlanmoqda..." : "To'lovni tasdiqlash"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

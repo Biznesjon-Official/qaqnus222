@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
       include: {
         taminotchi: { select: { id: true, nomi: true } },
         tarkiblar: true,
+        tolovlar: { orderBy: { sana: 'desc' } },
         foydalanuvchi: { select: { ism: true } },
       },
       orderBy: { sana: 'desc' },

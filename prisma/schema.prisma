@@ -26,6 +26,7 @@ model Foydalanuvchi {
   xarajatlar   Xarajat[]
   xaridlar     Xarid[]
   nasiyaTolovlar NasiyaTolov[]
+  xaridTolovlar  XaridTolov[] @relation("xaridTolovlar")
   qaytarishlar Qaytarish[]
 
   @@map("foydalanuvchilar")
@@ -283,8 +284,27 @@ model Xarid {
   taminotchi      Taminotchi    @relation(fields: [taminotchiId], references: [id])
   foydalanuvchi   Foydalanuvchi @relation(fields: [foydalanuvchiId], references: [id])
   tarkiblar       XaridTarkibi[]
+  tolovlar        XaridTolov[]
 
   @@map("xaridlar")
+}
+
+// ========================
+// XARID TO'LOV
+// ========================
+model XaridTolov {
+  id              String        @id @default(cuid())
+  xaridId         String
+  summa           Decimal       @db.Decimal(12, 2)
+  tolovUsuli      TolovUsuli    @default(NAQD)
+  qabulQiluvchiId String
+  izoh            String?
+  sana            DateTime      @default(now())
+
+  xarid           Xarid         @relation(fields: [xaridId], references: [id])
+  qabulQiluvchi   Foydalanuvchi @relation("xaridTolovlar", fields: [qabulQiluvchiId], references: [id])
+
+  @@map("xarid_tolovlar")
 }
 
 // ========================
