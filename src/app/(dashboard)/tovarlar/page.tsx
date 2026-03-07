@@ -271,10 +271,10 @@ export default function TovarlarPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Tovar nomi</th>
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden sm:table-cell whitespace-nowrap">Kategoriya</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Miqdori</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Kelish narxi</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Sotish narxi</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Kelish narxi</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qoldiq</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Kategoriya</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
                 </tr>
               </thead>
@@ -290,19 +290,19 @@ export default function TovarlarPage() {
                       <p className="text-gray-900 dark:text-gray-100 text-sm font-medium truncate" title={t.nomi}>{t.nomi}</p>
                       {t.shtrixKod && <p className="text-gray-400 dark:text-gray-600 text-xs truncate" title={t.shtrixKod}>{t.shtrixKod}</p>}
                     </td>
-                    <td className="px-4 py-3 hidden sm:table-cell whitespace-nowrap">
-                      <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg font-medium" title={t.kategoriya.nomi}>{t.kategoriya.nomi}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right text-green-600 text-sm font-semibold whitespace-nowrap">
-                      {formatSum(t.sotishNarxi)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">
-                      {formatSum(t.kelishNarxi)}
-                    </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <span className={`text-sm font-medium ${t.qoldiq <= t.minimalQoldiq ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
                         {t.qoldiq} {t.birlik.toLowerCase()}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400 text-sm whitespace-nowrap">
+                      {formatSum(t.kelishNarxi)}
+                    </td>
+                    <td className="px-4 py-3 text-right text-green-600 text-sm font-semibold whitespace-nowrap">
+                      {formatSum(t.sotishNarxi)}
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg font-medium" title={t.kategoriya.nomi}>{t.kategoriya.nomi}</span>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1">
