@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
@@ -427,39 +427,40 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
             </div>
           ) : (
             <div className="overflow-y-auto max-h-72">
-              {savat.map(item => (
-                <div key={item.tovarId} className="px-3 py-2 border-b border-gray-100 dark:border-neutral-800 last:border-b-0">
+              {savat.map(item => {
+                const isNarxOzgartirilgan = item.birlikNarxi !== tovarlar.find(t => t.id === item.tovarId)?.sotishNarxi
+                const isEditing = editNarx?.tovarId === item.tovarId
+                return (
+                <div key={item.tovarId} className="px-3 py-2.5 border-b border-gray-100 dark:border-neutral-800 last:border-b-0">
                   {/* Row 1: nomi + delete */}
-                  <div className="flex items-center justify-between gap-1 mb-1">
+                  <div className="flex items-center justify-between gap-1 mb-2">
                     <p className="text-gray-900 dark:text-gray-100 text-sm font-medium leading-tight flex-1 truncate" title={item.nomi}>{item.nomi}</p>
-                    <button onClick={() => miqdorOzgartir(item.tovarId, 0)} className="text-gray-300 dark:text-gray-600 hover:text-red-500 transition shrink-0">
+                    <button onClick={() => miqdorOzgartir(item.tovarId, 0)} className="text-gray-300 dark:text-gray-600 hover:text-red-500 transition shrink-0 ml-1">
                       <X size={13} />
                     </button>
                   </div>
-                  {/* Row 2: narx | miqdor | jami */}
-                  <div className="flex items-center gap-2">
-                    {/* Narx — double-click to edit */}
-                    <div className="flex-1 min-w-0">
-                      {editNarx?.tovarId === item.tovarId ? (
-                        <input
-                          autoFocus
-                          type="number"
-                          value={editNarx.val}
-                          onChange={e => setEditNarx({ tovarId: item.tovarId, val: e.target.value })}
-                          onBlur={() => narxTasdiqla(item.tovarId)}
-                          onKeyDown={e => { if (e.key === 'Enter') narxTasdiqla(item.tovarId); if (e.key === 'Escape') setEditNarx(null) }}
-                          className="w-full px-1.5 py-0.5 text-xs border border-blue-400 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 focus:outline-none"
-                        />
-                      ) : (
-                        <span
-                          onDoubleClick={() => setEditNarx({ tovarId: item.tovarId, val: String(item.birlikNarxi) })}
-                          title="Narxni o'zgartirish uchun ikki marta bosing"
-                          className={`text-xs cursor-pointer select-none truncate block ${item.birlikNarxi !== tovarlar.find(t => t.id === item.tovarId)?.sotishNarxi ? 'text-blue-500 font-medium' : 'text-gray-400 dark:text-gray-600'}`}
-                        >
-                          {formatSum(item.birlikNarxi)} / {item.birlik.toLowerCase()}
-                        </span>
-                      )}
+                  {/* Row 2: [narx input] × [miqdor] = [jami] */}
+                  <div className="flex items-center gap-1.5">
+                    {/* Narx — always editable input */}
+                    <div className="relative flex-1 min-w-0">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={isEditing ? editNarx.val : String(item.birlikNarxi).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+                        onFocus={e => { setEditNarx({ tovarId: item.tovarId, val: String(item.birlikNarxi) }); e.target.select() }}
+                        onChange={e => setEditNarx({ tovarId: item.tovarId, val: e.target.value.replace(/[^\d]/g, '') })}
+                        onBlur={() => narxTasdiqla(item.tovarId)}
+                        onKeyDown={e => { if (e.key === 'Enter') { narxTasdiqla(item.tovarId); (e.target as HTMLInputElement).blur() } if (e.key === 'Escape') setEditNarx(null) }}
+                        title="Narxni o'zgartirish mumkin"
+                        className={`w-full h-7 pl-2 pr-5 text-xs rounded-lg border focus:outline-none focus:ring-1 focus:ring-blue-400 transition
+                          ${isNarxOzgartirilgan
+                            ? 'border-blue-300 dark:border-blue-600 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-medium'
+                            : 'border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-gray-600 dark:text-gray-400'
+                          }`}
+                      />
+                      <Pencil size={9} className={`absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none ${isNarxOzgartirilgan ? 'text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
                     </div>
+                    <span className="text-gray-400 dark:text-gray-600 text-xs shrink-0">×</span>
                     <input
                       type="number"
                       min={0.001}
@@ -469,18 +470,20 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                       onFocus={e => e.target.select()}
                       onWheel={e => e.currentTarget.blur()}
                       style={{ MozAppearance: 'textfield' } as React.CSSProperties}
-                      className="w-16 h-7 text-center text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
+                      className="w-14 h-7 text-center text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
                     />
-                    <span className="text-green-600 text-sm font-bold shrink-0 min-w-[70px] text-right">{formatSum(item.jami)}</span>
+                    <span className="text-gray-400 dark:text-gray-600 text-xs shrink-0">=</span>
+                    <span className="text-green-600 text-sm font-bold shrink-0 min-w-[65px] text-right">{formatSum(item.jami)}</span>
                   </div>
                   {item.miqdor > item.mavjudQoldiq && (
-                    <div className="flex items-center gap-1 mt-1 text-amber-600 dark:text-amber-400">
+                    <div className="flex items-center gap-1 mt-1.5 text-amber-600 dark:text-amber-400">
                       <AlertTriangle size={11} />
                       <span className="text-[10px]">Qoldiq: {item.mavjudQoldiq}, ortiqcha: {+(item.miqdor - item.mavjudQoldiq).toFixed(3)} (sherikdan olinadi)</span>
                     </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
