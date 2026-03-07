@@ -62,6 +62,9 @@
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "16.1.6"
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { normalizeUzbek } from '@/lib/utils'
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,9 +19,12 @@ export async function GET(req: NextRequest) {
     if (holati !== 'BARCHASI') where.holati = holati
     if (kategoriyaId) where.kategoriyaId = kategoriyaId
     if (qidiruv) {
+      const normalized = normalizeUzbek(qidiruv)
+      const apostroflar = ["'", '`', 'ʻ', 'ʼ', '\u2018', '\u2019']
+      const variantlar = apostroflar.map(a => normalized.replace(/'/g, a))
       where.OR = [
-        { nomi: { contains: qidiruv, mode: 'insensitive' } },
-        { shtrixKod: { contains: qidiruv } },
+        ...variantlar.map(v => ({ nomi: { contains: v, mode: 'insensitive' as const } })),
+        { shtrixKod: { contains: normalized } },
       ]
     }
 

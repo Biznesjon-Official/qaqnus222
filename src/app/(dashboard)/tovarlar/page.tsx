@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { formatSum } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, X, Upload, Loader2, SlidersHorizontal, QrCode, Printer } from 'lucide-react'
+import { normalizeUzbek } from '@/lib/utils'
 import ViewToggle from '@/components/ViewToggle'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
@@ -67,8 +68,13 @@ export default function TovarlarPage() {
 
   async function yuklash() {
     setYuklanmoqda(true)
+    const params = new URLSearchParams({
+      q: normalizeUzbek(qidiruv),
+      limit: '9999',
+      ...(aktifKategoriya ? { kategoriya: aktifKategoriya } : {}),
+    })
     const [tv, kt] = await Promise.all([
-      fetch(`/api/tovarlar?q=${qidiruv}&limit=100`).then(r => r.json()),
+      fetch(`/api/tovarlar?${params}`).then(r => r.json()),
       fetch('/api/kategoriyalar').then(r => r.json()),
     ])
     setTovarlar(tv.tovarlar || [])
@@ -76,7 +82,7 @@ export default function TovarlarPage() {
     setYuklanmoqda(false)
   }
 
-  useEffect(() => { yuklash() }, [qidiruv])
+  useEffect(() => { yuklash() }, [qidiruv, aktifKategoriya])
 
   function ochModal(tovar?: Tovar) {
     if (tovar) {
@@ -256,9 +262,7 @@ export default function TovarlarPage() {
 
       {/* Table view */}
       {(() => {
-        const filteredTovarlar = aktifKategoriya
-          ? tovarlar.filter(t => t.kategoriya.id === aktifKategoriya)
-          : tovarlar
+        const filteredTovarlar = tovarlar
         return (<>
       {view === 'table' && (
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
@@ -347,7 +351,6 @@ export default function TovarlarPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{t.nomi}</p>
                   {t.shtrixKod && <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">{t.shtrixKod}</p>}
-                  <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-lg font-medium mt-1 inline-block">{t.kategoriya.nomi}</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   {/* Qoldiq sozlash button */}
@@ -376,19 +379,22 @@ export default function TovarlarPage() {
               </div>
               <div className="mt-3 pt-3 border-t border-gray-100 dark:border-neutral-800 grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-gray-400 dark:text-gray-600 text-xs">Sotish</p>
-                  <p className="text-green-600 font-semibold text-sm">{formatSum(t.sotishNarxi)}</p>
+                  <p className="text-gray-400 dark:text-gray-600 text-xs">Miqdori</p>
+                  <p className={`font-semibold text-sm ${t.qoldiq <= t.minimalQoldiq ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
+                    {t.qoldiq} {t.birlik.toLowerCase()}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-400 dark:text-gray-600 text-xs">Kelish</p>
                   <p className="text-gray-700 dark:text-gray-300 font-medium text-sm">{formatSum(t.kelishNarxi)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 dark:text-gray-600 text-xs">Qoldiq</p>
-                  <p className={`font-semibold text-sm ${t.qoldiq <= t.minimalQoldiq ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
-                    {t.qoldiq} {t.birlik.toLowerCase()}
-                  </p>
+                  <p className="text-gray-400 dark:text-gray-600 text-xs">Sotish</p>
+                  <p className="text-green-600 font-semibold text-sm">{formatSum(t.sotishNarxi)}</p>
                 </div>
+              </div>
+              <div className="mt-2">
+                <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-lg font-medium">{t.kategoriya.nomi}</span>
               </div>
             </div>
           ))}

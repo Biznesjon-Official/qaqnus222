@@ -6,6 +6,13 @@ import { prisma } from './prisma'
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   session: { strategy: 'jwt' },
+  // Cookie nomini bir xil qilib belgilash (local va production uchun)
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: { httpOnly: true, sameSite: 'lax' as const, path: '/', secure: false },
+    },
+  },
   pages: {
     signIn: '/login',
   },

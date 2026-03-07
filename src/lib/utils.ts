@@ -56,6 +56,11 @@ export function formatMoneyShort(amount: number | string): string {
   return String(Math.round(n))
 }
 
+// Normalize Uzbek apostrophe variants to standard ASCII apostrophe for consistent search
+export function normalizeUzbek(text: string): string {
+  return text.replace(/[`ʻʼ\u2018\u2019\u02BC]/g, "'")
+}
+
 // Format a phone number string to +998 (XX) XXX-XX-XX display format
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return ''
