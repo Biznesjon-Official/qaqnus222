@@ -446,7 +446,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                       <input
                         type="text"
                         inputMode="numeric"
-                        value={isEditing ? editNarx.val : String(item.birlikNarxi).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+                        value={isEditing ? editNarx.val.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') : String(item.birlikNarxi).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
                         onFocus={e => { setEditNarx({ tovarId: item.tovarId, val: String(item.birlikNarxi) }); e.target.select() }}
                         onChange={e => setEditNarx({ tovarId: item.tovarId, val: e.target.value.replace(/[^\d]/g, '') })}
                         onBlur={() => narxTasdiqla(item.tovarId)}
