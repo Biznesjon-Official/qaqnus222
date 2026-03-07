@@ -19,18 +19,24 @@ const bebasNeue = Bebas_Neue({
 })
 
 export const metadata: Metadata = {
-  title: "ERP - Xo'jalik Mollari Do'koni",
-  description: "Do'kon boshqaruv tizimi",
+  title: 'Qaqnus 222',
+  description: "Do'kon boshqaruv tizimi — Qaqnus 222",
   manifest: '/manifest.json',
   icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
-    shortcut: '/logo.png',
+    icon: [
+      { url: '/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/favicon-32.png',
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
-    title: "ERP Do'kon",
+    statusBarStyle: 'black-translucent',
+    title: 'Qaqnus 222',
   },
 }
 
