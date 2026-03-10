@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biznesjon — Investor Presentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a28;
+    --border: #2a2a3d;
+    --text: #e8e8f0;
+    --text2: #9898b0;
+    --accent: #6c5ce7;
+    --accent2: #a855f7;
+    --green: #10b981;
+    --blue: #3b82f6;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --cyan: #06b6d4;
+  }
+
+  html { scroll-behavior: smooth; scroll-snap-type: y mandatory; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ── Navigation ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nav-links { display: flex; gap: 8px; }
+  .nav-links a {
+    color: var(--text2); text-decoration: none; font-size: 13px;
+    padding: 6px 14px; border-radius: 8px; transition: all 0.3s;
+    font-weight: 500;
+  }
+  .nav-links a:hover { color: #fff; background: var(--surface2); }
+
+  /* ── Slides ── */
+  .slide {
+    min-height: 100vh;
+    scroll-snap-align: start;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 100px 60px 60px;
+    position: relative;
+  }
+
+  .slide-inner {
+    max-width: 1100px; width: 100%;
+  }
+
+  .slide-number {
+    position: absolute; top: 90px; left: 60px;
+    font-size: 12px; font-weight: 600; color: var(--accent);
+    letter-spacing: 3px; text-transform: uppercase;
+  }
+
+  /* ── Typography ── */
+  h1 {
+    font-size: clamp(42px, 5vw, 72px);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -2px;
+  }
+  h2 {
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 800; line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 40px;
+  }
+  h3 {
+    font-size: 20px; font-weight: 700;
+    margin-bottom: 16px;
+  }
+  .subtitle {
+    font-size: clamp(16px, 2vw, 22px);
+    color: var(--text2); line-height: 1.7;
+    max-width: 700px;
+  }
+  .label {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 16px;
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, #6c5ce7, #a855f7, #ec4899);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .green-text { color: var(--green); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.3s;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(108,92,231,0.1);
+  }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+
+  /* ── Stat ── */
+  .stat-value {
+    font-size: 48px; font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--accent), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stat-label {
+    font-size: 14px; color: var(--text2); margin-top: 8px;
+    font-weight: 500;
+  }
+
+  /* ── Table ── */
+  table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  th {
+    background: var(--surface2);
+    padding: 14px 20px; text-align: left;
+    font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text2);
+    border-bottom: 2px solid var(--accent);
+  }
+  td {
+    padding: 14px 20px; font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(108,92,231,0.05); }
+
+  /* ── Department Icon ── */
+  .dept-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 14px;
+  }
+
+  /* ── Progress bar ── */
+  .progress-bar {
+    height: 6px; border-radius: 3px; background: var(--surface2);
+    overflow: hidden; margin-top: 8px;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  /* ── Comparison check ── */
+  .check { color: var(--green); font-weight: 700; }
+  .cross { color: var(--red); opacity: 0.5; }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex; align-items: center; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .flow-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: var(--accent); font-size: 18px; }
+
+  /* ── Divider ── */
+  .divider {
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    margin: 24px 0;
+  }
+
+  /* ── Market Ring ── */
+  .market-ring {
+    width: 280px; height: 280px;
+    border-radius: 50%; position: relative;
+    margin: 0 auto;
+  }
+  .ring {
+    position: absolute; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; font-weight: 700;
+  }
+  .ring-outer {
+    inset: 0;
+    border: 3px solid var(--cyan);
+    background: rgba(6,182,212,0.05);
+    font-size: 11px; color: var(--cyan);
+    padding-top: 20px;
+  }
+  .ring-mid {
+    inset: 40px;
+    border: 3px solid var(--orange);
+    background: rgba(245,158,11,0.08);
+    font-size: 11px; color: var(--orange);
+    padding-top: 16px;
+  }
+  .ring-inner {
+    inset: 80px;
+    border: 3px solid var(--accent);
+    background: rgba(108,92,231,0.12);
+    font-size: 11px; color: var(--accent);
+    padding-top: 14px;
+  }
+  .ring-core {
+    inset: 105px;
+    border: 3px solid var(--green);
+    background: rgba(16,185,129,0.15);
+    font-size: 10px; color: var(--green);
+    font-weight: 800;
+  }
+
+  /* ── Timeline ── */
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 12px; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(180deg, var(--accent), var(--cyan), var(--green));
+  }
+  .timeline-item { position: relative; margin-bottom: 36px; }
+  .timeline-dot {
+    position: absolute; left: -27px; top: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  .timeline-item:nth-child(2) .timeline-dot { background: var(--blue); box-shadow: 0 0 0 2px var(--blue); }
+  .timeline-item:nth-child(3) .timeline-dot { background: var(--cyan); box-shadow: 0 0 0 2px var(--cyan); }
+  .timeline-item:nth-child(4) .timeline-dot { background: var(--green); box-shadow: 0 0 0 2px var(--green); }
+
+  /* ── Tag ── */
+  .tag {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px; font-weight: 600;
+    background: rgba(108,92,231,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(108,92,231,0.3);
+  }
+  .tag-green { background: rgba(16,185,129,0.15); color: var(--green); border-color: rgba(16,185,129,0.3); }
+  .tag-blue { background: rgba(59,130,246,0.15); color: var(--blue); border-color: rgba(59,130,246,0.3); }
+  .tag-orange { background: rgba(245,158,11,0.15); color: var(--orange); border-color: rgba(245,158,11,0.3); }
+
+  /* ── Animate on scroll ── */
+  .fade-up {
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; padding: 40px;
+    border-top: 1px solid var(--border);
+    color: var(--text2); font-size: 13px;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .slide { padding: 100px 24px 40px; }
+    .slide-number { left: 24px; }
+    .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .market-ring { width: 220px; height: 220px; }
+    .ring-mid { inset: 30px; }
+    .ring-inner { inset: 60px; }
+    .ring-core { inset: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ NAV ═══════════ -->
+<nav>
+  <div class="nav-logo">Biznesjon</div>
+  <div class="nav-links">
+    <a href="#muammo">Muammo</a>
+    <a href="#yechim">Yechim</a>
+    <a href="#bolimlar">Bo'limlar</a>
+    <a href="#texnologiya">Texnologiya</a>
+    <a href="#bozor">Bozor</a>
+    <a href="#biznes">Biznes model</a>
+    <a href="#roadmap">Roadmap</a>
+  </div>
+</nav>
+
+<!-- ═══════════ SLIDE 1 — HERO ═══════════ -->
+<section class="slide" id="hero" style="justify-content: center; text-align: center;">
+  <div class="slide-inner fade-up">
+    <div class="label">Investor Prezentatsiya 2026</div>
+    <h1 style="margin-bottom: 24px;">
+      <span class="gradient-text">Biznesjon</span>
+    </h1>
+    <p class="subtitle" style="margin: 0 auto 40px; max-width: 600px;">
+      Har bir kasb egasining shaxsiy AI yordamchisi.<br>
+      Bitta platforma. 15 soha. Bir narx.
+    </p>
+    <div style="display: flex; gap: 32px; justify-content: center; flex-wrap: wrap;">
+      <div>
+        <div class="stat-value">15</div>
+        <div class="stat-label">AI bo'lim</div>
+      </div>
+      <div>
+        <div class="stat-value">1.5B+</div>
+        <div class="stat-label">Potensial bozor (kishi)</div>
+      </div>
+      <div>
+        <div class="stat-value">$1B+</div>
+        <div class="stat-label">Bozor o'lchami (yillik)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 2 — MUAMMO ═══════════ -->
+<section class="slide" id="muammo">
+  <div class="slide-number">01 / Muammo</div>
+  <div class="slide-inner fade-up">
+    <h2>Muammo:<br><span class="gradient-text">AI hammaga bir xil</span></h2>
+    <div class="grid-2" style="margin-top: 20px;">
+      <div class="card">
+        <div style="font-size: 36px; margin-bottom: 16px;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        </div>
+        <h3>Umumiylik</h3>
+        <p style="color: var(--text2); font-size: 15px;">
+          ChatGPT buxgalterga ham, advokatga ham, shifokorga ham <strong style="color: #ef4444;">bir xil javob</strong> beradi. Hech qaysi sohada chuqur emas.
+        </p>
+      </div>
+      <div class="card">
+        <div style="font-size: 36px; margin-bottom: 16px;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Tarqoqlik</h3>
+        <p style="color: var(--text2); font-size: 15px;">
+          Buxgalter — 1C, advokat — Lexo, dasturchi — Cursor, dizayner — Canva. Hammasi alohida. Hammasiga <strong style="color: #ef4444;">alohida to'lov</strong>.
+        </p>
+      </div>
+    </div>
+    <div class="card" style="margin-top: 24px; text-align: center; border-color: rgba(108,92,231,0.3);">
+      <p style="font-size: 18px; font-weight: 600;">
+        Ayniqsa <span style="color: var(--accent);">rivojlanayotgan mamlakatlar</span>da:
+        mahalliy qonunchilik, til, bozor hususiyatlariga moslashgan AI <strong>umuman yo'q</strong>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 3 — YECHIM ═══════════ -->
+<section class="slide" id="yechim">
+  <div class="slide-number">02 / Yechim</div>
+  <div class="slide-inner fade-up">
+    <h2><span class="gradient-text">Biznesjon</span> — Yechim</h2>
+    <p class="subtitle" style="margin-bottom: 40px;">
+      Bitta platformada 15 ta ixtisoslashgan AI bo'lim. Har biri o'sha sohaning mutaxassisi.
+      Mahalliy qonunchilik + mahalliy til + mahalliy bozor.
+    </p>
+    <div class="grid-3">
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 32px; margin-bottom: 12px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#6c5ce7" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <h3>15 bo'lim</h3>
+        <p style="color: var(--text2); font-size: 14px;">Biznes, Buxgalteriya, Koding, Huquq, Tibbiyot, Ta'lim, Marketing, Dizayn va boshqalar</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 32px; margin-bottom: 12px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h3>Multi-davlat</h3>
+        <p style="color: var(--text2); font-size: 14px;">Har bir davlat uchun alohida: qonunchilik, til, to'lov tizimlari, mahalliy integratsiyalar</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <div style="font-size: 32px; margin-bottom: 12px;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>Desktop + Mobile</h3>
+        <p style="color: var(--text2); font-size: 14px;">Tauri 2.0 — Windows, macOS, Linux, Android, iOS. Bitta kod bazasi.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 4 — BO'LIMLAR ═══════════ -->
+<section class="slide" id="bolimlar">
+  <div class="slide-number">03 / Bo'limlar</div>
+  <div class="slide-inner fade-up">
+    <h2>15 ta <span class="gradient-text">ixtisoslashgan</span> bo'lim</h2>
+    <div class="grid-5" style="margin-top: 10px;">
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(108,92,231,0.15); color: var(--accent); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Biznes</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(16,185,129,0.15); color: var(--green); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Buxgalteriya</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(59,130,246,0.15); color: var(--blue); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Koding</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(168,85,247,0.15); color: var(--accent2); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Huquq</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(239,68,68,0.15); color: var(--red); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Tibbiyot</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(6,182,212,0.15); color: var(--cyan); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Ta'lim</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(245,158,11,0.15); color: var(--orange); margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Marketing</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(236,72,153,0.15); color: #ec4899; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Dizayn</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(107,114,128,0.15); color: #9ca3af; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Muhandislik</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(139,92,246,0.15); color: #8b5cf6; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2-3.5l6-4.5-6-4.5v9z"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Psixologiya</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(34,197,94,0.15); color: #22c55e; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Qishloq x.</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(251,146,60,0.15); color: #fb923c; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Jurnalistika</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(148,163,184,0.15); color: #94a3b8; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="22" height="12" rx="2"/><path d="M1 10h22"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Arxitektura</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(20,184,166,0.15); color: #14b8a6; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">Ilm-fan</div>
+      </div>
+      <div class="card" style="padding: 20px; text-align: center;">
+        <div class="dept-icon" style="background: rgba(244,114,182,0.15); color: #f472b6; margin: 0 auto 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div style="font-size: 13px; font-weight: 700;">HR</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 5 — TEXNOLOGIYA ═══════════ -->
+<section class="slide" id="texnologiya">
+  <div class="slide-number">04 / Texnologiya</div>
+  <div class="slide-inner fade-up">
+    <h2>AI <span class="gradient-text">texnologiyalar</span></h2>
+    <div class="grid-2" style="margin-bottom: 32px;">
+      <div class="card">
+        <h3 style="color: var(--accent);">AI modellar</h3>
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600;">Claude (Anthropic)</span>
+            <span class="tag">Sonnet / Opus</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600;">GPT (OpenAI)</span>
+            <span class="tag-blue tag">GPT-5</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600;">Gemini (Google)</span>
+            <span class="tag-green tag">3.1 Pro/Flash</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 600;">Grok (xAI)</span>
+            <span class="tag-orange tag">Grok 3</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--accent2);">Generatsiya</h3>
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 16px;">
+          <div>
+            <div style="font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 600;">RASM</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="tag">DALL-E 3</span>
+              <span class="tag-green tag">Nano Banana 2</span>
+              <span class="tag-blue tag">Flux Pro</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text2); margin-bottom: 6px; font-weight: 600;">VIDEO</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <span class="tag-orange tag">Veo 3</span>
+              <span class="tag">Sora</span>
+              <span class="tag-blue tag">Runway</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="border-color: rgba(108,92,231,0.3);">
+      <h3>Texnik stek</h3>
+      <div class="flow" style="margin-top: 12px;">
+        <span class="flow-step">Tauri 2.0</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Next.js 15</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">TypeScript</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">PostgreSQL</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Prisma ORM</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Redis</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 6 — ASOSIY FUNKSIYALAR ═══════════ -->
+<section class="slide" id="funksiyalar">
+  <div class="slide-number">05 / Asosiy funksiyalar</div>
+  <div class="slide-inner fade-up">
+    <h2>Nima qila <span class="gradient-text">oladi?</span></h2>
+    <div class="grid-3">
+      <div class="card">
+        <div style="color: var(--accent); margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+        <h3>AI Wizard</h3>
+        <p style="font-size: 13px; color: var(--text2);">AI avtomat ravishda 2-4 ta aniq savol beradi va topshiriqni mukammal bajaradi</p>
+      </div>
+      <div class="card">
+        <div style="color: var(--green); margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <h3>Deploy tools</h3>
+        <p style="font-size: 13px; color: var(--text2);">SSH, PM2, Git — xavfsizlik guardrails bilan. Xavfli buyruqlar avtomatik bloklanadi</p>
+      </div>
+      <div class="card">
+        <div style="color: var(--orange); margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h3>Monitoring</h3>
+        <p style="font-size: 13px; color: var(--text2);">O'qituvchi o'quvchilarni, rahbar xodimlarni real-time kuzatadi. Hisobotlar</p>
+      </div>
+      <div class="card">
+        <div style="color: var(--cyan); margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Extended Thinking</h3>
+        <p style="font-size: 13px; color: var(--text2);">AI o'ylash jarayonini ko'rish — murakkab masalalar uchun</p>
+      </div>
+      <div class="card">
+        <div style="color: #ec4899; margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        </div>
+        <h3>Kamera + Ovoz</h3>
+        <p style="font-size: 13px; color: var(--text2);">Hujjatni suratga olish, ovoz bilan so'rash — mobilda ayniqsa qulay</p>
+      </div>
+      <div class="card">
+        <div style="color: var(--blue); margin-bottom: 12px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        </div>
+        <h3>Marketplace</h3>
+        <p style="font-size: 13px; color: var(--text2);">Foydalanuvchilar o'z ilovalarini yaratib sotadi. Platform 20% komissiya oladi</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 7 — BOZOR ═══════════ -->
+<section class="slide" id="bozor">
+  <div class="slide-number">06 / Bozor</div>
+  <div class="slide-inner fade-up">
+    <h2>Bozor <span class="gradient-text">potensiali</span></h2>
+    <div class="grid-2">
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mintaqa</th>
+              <th>Aholi</th>
+              <th>Potensial</th>
+              <th>ARPU</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>O'zbekiston</strong></td>
+              <td>37M</td>
+              <td>3.5M</td>
+              <td>$12-35</td>
+            </tr>
+            <tr>
+              <td><strong>Markaziy Osiyo</strong></td>
+              <td>42M</td>
+              <td>4M</td>
+              <td>$10-25</td>
+            </tr>
+            <tr>
+              <td><strong>Turkiy dunyo</strong></td>
+              <td>95M</td>
+              <td>13M</td>
+              <td>$20-50</td>
+            </tr>
+            <tr>
+              <td><strong>GCC (Ko'rfaz)</strong></td>
+              <td>60M</td>
+              <td>8M</td>
+              <td style="color: var(--green); font-weight: 700;">$40-80</td>
+            </tr>
+            <tr>
+              <td><strong>MENA</strong></td>
+              <td>450M</td>
+              <td>30M</td>
+              <td>$10-50</td>
+            </tr>
+            <tr style="background: rgba(108,92,231,0.08);">
+              <td><strong style="color: var(--accent);">JAMI</strong></td>
+              <td><strong>1.5B+</strong></td>
+              <td><strong>102M</strong></td>
+              <td><strong>—</strong></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="card" style="margin-top: 20px; text-align: center; border-color: rgba(16,185,129,0.3); padding: 20px;">
+          <div style="font-size: 13px; color: var(--text2);">Faqat 2% konversiyada</div>
+          <div style="font-size: 42px; font-weight: 900; color: var(--green); margin: 4px 0;">$240M/yil</div>
+          <div style="font-size: 13px; color: var(--text2);">5% da &rarr; $1.2B/yil</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <div class="market-ring">
+          <div class="ring ring-outer">
+            <div>MENA + Osiyo<br><strong>1.5B</strong></div>
+          </div>
+          <div class="ring ring-mid">
+            <div>Turkiy dunyo<br><strong>95M</strong></div>
+          </div>
+          <div class="ring ring-inner">
+            <div>M.Osiyo<br><strong>42M</strong></div>
+          </div>
+          <div class="ring ring-core">UZ<br>37M</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 8 — NIMA UCHUN HOZIR ═══════════ -->
+<section class="slide" id="nima-uchun">
+  <div class="slide-number">07 / Nima uchun hozir</div>
+  <div class="slide-inner fade-up">
+    <h2>AI Agentlar <span class="gradient-text">davri boshlandi</span></h2>
+    <div class="grid-2">
+      <div>
+        <div class="card" style="margin-bottom: 24px; border-left: 3px solid var(--accent);">
+          <div style="font-size: 14px; color: var(--text2); margin-bottom: 6px;">Google 1998</div>
+          <p style="font-size: 15px;">Internet boshlanishi — ma'lumotni tartiblashtirish. Kim birinchi bo'lsa — hamma narsani oladi.</p>
+        </div>
+        <div class="card" style="border-left: 3px solid var(--green);">
+          <div style="font-size: 14px; color: var(--text2); margin-bottom: 6px;">Biznesjon 2026</div>
+          <p style="font-size: 15px;">AI agentlar boshlanishi — professional hayotni AI ga moslashtirish. Kim birinchi bo'lsa — hamma narsani oladi.</p>
+        </div>
+      </div>
+      <div>
+        <div class="card" style="height: 100%;">
+          <h3>Raqobatchilar bilan taqqos</h3>
+          <table style="margin-top: 12px; font-size: 13px;">
+            <thead>
+              <tr>
+                <th style="font-size: 11px;">Xususiyat</th>
+                <th style="font-size: 11px;">ChatGPT</th>
+                <th style="font-size: 11px;">Cursor</th>
+                <th style="font-size: 11px; color: var(--accent);">Biznesjon</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sohaga ixtisoslashgan</td>
+                <td class="cross">Yo'q</td>
+                <td>Faqat kod</td>
+                <td class="check">15 soha</td>
+              </tr>
+              <tr>
+                <td>Mahalliy qonunlar</td>
+                <td class="cross">Yo'q</td>
+                <td class="cross">Yo'q</td>
+                <td class="check">Ha</td>
+              </tr>
+              <tr>
+                <td>Desktop + Mobil</td>
+                <td>Mobil</td>
+                <td>Desktop</td>
+                <td class="check">Ikkalasi</td>
+              </tr>
+              <tr>
+                <td>Marketplace</td>
+                <td class="cross">Yo'q</td>
+                <td class="cross">Yo'q</td>
+                <td class="check">Ha</td>
+              </tr>
+              <tr>
+                <td>Monitoring</td>
+                <td class="cross">Yo'q</td>
+                <td class="cross">Yo'q</td>
+                <td class="check">Ha</td>
+              </tr>
+              <tr>
+                <td>Rasm / Video</td>
+                <td>Rasm</td>
+                <td class="cross">Yo'q</td>
+                <td class="check">Ikkalasi</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 9 — BIZNES MODEL ═══════════ -->
+<section class="slide" id="biznes">
+  <div class="slide-number">08 / Biznes model</div>
+  <div class="slide-inner fade-up">
+    <h2>Daromad <span class="gradient-text">modeli</span></h2>
+    <div class="grid-2" style="margin-bottom: 28px;">
+      <div>
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Bepul</th>
+              <th>Standart</th>
+              <th>Pro</th>
+              <th>Korporativ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Narx</strong></td>
+              <td>$0</td>
+              <td>$12/oy</td>
+              <td>$35/oy</td>
+              <td>$90/oy</td>
+            </tr>
+            <tr>
+              <td>Bo'limlar</td>
+              <td>3 ta</td>
+              <td>8 ta</td>
+              <td>Barchasi</td>
+              <td>Barchasi</td>
+            </tr>
+            <tr>
+              <td>Chat/kun</td>
+              <td>20</td>
+              <td>200</td>
+              <td style="color: var(--green);">Cheksiz</td>
+              <td style="color: var(--green);">Cheksiz</td>
+            </tr>
+            <tr>
+              <td>Rasm/kun</td>
+              <td>3</td>
+              <td>20</td>
+              <td>80</td>
+              <td>200</td>
+            </tr>
+            <tr>
+              <td>Deploy</td>
+              <td class="cross">—</td>
+              <td class="cross">—</td>
+              <td class="check">Ha</td>
+              <td class="check">Ha</td>
+            </tr>
+            <tr>
+              <td>Monitoring</td>
+              <td class="cross">—</td>
+              <td>5 kishi</td>
+              <td>50 kishi</td>
+              <td style="color: var(--green);">Cheksiz</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card" style="flex: 1;">
+          <h3 style="color: var(--accent);">Daromad manbalari</h3>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 12px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <span>Obuna (SaaS)</span>
+                <span style="color: var(--accent); font-weight: 700;">60%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 60%;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <span>Marketplace komissiya (20%)</span>
+                <span style="color: var(--accent); font-weight: 700;">25%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 25%;"></div></div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 14px;">
+                <span>Korporativ shartnomalar</span>
+                <span style="color: var(--accent); font-weight: 700;">15%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width: 15%;"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="border-color: rgba(16,185,129,0.3); text-align: center;">
+          <div style="font-size: 13px; color: var(--text2);">To'lov usullari</div>
+          <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap;">
+            <span class="tag-green tag">Payme</span>
+            <span class="tag-blue tag">Click</span>
+            <span class="tag-orange tag">Stripe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 10 — ROADMAP ═══════════ -->
+<section class="slide" id="roadmap">
+  <div class="slide-number">09 / Roadmap</div>
+  <div class="slide-inner fade-up">
+    <h2>Qurish <span class="gradient-text">rejasi</span></h2>
+    <div class="grid-2">
+      <div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div style="font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 4px;">FAZA 1 — MVP</div>
+            <h3 style="margin-bottom: 8px;">3 bo'lim: Koding + Biznes + Buxgalteriya</h3>
+            <p style="font-size: 13px; color: var(--text2);">
+              Asosiy chat, shablonlar, auth, tarif tizimi, desktop app (Windows + macOS)
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div style="font-size: 12px; color: var(--blue); font-weight: 700; margin-bottom: 4px;">FAZA 2 — KENGAYTIRISH</div>
+            <h3 style="margin-bottom: 8px;">Qolgan 12 bo'lim + Mobil</h3>
+            <p style="font-size: 13px; color: var(--text2);">
+              Rasm va video generatsiya, monitoring tizimi, Android va iOS
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div style="font-size: 12px; color: var(--cyan); font-weight: 700; margin-bottom: 4px;">FAZA 3 — PREMIUM</div>
+            <h3 style="margin-bottom: 8px;">Korporativ + Deploy + Marketplace</h3>
+            <p style="font-size: 13px; color: var(--text2);">
+              Korporativ tarif, deploy tizimi, kamera, ovoz, marketplace
+            </p>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div style="font-size: 12px; color: var(--green); font-weight: 700; margin-bottom: 4px;">FAZA 4 — GLOBAL</div>
+            <h3 style="margin-bottom: 8px;">Markaziy Osiyo + MENA ekspansiya</h3>
+            <p style="font-size: 13px; color: var(--text2);">
+              Multi-davlat lokalizatsiya, arabcha, turkcha, islomiy moliya
+            </p>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card" style="border-color: rgba(108,92,231,0.4);">
+          <h3>Himoya modeli (Moat)</h3>
+          <div style="display: flex; flex-direction: column; gap: 14px; margin-top: 12px;">
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div style="min-width: 28px; height: 28px; border-radius: 8px; background: rgba(108,92,231,0.15); display: flex; align-items: center; justify-content: center; color: var(--accent); font-weight: 800; font-size: 13px;">1</div>
+              <div>
+                <div style="font-weight: 600; font-size: 14px;">Mahalliy bilim</div>
+                <div style="font-size: 13px; color: var(--text2);">Qonunchilik + til + bozor</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div style="min-width: 28px; height: 28px; border-radius: 8px; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center; color: var(--blue); font-weight: 800; font-size: 13px;">2</div>
+              <div>
+                <div style="font-weight: 600; font-size: 14px;">Marketplace network effect</div>
+                <div style="font-size: 13px; color: var(--text2);">Ko'proq app = ko'proq user = ko'proq app</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <div style="min-width: 28px; height: 28px; border-radius: 8px; background: rgba(16,185,129,0.15); display: flex; align-items: center; justify-content: center; color: var(--green); font-weight: 800; font-size: 13px;">3</div>
+              <div>
+                <div style="font-weight: 600; font-size: 14px;">First mover advantage</div>
+                <div style="font-size: 13px; color: var(--text2);">Turkiy-Muslim dunyosida raqib yo'q</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="text-align: center; border-color: rgba(16,185,129,0.4); background: linear-gradient(135deg, rgba(16,185,129,0.05), rgba(108,92,231,0.05));">
+          <div style="font-size: 14px; color: var(--text2); margin-bottom: 8px;">Analoglar o'sishi</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px;">
+            <div>
+              <div style="font-weight: 700; color: var(--green);">Grab</div>
+              <div style="color: var(--text2);">$40B</div>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: var(--blue);">Paytm</div>
+              <div style="color: var(--text2);">$16B</div>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: var(--orange);">Rappi</div>
+              <div style="color: var(--text2);">$5.25B</div>
+            </div>
+            <div>
+              <div style="font-weight: 700; color: var(--accent);">Biznesjon</div>
+              <div style="color: var(--text2);">???</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ SLIDE 11 — CTA ═══════════ -->
+<section class="slide" style="text-align: center;">
+  <div class="slide-number">10 / Xulosa</div>
+  <div class="slide-inner fade-up">
+    <div class="label">Xulosa</div>
+    <h1 style="margin-bottom: 24px;">
+      <span class="gradient-text">Turkiy-Muslim dunyosining</span><br>
+      AI platformasi
+    </h1>
+    <p class="subtitle" style="margin: 0 auto 48px;">
+      O'zbekistondan boshlaymiz. Markaziy Osiyo, Turkiya, Arab dunyosiga kengaytamiz.<br>
+      1.5 milliard kishiga xizmat qiladigan platforma.
+    </p>
+    <div style="display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 48px;">
+      <div class="card" style="min-width: 200px; text-align: center;">
+        <div class="stat-value" style="font-size: 36px;">1.5B</div>
+        <div class="stat-label">Potensial bozor (kishi)</div>
+      </div>
+      <div class="card" style="min-width: 200px; text-align: center;">
+        <div class="stat-value" style="font-size: 36px;">$1B+</div>
+        <div class="stat-label">Bozor hajmi (yillik)</div>
+      </div>
+      <div class="card" style="min-width: 200px; text-align: center;">
+        <div class="stat-value" style="font-size: 36px;">0</div>
+        <div class="stat-label">Raqib (mahalliy)</div>
+      </div>
+    </div>
+    <div style="font-size: 18px; color: var(--text2); font-weight: 500;">
+      Bitta narx, barcha sohalar — birinchi.
+    </div>
+  </div>
+</section>
+
+<footer>
+  Biznesjon &mdash; 2026 &nbsp;&bull;&nbsp; Investor Prezentatsiya &nbsp;&bull;&nbsp; Maxfiy hujjat
+</footer>
+
+<!-- ═══════════ SCROLL ANIMATION ═══════════ -->
+<script>
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+</script>
+
+</body>
+</html>
