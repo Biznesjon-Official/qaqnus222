@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
@@ -19,6 +19,9 @@ interface SherikdanOlishItem {
 }
 interface SavatItem {
   tovarId: string; nomi: string; birlikNarxi: number; miqdor: number; birlik: string; chegirma: number; jami: number; mavjudQoldiq: number
+}
+interface SaqlanganiSavat {
+  id: string; savat: SavatItem[]; sana: string; jami: number
 }
 
 const TOLOV_USULLARI = [
@@ -65,6 +68,10 @@ export default function SotuvPage() {
   const [sotuvlarYuklanmoqda, setSotuvlarYuklanmoqda] = useState(false)
   const [sotuvQidiruv, setSotuvQidiruv] = useState('')
 
+  // Saqlangan savatlar
+  const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
+  const [saqlanganiModal, setSaqlanganiModal] = useState(false)
+
   useEffect(() => {
     async function yuklash() {
       const [tv, mj, sz, sd, sh] = await Promise.all([
@@ -84,6 +91,9 @@ export default function SotuvPage() {
     // Oxirgi sotuv localStorage dan yuklash
     const saved = localStorage.getItem('oxirgi-sotuv')
     if (saved) { try { setOxirgiSotuv(JSON.parse(saved)) } catch {} }
+    // Saqlangan savatlarni yuklash
+    const drafts = localStorage.getItem('saqlangan-savatlar')
+    if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
   }, [])
 
   const filteredTovarlar = tovarlar.filter(t =>
@@ -279,6 +289,60 @@ export default function SotuvPage() {
     return qaytarishTanlangan[tovarId] || { miqdor: 0, birlikNarxi: 0, checked: false }
   }
 
+  function savatniSaqlash() {
+    if (savat.length === 0) { toast.error('Savat bo\'sh!'); return }
+    const yangi: SaqlanganiSavat = {
+      id: Date.now().toString(),
+      savat: [...savat],
+      sana: new Date().toISOString(),
+      jami: savat.reduce((s, i) => s + i.miqdor * i.birlikNarxi, 0),
+    }
+    const yangilangan = [...saqlanganiSavatlar, yangi]
+    setSaqlanganiSavatlar(yangilangan)
+    localStorage.setItem('saqlangan-savatlar', JSON.stringify(yangilangan))
+    setSavat([])
+    setMijozId('')
+    setSherikDokonId('')
+    setNaqdTolangan('')
+    setQolBilanSumma('')
+    setTolovUsuli('NAQD')
+    toast.success('Savat saqlandi!')
+  }
+
+  function savatniYuklash(draft: SaqlanganiSavat) {
+    if (savat.length > 0) {
+      // Hozirgi savatni avval saqlaymiz
+      const hozirgi: SaqlanganiSavat = {
+        id: Date.now().toString(),
+        savat: [...savat],
+        sana: new Date().toISOString(),
+        jami: savat.reduce((s, i) => s + i.miqdor * i.birlikNarxi, 0),
+      }
+      const yangilangan = [...saqlanganiSavatlar.filter(d => d.id !== draft.id), hozirgi]
+      setSaqlanganiSavatlar(yangilangan)
+      localStorage.setItem('saqlangan-savatlar', JSON.stringify(yangilangan))
+    } else {
+      const yangilangan = saqlanganiSavatlar.filter(d => d.id !== draft.id)
+      setSaqlanganiSavatlar(yangilangan)
+      localStorage.setItem('saqlangan-savatlar', JSON.stringify(yangilangan))
+    }
+    // Qoldiq ma'lumotlarni yangilash
+    const yangiSavat = draft.savat.map(item => {
+      const tovar = tovarlar.find(t => t.id === item.tovarId)
+      return tovar ? { ...item, mavjudQoldiq: tovar.qoldiq } : item
+    })
+    setSavat(yangiSavat)
+    setSaqlanganiModal(false)
+    setMobileTab('savat')
+    toast.success('Savat yuklandi!')
+  }
+
+  function saqlanganiOchirish(id: string) {
+    const yangilangan = saqlanganiSavatlar.filter(d => d.id !== id)
+    setSaqlanganiSavatlar(yangilangan)
+    localStorage.setItem('saqlangan-savatlar', JSON.stringify(yangilangan))
+  }
+
   function chekHtml(s: any) {
     const dokonNomi = dokonInfo.dokon_nomi || "Do'kon"
     const manzil = dokonInfo.manzil || ''
@@ -395,6 +459,25 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
               <h2 className="text-gray-900 dark:text-gray-100 font-semibold text-sm">Savat ({savat.length})</h2>
             </div>
             <div className="flex items-center gap-1">
+              {savat.length > 0 && (
+                <button
+                  onClick={savatniSaqlash}
+                  className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition"
+                  title="Savatni saqlash"
+                >
+                  <Pause size={15} />
+                </button>
+              )}
+              {saqlanganiSavatlar.length > 0 && (
+                <button
+                  onClick={() => setSaqlanganiModal(true)}
+                  className="relative p-1.5 text-gray-400 dark:text-gray-600 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950 rounded-lg transition"
+                  title="Saqlangan savatlar"
+                >
+                  <Archive size={15} />
+                  <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">{saqlanganiSavatlar.length}</span>
+                </button>
+              )}
               {oxirgiSotuv && (
                 <button
                   onClick={() => setChekModal(true)}
@@ -788,6 +871,63 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                   Sotuvni yakunlash
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saqlangan savatlar modal */}
+      {saqlanganiModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-md max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Archive size={18} className="text-violet-600" />
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Saqlangan savatlar</h3>
+              </div>
+              <button onClick={() => setSaqlanganiModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto max-h-[70vh]">
+              {saqlanganiSavatlar.length === 0 ? (
+                <div className="p-8 text-center text-gray-400 dark:text-gray-600 text-sm">Saqlangan savatlar yo&apos;q</div>
+              ) : (
+                <div className="divide-y divide-gray-100 dark:divide-neutral-800">
+                  {saqlanganiSavatlar.map(draft => (
+                    <div key={draft.id} className="p-3 hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-500 dark:text-gray-400 text-[11px]">{formatSanaVaVaqt(draft.sana)}</p>
+                          <p className="text-green-600 font-bold text-sm">{formatSum(draft.jami)}</p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => savatniYuklash(draft)}
+                            className="px-2.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-xs rounded-lg transition font-medium flex items-center gap-1"
+                          >
+                            <Play size={12} />
+                            Yuklash
+                          </button>
+                          <button
+                            onClick={() => saqlanganiOchirish(draft.id)}
+                            className="p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-500 rounded-lg transition"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {draft.savat.map(item => (
+                          <span key={item.tovarId} className="text-[10px] bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
+                            {item.nomi} ×{item.miqdor}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
