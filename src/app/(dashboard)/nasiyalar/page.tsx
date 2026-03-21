@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Phone, Banknote, X, Clock, Plus, Trash2 } from 'lucide-react'
+import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import MoneyInput from '@/components/ui/money-input'
 import SearchBar from '@/components/ui/search-bar'
@@ -44,6 +44,9 @@ export default function NasiyalarPage() {
   const [qoshishModal, setQoshishModal] = useState(false)
   const [qoshishForm, setQoshishForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '' })
   const [qoshishYuklash, setQoshishYuklash] = useState(false)
+  const [qarzQoshishModal, setQarzQoshishModal] = useState<Nasiya | null>(null)
+  const [qarzQoshishForm, setQarzQoshishForm] = useState({ summa: '' })
+  const [qarzQoshishYuklash, setQarzQoshishYuklash] = useState(false)
 
   async function yuklash() {
     setYuklanmoqda(true)
@@ -110,6 +113,31 @@ export default function NasiyalarPage() {
       toast.error('Xatolik yuz berdi')
     }
     setQoshishYuklash(false)
+  }
+
+  async function qarzQoshish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!qarzQoshishModal) return
+    setQarzQoshishYuklash(true)
+    try {
+      const res = await fetch(`/api/nasiyalar/${qarzQoshishModal.id}/qarz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summa: qarzQoshishForm.summa }),
+      })
+      if (res.ok) {
+        toast.success('Qarz qo\'shildi!')
+        setQarzQoshishModal(null)
+        setQarzQoshishForm({ summa: '' })
+        yuklash()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.xato || 'Xatolik yuz berdi')
+      }
+    } catch {
+      toast.error('Xatolik yuz berdi')
+    }
+    setQarzQoshishYuklash(false)
   }
 
   async function nasiyaOchirish(id: string, ism: string) {
@@ -226,12 +254,20 @@ export default function NasiyalarPage() {
                       <td className="px-4 py-3 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           {n.holati !== 'YOPILGAN' && (
-                            <button
-                              onClick={() => openTolovModal(n)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
-                              <Banknote size={12} />
-                              To&apos;lov
-                            </button>
+                            <>
+                              <button
+                                onClick={() => openTolovModal(n)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
+                                <Banknote size={12} />
+                                To&apos;lov
+                              </button>
+                              <button
+                                onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
+                                className="inline-flex items-center p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition"
+                                title="Qarz qo'shish">
+                                <PlusCircle size={14} />
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
@@ -300,12 +336,20 @@ export default function NasiyalarPage() {
                 {/* Action buttons */}
                 <div className="mt-3 flex gap-2" onClick={e => e.stopPropagation()}>
                   {n.holati !== 'YOPILGAN' && (
-                    <button
-                      onClick={() => openTolovModal(n)}
-                      className="flex-1 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
-                      <Banknote size={15} />
-                      To&apos;lov qabul qilish
-                    </button>
+                    <>
+                      <button
+                        onClick={() => openTolovModal(n)}
+                        className="flex-1 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
+                        <Banknote size={15} />
+                        To&apos;lov
+                      </button>
+                      <button
+                        onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
+                        className="px-3 py-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-900/30 rounded-xl transition"
+                        title="Qarz qo'shish">
+                        <PlusCircle size={15} />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
@@ -316,6 +360,48 @@ export default function NasiyalarPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Qarz qo'shish modal */}
+      {qarzQoshishModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-sm">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz qo&apos;shish</h3>
+                <p className="text-gray-500 dark:text-gray-500 text-sm">{qarzQoshishModal.mijoz.ism}</p>
+                <p className="text-xs text-gray-400 mt-1">Hozirgi qarz: <span className="text-red-600 font-medium">{formatSum(qarzQoshishModal.qoldiq)}</span></p>
+              </div>
+              <button
+                onClick={() => setQarzQoshishModal(null)}
+                className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition shrink-0">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={qarzQoshish} className="p-5 space-y-4">
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qo&apos;shiladigan summa *</label>
+                <MoneyInput
+                  value={qarzQoshishForm.summa}
+                  onChange={v => setQarzQoshishForm({ summa: v })}
+                  required
+                  min={1}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setQarzQoshishModal(null)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium">
+                  Bekor
+                </button>
+                <button type="submit" disabled={qarzQoshishYuklash}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition disabled:opacity-50">
+                  {qarzQoshishYuklash ? 'Saqlanmoqda...' : 'Qo\'shish'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
