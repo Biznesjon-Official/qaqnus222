@@ -132,7 +132,7 @@ bot.callbackQuery('nasiyalar', async (ctx) => {
     jami += qoldiq
     const muddat = n.muddat ? ` \\(muddat: ${escMd(formatSana(n.muddat))}\\)` : ''
     const holat = n.holati === 'MUDDATI_OTGAN' ? '🔴' : '🟡'
-    xabar += `${holat} Chek: \`${escMd(n.sotuv.chekRaqami)}\`\n`
+    xabar += `${holat} ${n.sotuv ? `Chek: \`${escMd(n.sotuv.chekRaqami)}\`` : 'Nasiya'}\n`
     xabar += `   Qoldiq qarz: *${escMd(formatSum(qoldiq))}*${muddat}\n\n`
   }
   xabar += `📊 *Jami qarz: ${escMd(formatSum(jami))}*`

@@ -57,17 +57,17 @@ async function nasiyaOgohlantirishlar() {
 
     if (kunFarq === 3) {
       xabarTuri = '3_kun'
-      xabarMatni = `⚠️ *Nasiya eslatma*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv.chekRaqami)}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(3 kun qoldi\\)`
+      xabarMatni = `⚠️ *Nasiya eslatma*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv?.chekRaqami || 'Nasiya')}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(3 kun qoldi\\)`
     } else if (kunFarq === 2) {
       xabarTuri = '2_kun'
-      xabarMatni = `⚠️ *Nasiya eslatma*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv.chekRaqami)}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(2 kun qoldi\\)`
+      xabarMatni = `⚠️ *Nasiya eslatma*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv?.chekRaqami || 'Nasiya')}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(2 kun qoldi\\)`
     } else if (kunFarq === 1) {
       xabarTuri = '1_kun'
-      xabarMatni = `🔴 *MUHIM: Nasiya muddati ertaga\\!*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv.chekRaqami)}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(ertaga\\!\\)`
+      xabarMatni = `🔴 *MUHIM: Nasiya muddati ertaga\\!*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv?.chekRaqami || 'Nasiya')}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(ertaga\\!\\)`
     } else if (kunFarq <= 0 && nasiya.holati !== 'YOPILGAN') {
       xabarTuri = 'muddati_otgan'
       const otganKun = Math.abs(kunFarq)
-      xabarMatni = `🚨 *Nasiya muddati o'tdi\\!*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv.chekRaqami)}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(${otganKun} kun o'tdi\\)\n\nIltimos, tezroq to'lang\\.`
+      xabarMatni = `🚨 *Nasiya muddati o'tdi\\!*\n\nSalom, *${escMd(nasiya.mijoz.ism)}*\\!\n\nChek: \`${escMd(nasiya.sotuv?.chekRaqami || 'Nasiya')}\`\nQoldiq qarz: *${escMd(formatSum(Number(nasiya.qoldiq)))}*\nMuddat: *${escMd(formatSana(muddat))}* \\(${otganKun} kun o'tdi\\)\n\nIltimos, tezroq to'lang\\.`
     }
 
     if (!xabarTuri || !xabarMatni) continue
