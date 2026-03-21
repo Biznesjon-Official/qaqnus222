@@ -240,21 +240,21 @@ export default function NasiyalarPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Mijoz</th>
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden sm:table-cell whitespace-nowrap">Telefon</th>
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Chek</th>
                   <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Holati</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">Jami qarz</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">To&apos;langan</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qoldiq</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Muddat</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Berilgan sana</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Qaytarish sanasi</th>
                   <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
                 </tr>
               </thead>
               <tbody>
                 {yuklanmoqda ? (
-                  <tr><td colSpan={9} className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</td></tr>
+                  <tr><td colSpan={10} className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</td></tr>
                 ) : nasiyalar.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center text-gray-400 dark:text-gray-600 py-12">Nasiyalar topilmadi</td></tr>
+                  <tr><td colSpan={10} className="text-center text-gray-400 dark:text-gray-600 py-12">Nasiyalar topilmadi</td></tr>
                 ) : filteredNasiyalar.map((n, idx) => {
                   const hCfg = holatiConfig[n.holati as keyof typeof holatiConfig]
                   return (
@@ -263,13 +263,12 @@ export default function NasiyalarPage() {
                       onClick={() => openTolovModal(n)}
                       className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${idx % 2 === 1 ? 'bg-gray-50/40 dark:bg-neutral-800/40' : ''} ${n.holati !== 'YOPILGAN' ? 'cursor-pointer' : ''}`}
                     >
-                      {/* Mijoz */}
-                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 font-medium text-sm whitespace-nowrap">{n.mijoz.ism}</td>
-                      {/* Telefon */}
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden sm:table-cell whitespace-nowrap">
-                        {n.mijoz.telefon ? (
-                          <span className="flex items-center gap-1"><Phone size={12} />{n.mijoz.telefon}</span>
-                        ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
+                      {/* Mijoz + Telefon */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-gray-900 dark:text-gray-100 font-medium text-sm">{n.mijoz.ism}</div>
+                        {n.mijoz.telefon && (
+                          <div className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 mt-0.5"><Phone size={10} />{n.mijoz.telefon}</div>
+                        )}
                       </td>
                       {/* Chek */}
                       <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">{n.sotuv?.chekRaqami || <span className="text-gray-300 dark:text-gray-700">—</span>}</td>
@@ -285,7 +284,11 @@ export default function NasiyalarPage() {
                       <td className="px-4 py-3 text-right text-green-600 text-sm hidden lg:table-cell whitespace-nowrap">{formatSum(n.tolangan)}</td>
                       {/* Qoldiq */}
                       <td className="px-4 py-3 text-right text-red-600 font-semibold text-sm whitespace-nowrap">{formatSum(n.qoldiq)}</td>
-                      {/* Muddat */}
+                      {/* Berilgan sana */}
+                      <td className="px-4 py-3 text-right text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">
+                        {formatSana(n.sana)}
+                      </td>
+                      {/* Qaytarish sanasi */}
                       <td className="px-4 py-3 text-right text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">
                         {n.muddat ? formatSana(n.muddat) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                       </td>
