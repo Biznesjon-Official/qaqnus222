@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -46,34 +46,33 @@ export default function DateInput({
   disabled = false,
   className
 }: DateInputProps) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [raw, setRaw] = useState(() => toDigits(value))
 
-  const digits = toDigits(value)
-  const displayValue = formatDigits(digits)
+  // Sync from parent when value changes externally
+  useEffect(() => {
+    const parentDigits = toDigits(value)
+    if (parentDigits && parentDigits !== raw) {
+      setRaw(parentDigits)
+    }
+    if (!value && raw.length === 8) {
+      setRaw('')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, '').slice(0, 8)
-    if (raw.length === 8) {
-      onChange(toIso(raw))
-    } else if (raw.length === 0) {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+    setRaw(digits)
+    if (digits.length === 8) {
+      onChange(toIso(digits))
+    } else if (digits.length === 0) {
       onChange('')
-    } else {
-      // Store partial as-is so user can keep typing
-      // We keep the last valid iso or empty
-      onChange(value)
-      // Update display via ref
-      if (inputRef.current) {
-        inputRef.current.value = formatDigits(raw)
-      }
     }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    // Allow: backspace, delete, tab, escape, enter, arrows
     if (['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
-    // Allow ctrl/cmd shortcuts
     if (e.ctrlKey || e.metaKey) return
-    // Block non-digit
     if (!/^\d$/.test(e.key)) {
       e.preventDefault()
     }
@@ -88,10 +87,9 @@ export default function DateInput({
     )}>
       <Calendar size={16} className="text-gray-400 shrink-0" />
       <input
-        ref={inputRef}
         type="text"
         inputMode="numeric"
-        value={displayValue}
+        value={formatDigits(raw)}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
