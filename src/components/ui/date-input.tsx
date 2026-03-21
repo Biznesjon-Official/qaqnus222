@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -47,6 +47,7 @@ export default function DateInput({
   className
 }: DateInputProps) {
   const [raw, setRaw] = useState(() => toDigits(value))
+  const pickerRef = useRef<HTMLInputElement>(null)
 
   // Sync from parent when value changes externally
   useEffect(() => {
@@ -78,14 +79,33 @@ export default function DateInput({
     }
   }
 
+  function handlePickerChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const iso = e.target.value
+    if (iso) {
+      setRaw(toDigits(iso))
+      onChange(iso)
+    }
+  }
+
+  function openPicker() {
+    pickerRef.current?.showPicker()
+  }
+
   return (
     <div className={cn(
-      'flex items-center gap-2 px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl transition',
+      'flex items-center gap-2 px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl transition relative',
       'focus-within:ring-2 focus-within:ring-red-500 focus-within:border-transparent',
       disabled && 'opacity-50',
       className
     )}>
-      <Calendar size={16} className="text-gray-400 shrink-0" />
+      <button
+        type="button"
+        onClick={openPicker}
+        disabled={disabled}
+        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 transition"
+      >
+        <Calendar size={16} />
+      </button>
       <input
         type="text"
         inputMode="numeric"
@@ -96,6 +116,15 @@ export default function DateInput({
         required={required}
         disabled={disabled}
         className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 outline-none"
+      />
+      {/* Hidden native date picker */}
+      <input
+        ref={pickerRef}
+        type="date"
+        value={value}
+        onChange={handlePickerChange}
+        className="absolute inset-0 opacity-0 pointer-events-none"
+        tabIndex={-1}
       />
     </div>
   )
