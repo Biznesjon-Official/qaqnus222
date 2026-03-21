@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Phone, Banknote, X, Clock, Plus } from 'lucide-react'
+import { Phone, Banknote, X, Clock, Plus, Trash2 } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import MoneyInput from '@/components/ui/money-input'
 import SearchBar from '@/components/ui/search-bar'
@@ -112,6 +112,18 @@ export default function NasiyalarPage() {
     setQoshishYuklash(false)
   }
 
+  async function nasiyaOchirish(id: string, ism: string) {
+    if (!confirm(`"${ism}" nasiyasini o'chirishni tasdiqlaysizmi?`)) return
+    const res = await fetch(`/api/nasiyalar/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      toast.success('Nasiya o\'chirildi')
+      yuklash()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      toast.error(data.xato || 'Xatolik yuz berdi')
+    }
+  }
+
   const filteredNasiyalar = qidiruv
     ? nasiyalar.filter(n =>
         n.mijoz.ism.toLowerCase().includes(qidiruv.toLowerCase()) ||
@@ -210,18 +222,23 @@ export default function NasiyalarPage() {
                       <td className="px-4 py-3 text-right text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">
                         {n.muddat ? formatSana(n.muddat) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                       </td>
-                      {/* Amal: To'lov button — stop propagation so row click and button don't double-fire */}
+                      {/* Amal: To'lov + O'chirish buttons */}
                       <td className="px-4 py-3 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                        {n.holati !== 'YOPILGAN' ? (
+                        <div className="flex items-center justify-center gap-1">
+                          {n.holati !== 'YOPILGAN' && (
+                            <button
+                              onClick={() => openTolovModal(n)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
+                              <Banknote size={12} />
+                              To&apos;lov
+                            </button>
+                          )}
                           <button
-                            onClick={() => openTolovModal(n)}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
-                            <Banknote size={12} />
-                            To&apos;lov
+                            onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
+                            className="inline-flex items-center p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition">
+                            <Trash2 size={14} />
                           </button>
-                        ) : (
-                          <span className="text-gray-300 dark:text-gray-700 text-xs">—</span>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -280,15 +297,22 @@ export default function NasiyalarPage() {
                   />
                 </div>
 
-                {/* Payment button — stop propagation so card click and button don't double-fire */}
-                {n.holati !== 'YOPILGAN' && (
+                {/* Action buttons */}
+                <div className="mt-3 flex gap-2" onClick={e => e.stopPropagation()}>
+                  {n.holati !== 'YOPILGAN' && (
+                    <button
+                      onClick={() => openTolovModal(n)}
+                      className="flex-1 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
+                      <Banknote size={15} />
+                      To&apos;lov qabul qilish
+                    </button>
+                  )}
                   <button
-                    onClick={e => { e.stopPropagation(); openTolovModal(n) }}
-                    className="mt-3 w-full py-2 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
-                    <Banknote size={15} />
-                    To&apos;lov qabul qilish
+                    onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
+                    className="px-3 py-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/30 rounded-xl transition">
+                    <Trash2 size={15} />
                   </button>
-                )}
+                </div>
               </div>
             )
           })}
