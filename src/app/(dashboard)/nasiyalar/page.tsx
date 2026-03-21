@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Phone, Banknote, X, Clock } from 'lucide-react'
+import { Phone, Banknote, X, Clock, Plus } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import MoneyInput from '@/components/ui/money-input'
 import SearchBar from '@/components/ui/search-bar'
@@ -18,8 +18,8 @@ interface NasiyaTolov {
 
 interface Nasiya {
   id: string
-  mijoz: { ism: string; telefon: string | null }
-  sotuv: { chekRaqami: string; sana: string }
+  mijoz: { ism: string; telefon: string | null; manzil?: string | null }
+  sotuv: { chekRaqami: string; sana: string } | null
   jamiQarz: number; tolangan: number; qoldiq: number
   muddat: string | null; holati: string; sana: string
   tolovlar: NasiyaTolov[]
@@ -41,6 +41,9 @@ export default function NasiyalarPage() {
   const [tolovModal, setTolovModal] = useState<Nasiya | null>(null)
   const [tolovForm, setTolovForm] = useState({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
   const [view, setView] = useState<'table' | 'card'>('table')
+  const [qoshishModal, setQoshishModal] = useState(false)
+  const [qoshishForm, setQoshishForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '' })
+  const [qoshishYuklash, setQoshishYuklash] = useState(false)
 
   async function yuklash() {
     setYuklanmoqda(true)
@@ -85,10 +88,34 @@ export default function NasiyalarPage() {
     } else toast.error('Xatolik yuz berdi')
   }
 
+  async function nasiyaQoshish(e: React.FormEvent) {
+    e.preventDefault()
+    setQoshishYuklash(true)
+    try {
+      const res = await fetch('/api/nasiyalar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(qoshishForm),
+      })
+      if (res.ok) {
+        toast.success('Nasiya muvaffaqiyatli qo\'shildi!')
+        setQoshishModal(false)
+        setQoshishForm({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '' })
+        yuklash()
+      } else {
+        const data = await res.json()
+        toast.error(data.xato || 'Xatolik yuz berdi')
+      }
+    } catch {
+      toast.error('Xatolik yuz berdi')
+    }
+    setQoshishYuklash(false)
+  }
+
   const filteredNasiyalar = qidiruv
     ? nasiyalar.filter(n =>
         n.mijoz.ism.toLowerCase().includes(qidiruv.toLowerCase()) ||
-        n.sotuv.chekRaqami.toLowerCase().includes(qidiruv.toLowerCase())
+        (n.sotuv?.chekRaqami || '').toLowerCase().includes(qidiruv.toLowerCase())
       )
     : nasiyalar
 
@@ -118,6 +145,12 @@ export default function NasiyalarPage() {
         </div>
         {/* View toggle placed next to filters */}
         <ViewToggle view={view} onChange={changeView} />
+        <button
+          onClick={() => setQoshishModal(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition">
+          <Plus size={16} />
+          Nasiya qo&apos;shish
+        </button>
       </div>
 
       {/* TABLE VIEW */}
@@ -160,7 +193,7 @@ export default function NasiyalarPage() {
                         ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                       </td>
                       {/* Chek */}
-                      <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">{n.sotuv.chekRaqami}</td>
+                      <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">{n.sotuv?.chekRaqami || <span className="text-gray-300 dark:text-gray-700">—</span>}</td>
                       {/* Holati */}
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-xs px-2 py-0.5 rounded-lg font-medium ${hCfg?.cls || ''}`}>
@@ -228,7 +261,7 @@ export default function NasiyalarPage() {
                       </p>
                     )}
                     <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">
-                      Chek: {n.sotuv.chekRaqami} • {formatSana(n.sana)}
+                      {n.sotuv ? `Chek: ${n.sotuv.chekRaqami} • ` : ''}{formatSana(n.sana)}
                       {n.muddat && ` • Muddat: ${formatSana(n.muddat)}`}
                     </p>
                   </div>
@@ -259,6 +292,83 @@ export default function NasiyalarPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Nasiya qo'shish modal */}
+      {qoshishModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Nasiya qo&apos;shish</h3>
+              <button
+                onClick={() => setQoshishModal(false)}
+                className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={nasiyaQoshish} className="p-5 space-y-4">
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Ism *</label>
+                <input
+                  value={qoshishForm.ism}
+                  onChange={e => setQoshishForm(f => ({ ...f, ism: e.target.value }))}
+                  className={inputCls}
+                  placeholder="Mijoz ismi"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Manzil *</label>
+                <input
+                  value={qoshishForm.manzil}
+                  onChange={e => setQoshishForm(f => ({ ...f, manzil: e.target.value }))}
+                  className={inputCls}
+                  placeholder="Manzil"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qarz summasi *</label>
+                <MoneyInput
+                  value={qoshishForm.qarz}
+                  onChange={v => setQoshishForm(f => ({ ...f, qarz: v }))}
+                  required
+                  min={1}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qaytarish sanasi *</label>
+                <input
+                  type="date"
+                  value={qoshishForm.muddat}
+                  onChange={e => setQoshishForm(f => ({ ...f, muddat: e.target.value }))}
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Telefon raqam</label>
+                <input
+                  value={qoshishForm.telefon}
+                  onChange={e => setQoshishForm(f => ({ ...f, telefon: e.target.value }))}
+                  className={inputCls}
+                  placeholder="+998 XX XXX XX XX"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setQoshishModal(false)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium">
+                  Bekor
+                </button>
+                <button type="submit" disabled={qoshishYuklash}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition disabled:opacity-50">
+                  {qoshishYuklash ? 'Saqlanmoqda...' : 'Saqlash'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

@@ -209,7 +209,7 @@ model SotuvTarkibi {
 // ========================
 model Nasiya {
   id          String       @id @default(cuid())
-  sotuvId     String       @unique
+  sotuvId     String?      @unique
   mijozId     String
   jamiQarz    Decimal      @db.Decimal(12, 2)
   tolangan    Decimal      @default(0) @db.Decimal(12, 2)
@@ -218,7 +218,7 @@ model Nasiya {
   holati      NasiyaHolati @default(OCHIQ)
   sana        DateTime     @default(now())
 
-  sotuv       Sotuv        @relation(fields: [sotuvId], references: [id])
+  sotuv       Sotuv?       @relation(fields: [sotuvId], references: [id])
   mijoz       Mijoz        @relation(fields: [mijozId], references: [id])
   tolovlar    NasiyaTolov[]
   bildirishnomlar BildirishnomLog[]
