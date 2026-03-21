@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle, Pencil } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import MoneyInput from '@/components/ui/money-input'
+import DateInput from '@/components/ui/date-input'
 import SearchBar from '@/components/ui/search-bar'
 
 interface NasiyaTolov {
@@ -482,20 +483,16 @@ export default function NasiyalarPage() {
               </div>
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Berilgan sana</label>
-                <input
-                  type="date"
+                <DateInput
                   value={tahrirlashForm.sana}
-                  onChange={e => setTahrirlashForm(f => ({ ...f, sana: e.target.value }))}
-                  className={inputCls}
+                  onChange={v => setTahrirlashForm(f => ({ ...f, sana: v }))}
                 />
               </div>
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qaytarish sanasi</label>
-                <input
-                  type="date"
+                <DateInput
                   value={tahrirlashForm.muddat}
-                  onChange={e => setTahrirlashForm(f => ({ ...f, muddat: e.target.value }))}
-                  className={inputCls}
+                  onChange={v => setTahrirlashForm(f => ({ ...f, muddat: v }))}
                 />
               </div>
               <div className="flex gap-3">
@@ -600,21 +597,17 @@ export default function NasiyalarPage() {
               </div>
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Berilgan sana *</label>
-                <input
-                  type="date"
+                <DateInput
                   value={qoshishForm.sana}
-                  onChange={e => setQoshishForm(f => ({ ...f, sana: e.target.value }))}
-                  className={inputCls}
+                  onChange={v => setQoshishForm(f => ({ ...f, sana: v }))}
                   required
                 />
               </div>
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qaytarish sanasi</label>
-                <input
-                  type="date"
+                <DateInput
                   value={qoshishForm.muddat}
-                  onChange={e => setQoshishForm(f => ({ ...f, muddat: e.target.value }))}
-                  className={inputCls}
+                  onChange={v => setQoshishForm(f => ({ ...f, muddat: v }))}
                 />
               </div>
               <div>
