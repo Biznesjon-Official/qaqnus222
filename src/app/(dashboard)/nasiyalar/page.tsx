@@ -42,7 +42,7 @@ export default function NasiyalarPage() {
   const [tolovForm, setTolovForm] = useState({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
   const [view, setView] = useState<'table' | 'card'>('table')
   const [qoshishModal, setQoshishModal] = useState(false)
-  const [qoshishForm, setQoshishForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '' })
+  const [qoshishForm, setQoshishForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '', sana: new Date().toISOString().slice(0, 10) })
   const [qoshishYuklash, setQoshishYuklash] = useState(false)
   const [qarzQoshishModal, setQarzQoshishModal] = useState<Nasiya | null>(null)
   const [qarzQoshishForm, setQarzQoshishForm] = useState({ summa: '' })
@@ -106,7 +106,7 @@ export default function NasiyalarPage() {
       if (res.ok) {
         toast.success('Nasiya muvaffaqiyatli qo\'shildi!')
         setQoshishModal(false)
-        setQoshishForm({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '' })
+        setQoshishForm({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '', sana: new Date().toISOString().slice(0, 10) })
         yuklash()
       } else {
         const data = await res.json()
@@ -572,6 +572,16 @@ export default function NasiyalarPage() {
                   required
                   min={1}
                   placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Berilgan sana *</label>
+                <input
+                  type="date"
+                  value={qoshishForm.sana}
+                  onChange={e => setQoshishForm(f => ({ ...f, sana: e.target.value }))}
+                  className={inputCls}
+                  required
                 />
               </div>
               <div>

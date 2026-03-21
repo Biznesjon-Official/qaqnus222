@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ xato: 'Ruxsat yo\'q' }, { status: 401 })
 
     const body = await req.json()
-    const { ism, manzil, telefon, qarz, muddat } = body
+    const { ism, manzil, telefon, qarz, muddat, sana } = body
 
     if (!ism || !manzil || !qarz) {
       return NextResponse.json({ xato: 'Ism, manzil va qarz majburiy' }, { status: 400 })
@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
         jamiQarz: qarz,
         qoldiq: qarz,
         muddat: muddat ? new Date(muddat) : null,
+        sana: sana ? new Date(sana) : new Date(),
       },
     })
 
