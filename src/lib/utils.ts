@@ -12,11 +12,10 @@ export function formatSum(summa: number | string) {
 
 export function formatSana(sana: Date | string) {
   const d = typeof sana === 'string' ? new Date(sana) : sana
-  return d.toLocaleDateString('uz-UZ', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const kun = String(d.getDate()).padStart(2, '0')
+  const oy = String(d.getMonth() + 1).padStart(2, '0')
+  const yil = d.getFullYear()
+  return `${kun}.${oy}.${yil}`
 }
 
 export function formatSanaVaVaqt(sana: Date | string) {
