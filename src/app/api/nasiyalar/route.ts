@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { ism, manzil, telefon, qarz, muddat } = body
 
-    if (!ism || !manzil || !qarz || !muddat) {
-      return NextResponse.json({ xato: 'Ism, manzil, qarz va muddat majburiy' }, { status: 400 })
+    if (!ism || !manzil || !qarz) {
+      return NextResponse.json({ xato: 'Ism, manzil va qarz majburiy' }, { status: 400 })
     }
 
     // Mijozni topish yoki yaratish
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         mijozId: mijoz.id,
         jamiQarz: qarz,
         qoldiq: qarz,
-        muddat: new Date(muddat),
+        muddat: muddat ? new Date(muddat) : null,
       },
     })
 

@@ -36,7 +36,7 @@ const holatiConfig = {
 export default function NasiyalarPage() {
   const [nasiyalar, setNasiyalar] = useState<Nasiya[]>([])
   const [yuklanmoqda, setYuklanmoqda] = useState(true)
-  const [filter, setFilter] = useState('')
+  const [filter, setFilter] = useState('OCHIQ')
   const [qidiruv, setQidiruv] = useState('')
   const [tolovModal, setTolovModal] = useState<Nasiya | null>(null)
   const [tolovForm, setTolovForm] = useState({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
@@ -339,22 +339,35 @@ export default function NasiyalarPage() {
                 />
               </div>
               <div>
-                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qaytarish sanasi *</label>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qaytarish sanasi</label>
                 <input
                   type="date"
                   value={qoshishForm.muddat}
                   onChange={e => setQoshishForm(f => ({ ...f, muddat: e.target.value }))}
                   className={inputCls}
-                  required
                 />
               </div>
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Telefon raqam</label>
                 <input
                   value={qoshishForm.telefon}
-                  onChange={e => setQoshishForm(f => ({ ...f, telefon: e.target.value }))}
+                  onChange={e => {
+                    let v = e.target.value.replace(/\D/g, '')
+                    if (v.startsWith('998')) v = v
+                    else if (v.startsWith('8') && v.length > 1) v = '998' + v.slice(1)
+                    else if (v.length > 0 && !v.startsWith('998')) v = '998' + v
+                    if (v.length > 12) v = v.slice(0, 12)
+                    let formatted = ''
+                    if (v.length > 0) formatted = '+' + v.slice(0, 3)
+                    if (v.length > 3) formatted += ' ' + v.slice(3, 5)
+                    if (v.length > 5) formatted += ' ' + v.slice(5, 8)
+                    if (v.length > 8) formatted += ' ' + v.slice(8, 10)
+                    if (v.length > 10) formatted += ' ' + v.slice(10, 12)
+                    setQoshishForm(f => ({ ...f, telefon: formatted }))
+                  }}
                   className={inputCls}
-                  placeholder="+998 XX XXX XX XX"
+                  placeholder="+998 90 123 45 67"
+                  type="tel"
                 />
               </div>
               <div className="flex gap-3">
