@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle } from 'lucide-react'
+import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle, Pencil } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import MoneyInput from '@/components/ui/money-input'
 import SearchBar from '@/components/ui/search-bar'
@@ -47,6 +47,9 @@ export default function NasiyalarPage() {
   const [qarzQoshishModal, setQarzQoshishModal] = useState<Nasiya | null>(null)
   const [qarzQoshishForm, setQarzQoshishForm] = useState({ summa: '' })
   const [qarzQoshishYuklash, setQarzQoshishYuklash] = useState(false)
+  const [tahrirlashModal, setTahrirlashModal] = useState<Nasiya | null>(null)
+  const [tahrirlashForm, setTahrirlashForm] = useState({ ism: '', manzil: '', telefon: '', muddat: '' })
+  const [tahrirlashYuklash, setTahrirlashYuklash] = useState(false)
 
   async function yuklash() {
     setYuklanmoqda(true)
@@ -138,6 +141,40 @@ export default function NasiyalarPage() {
       toast.error('Xatolik yuz berdi')
     }
     setQarzQoshishYuklash(false)
+  }
+
+  function openTahrirlash(n: Nasiya) {
+    setTahrirlashModal(n)
+    setTahrirlashForm({
+      ism: n.mijoz.ism,
+      manzil: n.mijoz.manzil || '',
+      telefon: n.mijoz.telefon || '',
+      muddat: n.muddat ? n.muddat.slice(0, 10) : '',
+    })
+  }
+
+  async function tahrirlash(e: React.FormEvent) {
+    e.preventDefault()
+    if (!tahrirlashModal) return
+    setTahrirlashYuklash(true)
+    try {
+      const res = await fetch(`/api/nasiyalar/${tahrirlashModal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tahrirlashForm),
+      })
+      if (res.ok) {
+        toast.success('Ma\'lumotlar yangilandi!')
+        setTahrirlashModal(null)
+        yuklash()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.xato || 'Xatolik yuz berdi')
+      }
+    } catch {
+      toast.error('Xatolik yuz berdi')
+    }
+    setTahrirlashYuklash(false)
   }
 
   async function nasiyaOchirish(id: string, ism: string) {
@@ -270,6 +307,12 @@ export default function NasiyalarPage() {
                             </>
                           )}
                           <button
+                            onClick={() => openTahrirlash(n)}
+                            className="inline-flex items-center p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition"
+                            title="Tahrirlash">
+                            <Pencil size={14} />
+                          </button>
+                          <button
                             onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
                             className="inline-flex items-center p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition">
                             <Trash2 size={14} />
@@ -352,6 +395,12 @@ export default function NasiyalarPage() {
                     </>
                   )}
                   <button
+                    onClick={() => openTahrirlash(n)}
+                    className="px-3 py-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl transition"
+                    title="Tahrirlash">
+                    <Pencil size={15} />
+                  </button>
+                  <button
                     onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
                     className="px-3 py-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900/30 rounded-xl transition">
                     <Trash2 size={15} />
@@ -360,6 +409,83 @@ export default function NasiyalarPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Tahrirlash modal */}
+      {tahrirlashModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Nasiyani tahrirlash</h3>
+              <button
+                onClick={() => setTahrirlashModal(null)}
+                className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={tahrirlash} className="p-5 space-y-4">
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Ism *</label>
+                <input
+                  value={tahrirlashForm.ism}
+                  onChange={e => setTahrirlashForm(f => ({ ...f, ism: e.target.value }))}
+                  className={inputCls}
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Manzil</label>
+                <input
+                  value={tahrirlashForm.manzil}
+                  onChange={e => setTahrirlashForm(f => ({ ...f, manzil: e.target.value }))}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Telefon raqam</label>
+                <input
+                  value={tahrirlashForm.telefon}
+                  onChange={e => {
+                    let v = e.target.value.replace(/\D/g, '')
+                    if (v.startsWith('998')) v = v
+                    else if (v.startsWith('8') && v.length > 1) v = '998' + v.slice(1)
+                    else if (v.length > 0 && !v.startsWith('998')) v = '998' + v
+                    if (v.length > 12) v = v.slice(0, 12)
+                    let formatted = ''
+                    if (v.length > 0) formatted = '+' + v.slice(0, 3)
+                    if (v.length > 3) formatted += ' ' + v.slice(3, 5)
+                    if (v.length > 5) formatted += ' ' + v.slice(5, 8)
+                    if (v.length > 8) formatted += ' ' + v.slice(8, 10)
+                    if (v.length > 10) formatted += ' ' + v.slice(10, 12)
+                    setTahrirlashForm(f => ({ ...f, telefon: formatted }))
+                  }}
+                  className={inputCls}
+                  placeholder="+998 90 123 45 67"
+                  type="tel"
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qaytarish sanasi</label>
+                <input
+                  type="date"
+                  value={tahrirlashForm.muddat}
+                  onChange={e => setTahrirlashForm(f => ({ ...f, muddat: e.target.value }))}
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setTahrirlashModal(null)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium">
+                  Bekor
+                </button>
+                <button type="submit" disabled={tahrirlashYuklash}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition disabled:opacity-50">
+                  {tahrirlashYuklash ? 'Saqlanmoqda...' : 'Saqlash'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
