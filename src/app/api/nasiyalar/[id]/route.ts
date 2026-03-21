@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const nasiya = await prisma.nasiya.findUnique({ where: { id } })
     if (!nasiya) return NextResponse.json({ xato: 'Nasiya topilmadi' }, { status: 404 })
 
-    const { ism, manzil, telefon, muddat } = await req.json()
+    const { ism, manzil, telefon, muddat, qarz, sana } = await req.json()
 
     await prisma.mijoz.update({
       where: { id: nasiya.mijozId },
@@ -22,11 +22,22 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       },
     })
 
+    const nasiyaData: Record<string, unknown> = {
+      muddat: muddat ? new Date(muddat) : null,
+    }
+    if (sana) nasiyaData.sana = new Date(sana)
+    if (qarz !== undefined && qarz !== '') {
+      const yangiQarz = parseFloat(qarz)
+      const farq = yangiQarz - Number(nasiya.jamiQarz)
+      nasiyaData.jamiQarz = yangiQarz
+      nasiyaData.qoldiq = Math.max(0, Number(nasiya.qoldiq) + farq)
+      if (Number(nasiyaData.qoldiq) <= 0) nasiyaData.holati = 'YOPILGAN'
+      else if (nasiya.holati === 'YOPILGAN') nasiyaData.holati = 'OCHIQ'
+    }
+
     const yangilangan = await prisma.nasiya.update({
       where: { id },
-      data: {
-        muddat: muddat ? new Date(muddat) : null,
-      },
+      data: nasiyaData,
     })
 
     return NextResponse.json(yangilangan)

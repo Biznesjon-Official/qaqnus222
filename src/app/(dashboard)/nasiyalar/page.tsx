@@ -48,7 +48,7 @@ export default function NasiyalarPage() {
   const [qarzQoshishForm, setQarzQoshishForm] = useState({ summa: '' })
   const [qarzQoshishYuklash, setQarzQoshishYuklash] = useState(false)
   const [tahrirlashModal, setTahrirlashModal] = useState<Nasiya | null>(null)
-  const [tahrirlashForm, setTahrirlashForm] = useState({ ism: '', manzil: '', telefon: '', muddat: '' })
+  const [tahrirlashForm, setTahrirlashForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '', sana: '' })
   const [tahrirlashYuklash, setTahrirlashYuklash] = useState(false)
 
   async function yuklash() {
@@ -149,7 +149,9 @@ export default function NasiyalarPage() {
       ism: n.mijoz.ism,
       manzil: n.mijoz.manzil || '',
       telefon: n.mijoz.telefon || '',
+      qarz: String(n.jamiQarz),
       muddat: n.muddat ? n.muddat.slice(0, 10) : '',
+      sana: n.sana ? n.sana.slice(0, 10) : '',
     })
   }
 
@@ -463,6 +465,25 @@ export default function NasiyalarPage() {
                   className={inputCls}
                   placeholder="+998 90 123 45 67"
                   type="tel"
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qarz summasi *</label>
+                <MoneyInput
+                  value={tahrirlashForm.qarz}
+                  onChange={v => setTahrirlashForm(f => ({ ...f, qarz: v }))}
+                  required
+                  min={1}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Berilgan sana</label>
+                <input
+                  type="date"
+                  value={tahrirlashForm.sana}
+                  onChange={e => setTahrirlashForm(f => ({ ...f, sana: e.target.value }))}
+                  className={inputCls}
                 />
               </div>
               <div>
