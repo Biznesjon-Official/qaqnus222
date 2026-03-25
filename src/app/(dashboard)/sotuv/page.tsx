@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
@@ -33,6 +33,29 @@ const TOLOV_USULLARI = [
 ]
 
 const inputCls = 'w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition text-sm'
+
+// Lotin → Kirill transliteratsiya
+const lotinKirill: Record<string, string> = {
+  'Sh':'Ш','sh':'ш','Ch':'Ч','ch':'ч','Ng':'Нг','ng':'нг',
+  "O'":'Ў',"o'":'ў',"G'":'Ғ',"g'":'ғ',
+  'Yo':'Ё','yo':'ё','Yu':'Ю','yu':'ю','Ya':'Я','ya':'я',
+  'Ye':'Е','ye':'е','Ts':'Ц','ts':'ц',
+  'A':'А','a':'а','B':'Б','b':'б','D':'Д','d':'д','E':'Э','e':'э',
+  'F':'Ф','f':'ф','G':'Г','g':'г','H':'Ҳ','h':'ҳ','I':'И','i':'и',
+  'J':'Ж','j':'ж','K':'К','k':'к','L':'Л','l':'л','M':'М','m':'м',
+  'N':'Н','n':'н','O':'О','o':'о','P':'П','p':'п','Q':'Қ','q':'қ',
+  'R':'Р','r':'р','S':'С','s':'с','T':'Т','t':'т','U':'У','u':'у',
+  'V':'В','v':'в','X':'Х','x':'х','Y':'Й','y':'й','Z':'З','z':'з',
+}
+function kirill(text: string): string {
+  let result = text
+  // Avval ko'p harflilarni almashtirish (uzunroqlarini birinchi)
+  const keys = Object.keys(lotinKirill).sort((a, b) => b.length - a.length)
+  for (const lat of keys) {
+    result = result.split(lat).join(lotinKirill[lat])
+  }
+  return result
+}
 
 export default function SotuvPage() {
   const [tovarlar, setTovarlar] = useState<Tovar[]>([])
@@ -67,6 +90,9 @@ export default function SotuvPage() {
   const [sotuvlarRoyxati, setSotuvlarRoyxati] = useState<any[]>([])
   const [sotuvlarYuklanmoqda, setSotuvlarYuklanmoqda] = useState(false)
   const [sotuvQidiruv, setSotuvQidiruv] = useState('')
+
+  // Til (lotin / kirill)
+  const [til, setTil] = useState<'lotin' | 'kirill'>('lotin')
 
   // Saqlangan savatlar
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
@@ -343,31 +369,34 @@ export default function SotuvPage() {
     localStorage.setItem('saqlangan-savatlar', JSON.stringify(yangilangan))
   }
 
+  // Til bo'yicha matn tarjima qilish
+  const t = (text: string) => til === 'kirill' ? kirill(text) : text
+
   function chekHtml(s: any) {
-    const dokonNomi = dokonInfo.dokon_nomi || "Do'kon"
-    const manzil = dokonInfo.manzil || ''
+    const dokonNomi = t(dokonInfo.dokon_nomi || "Do'kon")
+    const manzil = t(dokonInfo.manzil || '')
     const tel = dokonInfo.telefon || ''
-    const chekMatn = dokonInfo.chek_matn || ''
+    const chekMatn = t(dokonInfo.chek_matn || '')
     const kassirTel = s.kassir?.telefon || ''
     const chekEni = dokonInfo.chek_eni === '58' ? 58 : 80
     const chekPx = chekEni === 58 ? 218 : 302
     const sz = chekEni === 58 ? 11 : 12
-    const tovarlarHtml = s.tarkiblar?.map((t: any) => {
-      const nomi = t.tovar?.nomi || '—'
-      const miqdor = Number(t.miqdor)
-      const narx = formatSum(t.birlikNarxi)
-      const jami = formatSum(t.jami)
+    const tovarlarHtml = s.tarkiblar?.map((item: any) => {
+      const nomi = t(item.tovar?.nomi || '—')
+      const miqdor = Number(item.miqdor)
+      const narx = formatSum(item.birlikNarxi)
+      const jami = formatSum(item.jami)
       return `<tr><td>${nomi}</td><td style="text-align:right">${miqdor} x ${narx}</td></tr><tr><td></td><td style="text-align:right;font-weight:bold">${jami}</td></tr>`
     }).join('') || ''
     const chegirmaHtml = Number(s.chegirma) > 0
-      ? `<tr><td>Chegirma:</td><td style="text-align:right;color:#666">-${formatSum(s.chegirma)}</td></tr>` : ''
+      ? `<tr><td>${t('Chegirma')}:</td><td style="text-align:right;color:#666">-${formatSum(s.chegirma)}</td></tr>` : ''
     const tolov = s.tolovUsuli === 'ARALASH'
-      ? `<tr><td>Naqd:</td><td style="text-align:right">${formatSum(s.naqdTolangan)}</td></tr><tr><td>Karta:</td><td style="text-align:right">${formatSum(s.kartaTolangan)}</td></tr>`
+      ? `<tr><td>${t('Naqd')}:</td><td style="text-align:right">${formatSum(s.naqdTolangan)}</td></tr><tr><td>${t('Karta')}:</td><td style="text-align:right">${formatSum(s.kartaTolangan)}</td></tr>`
       : s.tolovUsuli === 'NASIYA'
-      ? `<tr><td>To'lov:</td><td style="text-align:right">Nasiya</td></tr><tr><td>Mijoz:</td><td style="text-align:right">${s.mijoz?.ism || '—'}</td></tr>`
-      : `<tr><td>To'lov:</td><td style="text-align:right">${s.tolovUsuli === 'KARTA' ? 'Karta' : 'Naqd pul'}</td></tr>`
-    const kassirHtml = kassirTel ? `<div>Kassir tel: ${kassirTel}</div>` : ''
-    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Chek ${s.chekRaqami}</title>
+      ? `<tr><td>${t("To'lov")}:</td><td style="text-align:right">${t('Nasiya')}</td></tr><tr><td>${t('Mijoz')}:</td><td style="text-align:right">${t(s.mijoz?.ism || '—')}</td></tr>`
+      : `<tr><td>${t("To'lov")}:</td><td style="text-align:right">${s.tolovUsuli === 'KARTA' ? t('Karta') : t('Naqd pul')}</td></tr>`
+    const kassirHtml = kassirTel ? `<div>${t('Kassir tel')}: ${kassirTel}</div>` : ''
+    return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
 <style>
   @page{size:${chekEni}mm auto;margin:0}
   body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;width:${chekPx}px;margin:0 auto;padding:6px;color:#000;background:#fff}
@@ -379,18 +408,18 @@ export default function SotuvPage() {
 ${manzil ? `<div class="center">${manzil}</div>` : ''}
 ${tel ? `<div class="center">Tel: ${tel}</div>` : ''}
 <div class="sep"></div>
-<div>Chek: ${s.chekRaqami}</div>
-<div>Sana: ${formatSanaVaVaqt(s.sana)}</div>
+<div>${t('Chek')}: ${s.chekRaqami}</div>
+<div>${t('Sana')}: ${formatSanaVaVaqt(s.sana)}</div>
 ${kassirHtml}
 <div class="sep"></div>
 <table>${tovarlarHtml}</table>
 <div class="sep"></div>
-<table>${chegirmaHtml}<tr class="total"><td>JAMI:</td><td style="text-align:right">${formatSum(s.yakuniySumma)}</td></tr></table>
+<table>${chegirmaHtml}<tr class="total"><td>${t('JAMI')}:</td><td style="text-align:right">${formatSum(s.yakuniySumma)}</td></tr></table>
 <div class="sep"></div>
 <table>${tolov}</table>
 ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz - 1}px">${chekMatn}</div>` : ''}
 <div class="sep"></div>
-<div class="center" style="font-size:10px">Rahmat!</div>
+<div class="center" style="font-size:10px">${t('Rahmat')}!</div>
 </body></html>`
   }
 
@@ -687,21 +716,30 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
       {/* Chek modal */}
       {chekModal && oxirgiSotuv && (() => {
         const s = oxirgiSotuv
-        const dokonNomi = dokonInfo.dokon_nomi || "Do'kon"
-        const manzil = dokonInfo.manzil || ''
+        const dokonNomi = t(dokonInfo.dokon_nomi || "Do'kon")
+        const manzil = t(dokonInfo.manzil || '')
         const tel = dokonInfo.telefon || ''
-        const chekMatn = dokonInfo.chek_matn || ''
+        const chekMatn = t(dokonInfo.chek_matn || '')
         const kassirTel = s.kassir?.telefon || ''
 
         return (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-sm overflow-hidden">
-              <div className="bg-red-600 px-5 py-4 flex items-center gap-3">
-                <CheckCircle className="w-7 h-7 text-white shrink-0" />
-                <div>
-                  <p className="text-white font-bold">Sotuv amalga oshdi!</p>
-                  <p className="text-red-200 text-xs">{s.chekRaqami}</p>
+              <div className="bg-red-600 px-5 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-7 h-7 text-white shrink-0" />
+                  <div>
+                    <p className="text-white font-bold">{t('Sotuv amalga oshdi')}!</p>
+                    <p className="text-red-200 text-xs">{s.chekRaqami}</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => setTil(til === 'lotin' ? 'kirill' : 'lotin')}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-xs font-medium transition"
+                >
+                  <Languages size={14} />
+                  {til === 'lotin' ? 'Кирилл' : 'Lotin'}
+                </button>
               </div>
 
               <div className="chek-print bg-white max-h-[55vh] overflow-y-auto" style={{ fontFamily: "'Courier New', Consolas, monospace", fontSize: 12, color: '#000', width: '100%', padding: '12px 16px' }}>
@@ -709,44 +747,44 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                 {manzil && <div style={{ textAlign: 'center', fontSize: 11, marginBottom: 1 }}>{manzil}</div>}
                 {tel && <div style={{ textAlign: 'center', fontSize: 11 }}>Tel: {tel}</div>}
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-                <div>Chek: {s.chekRaqami}</div>
-                <div>Sana: {formatSanaVaVaqt(s.sana)}</div>
-                {kassirTel && <div>Kassir tel: {kassirTel}</div>}
+                <div>{t('Chek')}: {s.chekRaqami}</div>
+                <div>{t('Sana')}: {formatSanaVaVaqt(s.sana)}</div>
+                {kassirTel && <div>{t('Kassir tel')}: {kassirTel}</div>}
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-                {s.tarkiblar?.map((t: any) => (
-                  <div key={t.id} style={{ marginBottom: 4 }}>
+                {s.tarkiblar?.map((item: any) => (
+                  <div key={item.id} style={{ marginBottom: 4 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ flex: 1 }}>{t.tovar?.nomi || '—'}</span>
+                      <span style={{ flex: 1 }}>{t(item.tovar?.nomi || '—')}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ color: '#555' }}>{Number(t.miqdor)} × {formatSum(t.birlikNarxi)}</span>
-                      <span style={{ fontWeight: 'bold' }}>{formatSum(t.jami)}</span>
+                      <span style={{ color: '#555' }}>{Number(item.miqdor)} × {formatSum(item.birlikNarxi)}</span>
+                      <span style={{ fontWeight: 'bold' }}>{formatSum(item.jami)}</span>
                     </div>
                   </div>
                 ))}
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
                 {Number(s.chegirma) > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Chegirma:</span><span>-{formatSum(s.chegirma)}</span>
+                    <span>{t('Chegirma')}:</span><span>-{formatSum(s.chegirma)}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: 13 }}>
-                  <span>JAMI:</span><span>{formatSum(s.yakuniySumma)}</span>
+                  <span>{t('JAMI')}:</span><span>{formatSum(s.yakuniySumma)}</span>
                 </div>
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
                 {s.tolovUsuli === 'ARALASH' ? (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Naqd:</span><span>{formatSum(s.naqdTolangan)}</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Karta:</span><span>{formatSum(s.kartaTolangan)}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{t('Naqd')}:</span><span>{formatSum(s.naqdTolangan)}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{t('Karta')}:</span><span>{formatSum(s.kartaTolangan)}</span></div>
                   </>
                 ) : s.tolovUsuli === 'NASIYA' ? (
                   <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>To&apos;lov:</span><span>Nasiya</span></div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Mijoz:</span><span>{s.mijoz?.ism || '—'}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{t("To'lov")}:</span><span>{t('Nasiya')}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{t('Mijoz')}:</span><span>{t(s.mijoz?.ism || '—')}</span></div>
                   </>
                 ) : (
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>To&apos;lov:</span><span>{s.tolovUsuli === 'KARTA' ? 'Karta' : 'Naqd pul'}</span>
+                    <span>{t("To'lov")}:</span><span>{s.tolovUsuli === 'KARTA' ? t('Karta') : t('Naqd pul')}</span>
                   </div>
                 )}
                 {chekMatn && (
@@ -756,7 +794,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                   </>
                 )}
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-                <div style={{ textAlign: 'center', fontSize: 11 }}>Rahmat!</div>
+                <div style={{ textAlign: 'center', fontSize: 11 }}>{t('Rahmat')}!</div>
               </div>
 
               <div className="p-4 flex gap-2">
@@ -765,7 +803,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                   className="flex-1 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400"
                 >
                   <Printer size={14} />
-                  Chop etish
+                  {t('Chop etish')}
                 </button>
                 <button
                   onClick={() => chekChopEtish(s)}
@@ -778,7 +816,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                   onClick={() => setChekModal(false)}
                   className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm transition font-medium"
                 >
-                  Yopish
+                  {t('Yopish')}
                 </button>
               </div>
             </div>
