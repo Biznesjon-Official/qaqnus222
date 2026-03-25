@@ -58,6 +58,12 @@ export default function SherikDokonlarPage() {
   const [tolovIzoh, setTolovIzoh] = useState('')
   const [tolovYuklanmoqda, setTolovYuklanmoqda] = useState(false)
 
+  // Qarz qo'shish modal
+  const [qarzModal, setQarzModal] = useState(false)
+  const [qarzSumma, setQarzSumma] = useState('')
+  const [qarzIzoh, setQarzIzoh] = useState('')
+  const [qarzYuklanmoqda, setQarzYuklanmoqda] = useState(false)
+
   async function yuklash() {
     setYuklanmoqda(true)
     const res = await fetch('/api/sherik-dokonlar')
@@ -122,10 +128,33 @@ export default function SherikDokonlarPage() {
     } else { const e = await res.json(); toast.error(e.xato || 'Xatolik') }
   }
 
+  // Qarz qo'shish
+  async function qarzYuborish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!tanlangan) return
+    setQarzYuklanmoqda(true)
+    const res = await fetch(`/api/sherik-dokonlar/${tanlangan.id}/tolov`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ summa: -Math.abs(parseFloat(qarzSumma)), izoh: qarzIzoh || 'Qo\'shimcha qarz' }),
+    })
+    setQarzYuklanmoqda(false)
+    if (res.ok) {
+      toast.success("Qarz qo'shildi")
+      setQarzModal(false)
+      setQarzSumma('')
+      setQarzIzoh('')
+      detailYuklash(tanlangan)
+      yuklash()
+    } else { const e = await res.json(); toast.error(e.xato || 'Xatolik') }
+  }
+
   // ─── Detail view ───
   if (tanlangan) {
-    const jami = detail?.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0) ?? 0
-    const tolangan = detail?.tolovlar.reduce((s, t) => s + Number(t.summa), 0) ?? 0
+    const sotuvQarz = detail?.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0) ?? 0
+    const manualQarz = detail?.tolovlar.filter(t => Number(t.summa) < 0).reduce((s, t) => s + Math.abs(Number(t.summa)), 0) ?? 0
+    const jami = sotuvQarz + manualQarz
+    const tolangan = detail?.tolovlar.filter(t => Number(t.summa) > 0).reduce((s, t) => s + Number(t.summa), 0) ?? 0
     const qoldiq = jami - tolangan
 
     return (
@@ -144,9 +173,13 @@ export default function SherikDokonlarPage() {
               </a>
             )}
           </div>
+          <button onClick={() => setQarzModal(true)}
+            className="flex items-center gap-2 px-3 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition text-sm">
+            <Plus size={15} /> Qarz
+          </button>
           <button onClick={() => setTolovModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition text-sm">
-            <Banknote size={15} /> To&apos;lov qildi
+            className="flex items-center gap-2 px-3 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition text-sm">
+            <Banknote size={15} /> To&apos;lov
           </button>
         </div>
 
@@ -201,26 +234,36 @@ export default function SherikDokonlarPage() {
               </div>
             </div>
 
-            {/* To'lovlar */}
+            {/* To'lovlar va Qarzlar */}
             <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
                 <Banknote size={15} className="text-green-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">To&apos;lovlar ({detail?.tolovlar.length ?? 0})</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">To&apos;lovlar va Qarzlar ({detail?.tolovlar.length ?? 0})</span>
               </div>
               <div className="divide-y divide-gray-50 dark:divide-neutral-800 max-h-80 overflow-y-auto">
                 {!detail?.tolovlar.length ? (
-                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">To'lovlar yo'q</p>
-                ) : detail.tolovlar.map(t => (
-                  <div key={t.id} className="px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-green-600 dark:text-green-400">{formatSum(Number(t.summa))}</p>
-                      {t.izoh && <p className="text-xs text-gray-400 dark:text-gray-600">{t.izoh}</p>}
+                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Hali yozuv yo&apos;q</p>
+                ) : detail.tolovlar.map(t => {
+                  const isQarz = Number(t.summa) < 0
+                  return (
+                    <div key={t.id} className="px-4 py-3 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isQarz ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400'}`}>
+                            {isQarz ? 'QARZ' : "TO'LOV"}
+                          </span>
+                          <p className={`text-sm font-semibold ${isQarz ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {isQarz ? '+' : '-'}{formatSum(Math.abs(Number(t.summa)))}
+                          </p>
+                        </div>
+                        {t.izoh && <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{t.izoh}</p>}
+                      </div>
+                      <span className="text-xs text-gray-400 dark:text-gray-600">
+                        {new Date(t.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-600">
-                      {new Date(t.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -248,6 +291,35 @@ export default function SherikDokonlarPage() {
                   <button type="button" onClick={() => setTolovModal(false)} className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium">Bekor</button>
                   <button type="submit" disabled={tolovYuklanmoqda} className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
                     <Banknote size={15} />{tolovYuklanmoqda ? 'Saqlanmoqda...' : 'Saqlash'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Qarz qo'shish modal */}
+        {qarzModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-sm">
+              <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz qo&apos;shish — {tanlangan.nomi}</h3>
+                <button onClick={() => setQarzModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition"><X size={18} /></button>
+              </div>
+              <form onSubmit={qarzYuborish} className="p-5 space-y-4">
+                <div>
+                  <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qarz summasi (so&apos;m) *</label>
+                  <input type="number" value={qarzSumma} onChange={e => setQarzSumma(e.target.value)}
+                    required min="1" placeholder="0" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Izoh</label>
+                  <input value={qarzIzoh} onChange={e => setQarzIzoh(e.target.value)} placeholder="Sabab yoki izoh" className={inputCls} />
+                </div>
+                <div className="flex gap-3 pt-1">
+                  <button type="button" onClick={() => setQarzModal(false)} className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium">Bekor</button>
+                  <button type="submit" disabled={qarzYuklanmoqda} className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                    <Plus size={15} />{qarzYuklanmoqda ? 'Saqlanmoqda...' : "Qarz qo'shish"}
                   </button>
                 </div>
               </form>

@@ -19,8 +19,10 @@ export async function GET() {
     })
 
     const natija = dokonlar.map(d => {
-      const jami = d.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0)
-      const tolangan = d.tolovlar.reduce((s, t) => s + Number(t.summa), 0)
+      const sotuvQarz = d.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0)
+      const manualQarz = d.tolovlar.filter(t => Number(t.summa) < 0).reduce((s, t) => s + Math.abs(Number(t.summa)), 0)
+      const jami = sotuvQarz + manualQarz
+      const tolangan = d.tolovlar.filter(t => Number(t.summa) > 0).reduce((s, t) => s + Number(t.summa), 0)
       return {
         id: d.id, nomi: d.nomi, telefon: d.telefon, manzil: d.manzil,
         izoh: d.izoh, yaratilgan: d.yaratilgan,

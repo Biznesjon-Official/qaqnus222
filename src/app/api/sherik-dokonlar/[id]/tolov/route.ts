@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params
     const { summa, izoh } = await req.json()
 
-    if (!summa || parseFloat(summa) <= 0) return NextResponse.json({ xato: "Summa noto'g'ri" }, { status: 400 })
+    if (!summa || parseFloat(summa) === 0) return NextResponse.json({ xato: "Summa noto'g'ri" }, { status: 400 })
 
     const tolov = await prisma.sherikDokonTolov.create({
       data: { sherikDokonId: id, summa: parseFloat(summa), izoh: izoh || null },
