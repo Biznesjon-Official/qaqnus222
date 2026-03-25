@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { formatSum } from '@/lib/utils'
-import { TrendingUp, CreditCard, AlertTriangle, ShoppingBag, Loader2 } from 'lucide-react'
+import { TrendingUp, TrendingDown, Receipt, ShoppingBag, Loader2 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts'
@@ -10,11 +10,9 @@ import {
 interface HisobotData {
   jamiSotuv: number
   jamiXarajat: number
+  jamiDaromad: number
   soFoyda: number
   sotuvSoni: number
-  ochiqNasiyalar: number
-  muddatiOtgan: number
-  jamiNasiyaQarz: number
   topTovarlar: { nomi: string; jami_miqdor: number; jami_summa: number }[]
   grafikData: { sana: string; sotuv: number; sotuvSoni: number }[]
 }
@@ -81,7 +79,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={ShoppingBag}
-          sarlavha="Haftalik sotuv"
+          sarlavha="Sotuv"
           qiymat={formatSum(data.jamiSotuv)}
           rang="text-gray-900 dark:text-gray-100"
           iconBg="bg-red-500"
@@ -89,26 +87,24 @@ export default function DashboardPage() {
         />
         <StatCard
           icon={TrendingUp}
+          sarlavha="Daromad"
+          qiymat={formatSum(data.jamiDaromad)}
+          rang="text-green-600"
+          iconBg="bg-green-500"
+        />
+        <StatCard
+          icon={TrendingDown}
+          sarlavha="Xarajatlar"
+          qiymat={formatSum(data.jamiXarajat)}
+          rang="text-red-600"
+          iconBg="bg-orange-500"
+        />
+        <StatCard
+          icon={Receipt}
           sarlavha="Sof foyda"
           qiymat={formatSum(data.soFoyda)}
           rang={data.soFoyda >= 0 ? 'text-green-600' : 'text-red-600'}
           iconBg={data.soFoyda >= 0 ? 'bg-green-500' : 'bg-red-500'}
-        />
-        <StatCard
-          icon={CreditCard}
-          sarlavha="Ochiq nasiyalar"
-          qiymat={`${data.ochiqNasiyalar} ta`}
-          rang="text-gray-900 dark:text-gray-100"
-          iconBg="bg-amber-500"
-          qoshimcha={`Qarz: ${formatSum(data.jamiNasiyaQarz)}`}
-        />
-        <StatCard
-          icon={AlertTriangle}
-          sarlavha="Muddati o'tgan"
-          qiymat={`${data.muddatiOtgan} ta`}
-          rang="text-red-600"
-          iconBg="bg-red-600"
-          qoshimcha="Nasiyalar"
         />
       </div>
 
