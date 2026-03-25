@@ -13,7 +13,8 @@ export async function GET(req: NextRequest) {
     const kategoriyaId = searchParams.get('kategoriya') || ''
     const holati = searchParams.get('holati') || 'FAOL'
     const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const limitParam = searchParams.get('limit')
+    const limit = limitParam ? parseInt(limitParam) : 0
 
     const where: any = {}
     if (holati !== 'BARCHASI') where.holati = holati
@@ -38,8 +39,7 @@ export async function GET(req: NextRequest) {
           },
         },
         orderBy: { nomi: 'asc' },
-        skip: (page - 1) * limit,
-        take: limit,
+        ...(limit > 0 ? { skip: (page - 1) * limit, take: limit } : {}),
       }),
       prisma.tovar.count({ where }),
     ])

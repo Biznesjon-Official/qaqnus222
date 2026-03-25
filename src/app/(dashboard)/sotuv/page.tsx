@@ -101,7 +101,7 @@ export default function SotuvPage() {
   useEffect(() => {
     async function yuklash() {
       const [tv, mj, sz, sd, sh] = await Promise.all([
-        fetch('/api/tovarlar?limit=500').then(r => r.json()),
+        fetch('/api/tovarlar').then(r => r.json()),
         fetch('/api/mijozlar').then(r => r.json()),
         fetch('/api/sozlamalar').then(r => r.json()),
         fetch('/api/sherik-dokonlar').then(r => r.json()),
@@ -254,7 +254,7 @@ export default function SotuvPage() {
       setSherikdanOlishModal(false)
       toast.success(`Sotuv yakunlandi! Chek: ${sotuv.chekRaqami}`)
       const [tv, sh] = await Promise.all([
-        fetch('/api/tovarlar?limit=500').then(r => r.json()),
+        fetch('/api/tovarlar').then(r => r.json()),
         fetch('/api/sheriklar').then(r => r.json()),
       ])
       setTovarlar(tv.tovarlar || [])
