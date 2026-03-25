@@ -217,12 +217,13 @@ export default function NasiyalarPage() {
 
   return (
     <div className="space-y-4">
-      {/* Stats Cards */}
+      {/* Stats Cards = Filter */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+        <button onClick={() => setFilter('')}
+          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === '' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Jami qarz</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Barchasi</p>
               <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-gray-100">{formatSum(stats.jamiQarz)}</p>
               <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.mijozlarSoni} ta mijoz</p>
             </div>
@@ -230,32 +231,22 @@ export default function NasiyalarPage() {
               <Banknote size={20} className="text-white" />
             </div>
           </div>
-        </div>
-        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+        </button>
+        <button onClick={() => setFilter('OCHIQ')}
+          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === 'OCHIQ' ? 'border-amber-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">To&apos;langan</p>
-              <p className="text-2xl font-bold mt-1 text-green-600">{formatSum(stats.jamiTolangan)}</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.yopilgan} ta yopilgan</p>
-            </div>
-            <div className="w-11 h-11 bg-green-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
-              <CheckCircle size={20} className="text-white" />
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between">
-            <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Qoldiq qarz</p>
-              <p className="text-2xl font-bold mt-1 text-red-600">{formatSum(stats.jamiQoldiq)}</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.ochiq} ta ochiq</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Ochiq</p>
+              <p className="text-2xl font-bold mt-1 text-amber-600">{stats.ochiq} ta</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Qarz: {formatSum(stats.jamiQoldiq)}</p>
             </div>
             <div className="w-11 h-11 bg-amber-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
-              <TrendingDown size={20} className="text-white" />
+              <Clock size={20} className="text-white" />
             </div>
           </div>
-        </div>
-        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+        </button>
+        <button onClick={() => setFilter('MUDDATI_OTGAN')}
+          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === 'MUDDATI_OTGAN' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-gray-500 dark:text-gray-500 text-sm">Muddati o&apos;tgan</p>
@@ -266,7 +257,20 @@ export default function NasiyalarPage() {
               <AlertTriangle size={20} className="text-white" />
             </div>
           </div>
-        </div>
+        </button>
+        <button onClick={() => setFilter('YOPILGAN')}
+          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === 'YOPILGAN' ? 'border-green-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Yopilgan</p>
+              <p className="text-2xl font-bold mt-1 text-green-600">{stats.yopilgan} ta</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">To&apos;langan: {formatSum(stats.jamiTolangan)}</p>
+            </div>
+            <div className="w-11 h-11 bg-green-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
+              <CheckCircle size={20} className="text-white" />
+            </div>
+          </div>
+        </button>
       </div>
 
       <SearchBar
@@ -276,22 +280,9 @@ export default function NasiyalarPage() {
         debounceMs={0}
       />
 
-      {/* Filter + ViewToggle */}
+      {/* ViewToggle + Qo'shish */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex gap-2 flex-wrap flex-1">
-          {[
-            { value: '', label: 'Barchasi' },
-            { value: 'OCHIQ', label: 'Ochiq' },
-            { value: 'MUDDATI_OTGAN', label: "Muddati o'tgan" },
-            { value: 'YOPILGAN', label: 'Yopilgan' },
-          ].map(f => (
-            <button key={f.value} onClick={() => setFilter(f.value)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${filter === f.value ? 'bg-red-600 text-white' : 'bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800'}`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-        {/* View toggle placed next to filters */}
+        <div className="flex-1" />
         <ViewToggle view={view} onChange={changeView} />
         <button
           onClick={() => setQoshishModal(true)}
