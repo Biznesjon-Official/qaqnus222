@@ -429,7 +429,7 @@ model SherikQarz {
 // ========================
 model SherikdanOlish {
   id         String   @id @default(cuid())
-  sotuvId    String
+  sotuvId    String?
   sherikId   String
   tovarId    String
   miqdor     Decimal  @db.Decimal(12, 3)
@@ -438,7 +438,7 @@ model SherikdanOlish {
   izoh       String?
   yaratilgan DateTime @default(now())
 
-  sotuv   Sotuv  @relation(fields: [sotuvId], references: [id])
+  sotuv   Sotuv?  @relation(fields: [sotuvId], references: [id])
   sherik  Sherik @relation(fields: [sherikId], references: [id])
   tovar   Tovar  @relation(fields: [tovarId], references: [id])
 

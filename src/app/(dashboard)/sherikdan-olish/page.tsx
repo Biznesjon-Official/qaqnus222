@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package } from 'lucide-react'
+import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package, Plus } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
+import MoneyInput from '@/components/ui/money-input'
 
 interface SherikOlish {
   id: string
@@ -18,7 +19,7 @@ interface SherikOlish {
   yaratilgan: string
   sherik: { id: string; ism: string; telefon: string | null }
   tovar: { id: string; nomi: string; birlik: string }
-  sotuv: { id: string; chekRaqami: string; sana: string }
+  sotuv: { id: string; chekRaqami: string; sana: string } | null
   tolovlar: { id: string; summa: number; turi: string; izoh: string | null; yaratilgan: string }[]
 }
 
@@ -54,17 +55,26 @@ export default function SherikdanOlishPage() {
   const [sheriklar, setSheriklar] = useState<{ id: string; ism: string; telefon: string | null }[]>([])
   const [tahririYuklanmoqda, setTahririYuklanmoqda] = useState(false)
 
+  // Qo'shish modal
+  const [qoshishModal, setQoshishModal] = useState(false)
+  const [qoshishForm, setQoshishForm] = useState({ sherikId: '', tovarId: '', miqdor: '', narx: '', izoh: '' })
+  const [qoshishYuklanmoqda, setQoshishYuklanmoqda] = useState(false)
+  const [tovarlar, setTovarlar] = useState<{ id: string; nomi: string; birlik: string; kelishNarxi: number }[]>([])
+
   async function yuklash() {
     setYuklanmoqda(true)
     try {
-      const [res, shRes] = await Promise.all([
+      const [res, shRes, tvRes] = await Promise.all([
         fetch('/api/sherikdan-olish'),
         fetch('/api/sheriklar'),
+        fetch('/api/tovarlar?limit=500'),
       ])
       const d = await res.json()
       const sh = await shRes.json()
+      const tv = await tvRes.json()
       setData(Array.isArray(d) ? d : [])
       setSheriklar(Array.isArray(sh) ? sh.map((s: any) => ({ id: s.id, ism: s.ism, telefon: s.telefon })) : [])
+      setTovarlar(Array.isArray(tv.tovarlar) ? tv.tovarlar.map((t: any) => ({ id: t.id, nomi: t.nomi, birlik: t.birlik, kelishNarxi: Number(t.kelishNarxi) })) : [])
     } catch { toast.error('Ma\'lumot yuklanmadi') }
     setYuklanmoqda(false)
   }
@@ -138,6 +148,25 @@ export default function SherikdanOlishPage() {
     }
   }
 
+  async function qoshish() {
+    setQoshishYuklanmoqda(true)
+    const res = await fetch('/api/sherikdan-olish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(qoshishForm),
+    })
+    setQoshishYuklanmoqda(false)
+    if (res.ok) {
+      toast.success('Sherikdan olish qo\'shildi')
+      setQoshishModal(false)
+      setQoshishForm({ sherikId: '', tovarId: '', miqdor: '', narx: '', izoh: '' })
+      yuklash()
+    } else {
+      const err = await res.json()
+      toast.error(err.xato || 'Xatolik')
+    }
+  }
+
   if (yuklanmoqda) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -153,6 +182,12 @@ export default function SherikdanOlishPage() {
           <Handshake size={20} className="text-gray-500 dark:text-gray-500" />
           <h1 className="text-gray-900 dark:text-gray-100 text-lg font-bold">Sherikdan olishlar</h1>
         </div>
+        <button
+          onClick={() => setQoshishModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition text-sm"
+        >
+          <Plus size={16} /> Qo&apos;shish
+        </button>
       </div>
 
       {data.length === 0 ? (
@@ -223,7 +258,7 @@ export default function SherikdanOlishPage() {
                           <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{Number(olish.miqdor)}</td>
                           <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{formatSum(olish.narx)}</td>
                           <td className="px-4 py-2 text-right text-gray-900 dark:text-gray-100 font-medium">{formatSum(olish.jami)}</td>
-                          <td className="px-4 py-2 text-gray-500 dark:text-gray-500 text-xs">{olish.sotuv.chekRaqami}</td>
+                          <td className="px-4 py-2 text-gray-500 dark:text-gray-500 text-xs">{olish.sotuv?.chekRaqami || <span className="text-amber-500">Qo&apos;lda</span>}</td>
                           <td className="px-4 py-2 text-gray-400 dark:text-gray-600 text-xs">{formatSanaVaVaqt(olish.yaratilgan)}</td>
                           <td className="px-4 py-2">
                             <button
@@ -356,6 +391,81 @@ export default function SherikdanOlishPage() {
                 >
                   {tahririYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                   Saqlash
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Qo'shish modal */}
+      {qoshishModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-md">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold flex items-center gap-2">
+                <Plus size={16} className="text-red-600" />
+                Sherikdan olish qo&apos;shish
+              </h3>
+              <button onClick={() => setQoshishModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Sherik *</label>
+                <Combobox
+                  options={sheriklar.map(s => ({ value: s.id, label: `${s.ism}${s.telefon ? ' — ' + s.telefon : ''}` }))}
+                  value={qoshishForm.sherikId}
+                  onChange={v => setQoshishForm(f => ({ ...f, sherikId: v }))}
+                  placeholder="Sherik tanlang"
+                  searchPlaceholder="Sherik qidirish..."
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tovar *</label>
+                <Combobox
+                  options={tovarlar.map(t => ({ value: t.id, label: t.nomi }))}
+                  value={qoshishForm.tovarId}
+                  onChange={v => {
+                    const tv = tovarlar.find(t => t.id === v)
+                    setQoshishForm(f => ({ ...f, tovarId: v, narx: tv ? String(tv.kelishNarxi) : f.narx }))
+                  }}
+                  placeholder="Tovar tanlang"
+                  searchPlaceholder="Tovar qidirish..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Miqdor *</label>
+                  <input type="number" value={qoshishForm.miqdor} onChange={e => setQoshishForm(f => ({ ...f, miqdor: e.target.value }))}
+                    min="0.001" step="any" placeholder="0" className={inputCls} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Narx *</label>
+                  <MoneyInput value={qoshishForm.narx} onChange={v => setQoshishForm(f => ({ ...f, narx: v }))} placeholder="0" />
+                </div>
+              </div>
+              {qoshishForm.miqdor && qoshishForm.narx && (
+                <div className="text-right text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Jami: {formatSum(parseFloat(qoshishForm.miqdor || '0') * parseFloat(qoshishForm.narx || '0'))}
+                </div>
+              )}
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Izoh</label>
+                <input value={qoshishForm.izoh} onChange={e => setQoshishForm(f => ({ ...f, izoh: e.target.value }))} placeholder="Ixtiyoriy" className={inputCls} />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setQoshishModal(false)} className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium text-sm">
+                  Bekor
+                </button>
+                <button
+                  onClick={qoshish}
+                  disabled={qoshishYuklanmoqda || !qoshishForm.sherikId || !qoshishForm.tovarId || !qoshishForm.miqdor || !qoshishForm.narx}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-1"
+                >
+                  {qoshishYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Qo&apos;shish
                 </button>
               </div>
             </div>

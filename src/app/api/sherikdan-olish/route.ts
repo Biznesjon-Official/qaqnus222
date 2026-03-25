@@ -54,6 +54,42 @@ export async function GET() {
   }
 }
 
+export async function POST(req: NextRequest) {
+  try {
+    const session = await auth()
+    if (!session) return NextResponse.json({ xato: "Ruxsat yo'q" }, { status: 401 })
+
+    const { sherikId, tovarId, miqdor, narx, izoh } = await req.json()
+    if (!sherikId) return NextResponse.json({ xato: 'Sherik tanlanmagan' }, { status: 400 })
+    if (!tovarId) return NextResponse.json({ xato: 'Tovar tanlanmagan' }, { status: 400 })
+    if (!miqdor || parseFloat(miqdor) <= 0) return NextResponse.json({ xato: 'Miqdor noto\'g\'ri' }, { status: 400 })
+    if (!narx || parseFloat(narx) <= 0) return NextResponse.json({ xato: 'Narx noto\'g\'ri' }, { status: 400 })
+
+    const m = parseFloat(miqdor)
+    const n = parseFloat(narx)
+
+    const olish = await prisma.sherikdanOlish.create({
+      data: {
+        sherikId,
+        tovarId,
+        miqdor: m,
+        narx: n,
+        jami: m * n,
+        izoh: izoh || null,
+      },
+      include: {
+        sherik: { select: { ism: true } },
+        tovar: { select: { nomi: true } },
+      },
+    })
+
+    return NextResponse.json(olish, { status: 201 })
+  } catch (e) {
+    console.error(e)
+    return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
+  }
+}
+
 export async function PUT(req: NextRequest) {
   try {
     const session = await auth()
