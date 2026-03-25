@@ -438,6 +438,88 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
     win.onload = () => { win.focus(); win.print() }
   }
 
+  function chekPdfYuklash(s: any) {
+    const dokonNomi = t(dokonInfo.dokon_nomi || "Do'kon")
+    const manzil = t(dokonInfo.manzil || '')
+    const tel = dokonInfo.telefon || ''
+    const chekMatn = t(dokonInfo.chek_matn || '')
+    const kassirTel = s.kassir?.telefon || ''
+
+    const tovarlarRows = s.tarkiblar?.map((item: any) => {
+      const nomi = t(item.tovar?.nomi || '—')
+      const miqdor = Number(item.miqdor)
+      const narx = formatSum(item.birlikNarxi)
+      const jami = formatSum(item.jami)
+      return `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${nomi}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:center">${miqdor}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right">${narx}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600">${jami}</td>
+      </tr>`
+    }).join('') || ''
+
+    const tolovText = s.tolovUsuli === 'ARALASH'
+      ? `<div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t('Naqd')}:</span><span>${formatSum(s.naqdTolangan)}</span></div>
+         <div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t('Karta')}:</span><span>${formatSum(s.kartaTolangan)}</span></div>`
+      : s.tolovUsuli === 'NASIYA'
+      ? `<div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t("To'lov")}:</span><span>${t('Nasiya')}</span></div>
+         <div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t('Mijoz')}:</span><span>${t(s.mijoz?.ism || '—')}</span></div>`
+      : `<div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t("To'lov")}:</span><span>${s.tolovUsuli === 'KARTA' ? t('Karta') : t('Naqd pul')}</span></div>`
+
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
+<style>
+  @page{size:80mm auto;margin:0}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',Arial,sans-serif;width:80mm;margin:0 auto;padding:12px;color:#1a1a1a;background:#fff}
+  .header{text-align:center;padding-bottom:12px;border-bottom:2px solid #e53e3e}
+  .logo{font-size:18px;font-weight:800;color:#e53e3e;letter-spacing:1px}
+  .info{font-size:10px;color:#666;margin-top:2px}
+  .meta{padding:10px 0;font-size:11px;color:#444;border-bottom:1px solid #eee}
+  .meta div{display:flex;justify-content:space-between;margin:2px 0}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11px}
+  thead th{background:#f8f8f8;padding:8px 12px;text-align:left;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #eee}
+  thead th:nth-child(2){text-align:center}
+  thead th:nth-child(3),thead th:nth-child(4){text-align:right}
+  .total-section{border-top:2px solid #e53e3e;padding-top:10px;margin-top:4px}
+  .total-row{display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:#e53e3e}
+  .payment{padding:8px 0;font-size:11px;color:#444;border-top:1px solid #eee;margin-top:8px}
+  .footer{text-align:center;padding-top:12px;border-top:1px solid #eee;margin-top:12px}
+  .footer-msg{font-size:10px;color:#999}
+  .thank{font-size:13px;font-weight:600;color:#e53e3e;margin-bottom:4px}
+</style></head><body>
+<div class="header">
+  <div class="logo">${dokonNomi}</div>
+  ${manzil ? `<div class="info">${manzil}</div>` : ''}
+  ${tel ? `<div class="info">Tel: ${tel}</div>` : ''}
+</div>
+<div class="meta">
+  <div><span>${t('Chek')}:</span><span style="font-weight:600">${s.chekRaqami}</span></div>
+  <div><span>${t('Sana')}:</span><span>${formatSanaVaVaqt(s.sana)}</span></div>
+  ${kassirTel ? `<div><span>${t('Kassir')}:</span><span>${kassirTel}</span></div>` : ''}
+</div>
+<table>
+  <thead><tr><th>${t('Tovar')}</th><th>${t('Soni')}</th><th>${t('Narx')}</th><th>${t('Jami')}</th></tr></thead>
+  <tbody>${tovarlarRows}</tbody>
+</table>
+${Number(s.chegirma) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:4px 0"><span>${t('Chegirma')}:</span><span>-${formatSum(s.chegirma)}</span></div>` : ''}
+<div class="total-section">
+  <div class="total-row"><span>${t('JAMI')}:</span><span>${formatSum(s.yakuniySumma)}</span></div>
+</div>
+<div class="payment">${tolovText}</div>
+<div class="footer">
+  ${chekMatn ? `<div class="footer-msg" style="margin-bottom:6px">${chekMatn}</div>` : ''}
+  <div class="thank">${t('Rahmat')}!</div>
+  <div class="footer-msg">${dokonNomi}</div>
+</div>
+</body></html>`
+
+    const win = window.open('', '_blank', 'width=340,height=700')
+    if (!win) { toast.error('Popup bloklanmoqda'); return }
+    win.document.write(html)
+    win.document.close()
+    win.onload = () => { win.focus(); win.print() }
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-full">
       {/* Mobile tab switcher */}
@@ -813,7 +895,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                   {t('Chop etish')}
                 </button>
                 <button
-                  onClick={() => chekChopEtish(s)}
+                  onClick={() => chekPdfYuklash(s)}
                   className="flex-1 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400"
                 >
                   <Download size={14} />
