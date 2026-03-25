@@ -117,7 +117,7 @@ export default function DashboardPage() {
         <h2 className="text-gray-900 dark:text-gray-100 font-semibold mb-4">Oxirgi 7 kunlik sotuv</h2>
         <div className="h-48 sm:h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data.grafikData} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+            <AreaChart data={data.grafikData || []} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
               <defs>
                 <linearGradient id="sotuvGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#DC2626" stopOpacity={0.15} />
@@ -151,7 +151,7 @@ export default function DashboardPage() {
       {/* Top tovarlar */}
       <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5">
         <h2 className="text-gray-900 dark:text-gray-100 font-semibold mb-4">Top sotilgan tovarlar</h2>
-        {data.topTovarlar.length === 0 ? (
+        {!data.topTovarlar || data.topTovarlar.length === 0 ? (
           <p className="text-gray-400 dark:text-gray-600 text-center py-8">Hali sotuv yo&apos;q</p>
         ) : (
           <div className="space-y-3">

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle, Pencil } from 'lucide-react'
+import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle, Pencil, Users, AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import MoneyInput from '@/components/ui/money-input'
 import DateInput from '@/components/ui/date-input'
@@ -36,6 +36,7 @@ const holatiConfig = {
 
 export default function NasiyalarPage() {
   const [nasiyalar, setNasiyalar] = useState<Nasiya[]>([])
+  const [barchasi, setBarchasi] = useState<Nasiya[]>([])
   const [yuklanmoqda, setYuklanmoqda] = useState(true)
   const [filter, setFilter] = useState('OCHIQ')
   const [qidiruv, setQidiruv] = useState('')
@@ -54,8 +55,12 @@ export default function NasiyalarPage() {
 
   async function yuklash() {
     setYuklanmoqda(true)
-    const data = await fetch(`/api/nasiyalar${filter ? `?holati=${filter}` : ''}`).then(r => r.json())
-    setNasiyalar(data || [])
+    const [filtered, all] = await Promise.all([
+      fetch(`/api/nasiyalar${filter ? `?holati=${filter}` : ''}`).then(r => r.json()),
+      fetch('/api/nasiyalar').then(r => r.json()),
+    ])
+    setNasiyalar(filtered || [])
+    setBarchasi(all || [])
     setYuklanmoqda(false)
   }
 
@@ -66,6 +71,17 @@ export default function NasiyalarPage() {
   }, [])
 
   useEffect(() => { yuklash() }, [filter])
+
+  // Stats hisoblash
+  const stats = {
+    jamiQarz: barchasi.reduce((s, n) => s + Number(n.jamiQarz), 0),
+    jamiTolangan: barchasi.reduce((s, n) => s + Number(n.tolangan), 0),
+    jamiQoldiq: barchasi.reduce((s, n) => s + Number(n.qoldiq), 0),
+    ochiq: barchasi.filter(n => n.holati === 'OCHIQ').length,
+    muddatiOtgan: barchasi.filter(n => n.holati === 'MUDDATI_OTGAN').length,
+    yopilgan: barchasi.filter(n => n.holati === 'YOPILGAN').length,
+    mijozlarSoni: new Set(barchasi.map(n => n.mijoz.ism)).size,
+  }
 
   function changeView(v: 'table' | 'card') {
     setView(v)
@@ -201,6 +217,58 @@ export default function NasiyalarPage() {
 
   return (
     <div className="space-y-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Jami qarz</p>
+              <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-gray-100">{formatSum(stats.jamiQarz)}</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.mijozlarSoni} ta mijoz</p>
+            </div>
+            <div className="w-11 h-11 bg-red-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
+              <Banknote size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-500 text-sm">To&apos;langan</p>
+              <p className="text-2xl font-bold mt-1 text-green-600">{formatSum(stats.jamiTolangan)}</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.yopilgan} ta yopilgan</p>
+            </div>
+            <div className="w-11 h-11 bg-green-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
+              <CheckCircle size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Qoldiq qarz</p>
+              <p className="text-2xl font-bold mt-1 text-red-600">{formatSum(stats.jamiQoldiq)}</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.ochiq} ta ochiq</p>
+            </div>
+            <div className="w-11 h-11 bg-amber-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
+              <TrendingDown size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Muddati o&apos;tgan</p>
+              <p className="text-2xl font-bold mt-1 text-red-600">{stats.muddatiOtgan} ta</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Diqqat talab etadi</p>
+            </div>
+            <div className="w-11 h-11 bg-red-600 rounded-xl flex items-center justify-center shrink-0 ml-3">
+              <AlertTriangle size={20} className="text-white" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       <SearchBar
         value={qidiruv}
         onChange={setQidiruv}
