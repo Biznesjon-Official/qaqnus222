@@ -256,36 +256,47 @@ export default function SherikDokonlarPage() {
             <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
                 <Package size={15} className="text-red-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Olib ketilgan tovarlar ({detail?.sotuvlar.reduce((s, sv) => s + sv.tarkiblar.length, 0) ?? 0})</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Olib ketilgan tovarlar</span>
               </div>
               <div className="max-h-96 overflow-y-auto">
                 {!detail?.sotuvlar.length ? (
                   <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Tovarlar yo&apos;q</p>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-gray-500 dark:text-gray-500 text-xs border-b border-gray-100 dark:border-neutral-800">
-                        <th className="text-left px-4 py-2 font-medium">Tovar</th>
-                        <th className="text-right px-4 py-2 font-medium">Miqdor</th>
-                        <th className="text-right px-4 py-2 font-medium">Narx</th>
-                        <th className="text-right px-4 py-2 font-medium">Jami</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.sotuvlar.flatMap(s => s.tarkiblar.map(t => (
-                        <tr key={t.id} className="border-b border-gray-50 dark:border-neutral-800 last:border-b-0">
-                          <td className="px-4 py-2.5">
-                            <p className="text-gray-900 dark:text-gray-100 font-medium">{t.tovar.nomi}</p>
-                            <p className="text-[10px] text-gray-400 dark:text-gray-600">{s.chekRaqami} — {new Date(s.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}</p>
-                          </td>
-                          <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{fmt(Number(t.miqdor))} {t.tovar.birlik}</td>
-                          <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-500">{formatSum(Number(t.birlikNarxi))}</td>
-                          <td className="px-4 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">{formatSum(Number(t.jami))}</td>
+                ) : (() => {
+                  // Tovarlarni birlashtirish
+                  const tovarMap: Record<string, { nomi: string; birlik: string; narx: number; miqdor: number; jami: number }> = {}
+                  detail.sotuvlar.forEach(s => s.tarkiblar.forEach(t => {
+                    const key = `${t.tovarId}_${Number(t.birlikNarxi)}`
+                    if (tovarMap[key]) {
+                      tovarMap[key].miqdor += Number(t.miqdor)
+                      tovarMap[key].jami += Number(t.jami)
+                    } else {
+                      tovarMap[key] = { nomi: t.tovar.nomi, birlik: t.tovar.birlik, narx: Number(t.birlikNarxi), miqdor: Number(t.miqdor), jami: Number(t.jami) }
+                    }
+                  }))
+                  const tovarlar = Object.entries(tovarMap)
+                  return (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-gray-500 dark:text-gray-500 text-xs border-b border-gray-100 dark:border-neutral-800">
+                          <th className="text-left px-4 py-2 font-medium">Tovar</th>
+                          <th className="text-right px-4 py-2 font-medium">Miqdor</th>
+                          <th className="text-right px-4 py-2 font-medium">Narx</th>
+                          <th className="text-right px-4 py-2 font-medium">Jami</th>
                         </tr>
-                      )))}
-                    </tbody>
-                  </table>
-                )}
+                      </thead>
+                      <tbody>
+                        {tovarlar.map(([key, t]) => (
+                          <tr key={key} className="border-b border-gray-50 dark:border-neutral-800 last:border-b-0">
+                            <td className="px-4 py-2.5 text-gray-900 dark:text-gray-100 font-medium">{t.nomi}</td>
+                            <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{fmt(t.miqdor)} {t.birlik}</td>
+                            <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-500">{formatSum(t.narx)}</td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">{formatSum(t.jami)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )
+                })()}
               </div>
             </div>
 
