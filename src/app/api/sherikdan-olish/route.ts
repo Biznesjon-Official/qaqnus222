@@ -70,8 +70,8 @@ export async function POST(req: NextRequest) {
 
     const olish = await prisma.sherikdanOlish.create({
       data: {
-        sherikId,
-        tovarId,
+        sherik: { connect: { id: sherikId } },
+        tovar: { connect: { id: tovarId } },
         miqdor: m,
         narx: n,
         jami: m * n,
