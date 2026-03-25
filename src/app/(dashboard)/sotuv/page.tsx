@@ -122,8 +122,15 @@ export default function SotuvPage() {
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
   }, [])
 
+  // O'zbek harflarini normallashtirish (o', oʻ, o', o' -> bitta variant)
+  function normUz(s: string) {
+    return s.toLowerCase()
+      .replace(/[oо][''ʻʼ`']/g, "o'")
+      .replace(/[gг][''ʻʼ`']/g, "g'")
+  }
+
   const filteredTovarlar = tovarlar.filter(t =>
-    t.nomi.toLowerCase().includes(qidiruv.toLowerCase()) ||
+    normUz(t.nomi).includes(normUz(qidiruv)) ||
     (t.shtrixKod && t.shtrixKod.includes(qidiruv))
   )
 
