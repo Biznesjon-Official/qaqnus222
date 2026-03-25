@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, X, ArrowLeft, Phone,
-  Building2, TrendingDown, Banknote, ChevronRight, RotateCcw, Package,
+  Building2, TrendingDown, Banknote, ChevronRight, ChevronDown, RotateCcw, Package, ShoppingBag,
 } from 'lucide-react'
 import { formatSum } from '@/lib/utils'
 
@@ -57,6 +57,10 @@ export default function SherikDokonlarPage() {
   const [tolovSumma, setTolovSumma] = useState('')
   const [tolovIzoh, setTolovIzoh] = useState('')
   const [tolovYuklanmoqda, setTolovYuklanmoqda] = useState(false)
+
+  // Detail tab
+  const [detailTab, setDetailTab] = useState<'mahsulotlar' | 'sotuvlar' | 'tolovlar'>('mahsulotlar')
+  const [ochiqSotuvlar, setOchiqSotuvlar] = useState<Record<string, boolean>>({})
 
   // Qarz qo'shish modal
   const [qarzModal, setQarzModal] = useState(false)
@@ -248,127 +252,165 @@ export default function SherikDokonlarPage() {
           ))}
         </div>
 
-        {detailYuklanmoqda ? (
-          <div className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</div>
-        ) : (
-          <div className="space-y-4">
-            {/* Olib ketilgan tovarlar */}
-            <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
-                <Package size={15} className="text-red-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Olib ketilgan tovarlar</span>
+        {/* Filter tabs */}
+        {(() => {
+          // Mahsulotlar guruhlab hisoblash
+          const mahsulotMap: Record<string, { nomi: string; birlik: string; miqdor: number; jami: number; sotuvSoni: number }> = {}
+          detail?.sotuvlar.forEach(s => s.tarkiblar.forEach(t => {
+            const key = t.tovarId
+            if (!mahsulotMap[key]) mahsulotMap[key] = { nomi: t.tovar.nomi, birlik: t.tovar.birlik, miqdor: 0, jami: 0, sotuvSoni: 0 }
+            mahsulotMap[key].miqdor += Number(t.miqdor)
+            mahsulotMap[key].jami += Number(t.jami)
+            mahsulotMap[key].sotuvSoni += 1
+          }))
+          const mahsulotlar = Object.values(mahsulotMap).sort((a, b) => b.jami - a.jami)
+
+          const tabs = [
+            { key: 'mahsulotlar' as const, label: 'Mahsulotlar', count: mahsulotlar.length, icon: <Package size={14} /> },
+            { key: 'sotuvlar' as const, label: 'Sotuvlar', count: detail?.sotuvlar.length ?? 0, icon: <ShoppingBag size={14} /> },
+            { key: 'tolovlar' as const, label: "To'lovlar", count: detail?.tolovlar.length ?? 0, icon: <Banknote size={14} /> },
+          ]
+
+          return (
+            <>
+              <div className="flex gap-2">
+                {tabs.map(tab => (
+                  <button key={tab.key} onClick={() => setDetailTab(tab.key)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition ${
+                      detailTab === tab.key
+                        ? 'bg-red-600 text-white'
+                        : 'bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-800'
+                    }`}>
+                    {tab.icon} {tab.label}
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${detailTab === tab.key ? 'bg-white/20' : 'bg-gray-100 dark:bg-neutral-800'}`}>{tab.count}</span>
+                  </button>
+                ))}
               </div>
-              <div className="max-h-96 overflow-y-auto">
-                {!detail?.sotuvlar.length ? (
-                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Tovarlar yo&apos;q</p>
-                ) : (() => {
-                  // Tovarlarni birlashtirish
-                  const tovarMap: Record<string, { nomi: string; birlik: string; narx: number; miqdor: number; jami: number }> = {}
-                  detail.sotuvlar.forEach(s => s.tarkiblar.forEach(t => {
-                    const key = `${t.tovarId}_${Number(t.birlikNarxi)}`
-                    if (tovarMap[key]) {
-                      tovarMap[key].miqdor += Number(t.miqdor)
-                      tovarMap[key].jami += Number(t.jami)
-                    } else {
-                      tovarMap[key] = { nomi: t.tovar.nomi, birlik: t.tovar.birlik, narx: Number(t.birlikNarxi), miqdor: Number(t.miqdor), jami: Number(t.jami) }
-                    }
-                  }))
-                  const tovarlar = Object.entries(tovarMap)
-                  return (
+
+              {detailYuklanmoqda ? (
+                <div className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</div>
+              ) : detailTab === 'mahsulotlar' ? (
+                /* ─── MAHSULOTLAR ─── */
+                <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+                  {mahsulotlar.length === 0 ? (
+                    <p className="text-center text-gray-400 dark:text-gray-600 py-12 text-sm">Tovarlar yo&apos;q</p>
+                  ) : (
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-gray-500 dark:text-gray-500 text-xs border-b border-gray-100 dark:border-neutral-800">
-                          <th className="text-left px-4 py-2 font-medium">Tovar</th>
-                          <th className="text-right px-4 py-2 font-medium">Miqdor</th>
-                          <th className="text-right px-4 py-2 font-medium">Narx</th>
-                          <th className="text-right px-4 py-2 font-medium">Jami</th>
+                        <tr className="bg-gray-50 dark:bg-neutral-800 text-gray-500 dark:text-gray-500 text-xs border-b border-gray-200 dark:border-neutral-800">
+                          <th className="text-left px-4 py-3 font-medium">Tovar</th>
+                          <th className="text-right px-4 py-3 font-medium">Jami miqdor</th>
+                          <th className="text-right px-4 py-3 font-medium">Jami summa</th>
+                          <th className="text-center px-4 py-3 font-medium">Necha marta</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {tovarlar.map(([key, t]) => (
-                          <tr key={key} className="border-b border-gray-50 dark:border-neutral-800 last:border-b-0">
-                            <td className="px-4 py-2.5 text-gray-900 dark:text-gray-100 font-medium">{t.nomi}</td>
-                            <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{fmt(t.miqdor)} {t.birlik}</td>
-                            <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-500">{formatSum(t.narx)}</td>
-                            <td className="px-4 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">{formatSum(t.jami)}</td>
+                        {mahsulotlar.map((m, i) => (
+                          <tr key={i} className={`border-b border-gray-100 dark:border-neutral-800 last:border-b-0 ${i % 2 ? 'bg-gray-50/40 dark:bg-neutral-800/40' : ''}`}>
+                            <td className="px-4 py-3 text-gray-900 dark:text-gray-100 font-medium">{m.nomi}</td>
+                            <td className="px-4 py-3 text-right text-gray-700 dark:text-gray-300">{fmt(m.miqdor)} {m.birlik}</td>
+                            <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">{formatSum(m.jami)}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 text-xs font-bold rounded-full">{m.sotuvSoni}</span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot>
+                        <tr className="bg-gray-50 dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700">
+                          <td className="px-4 py-3 font-bold text-gray-900 dark:text-gray-100">Jami</td>
+                          <td className="px-4 py-3"></td>
+                          <td className="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">{formatSum(mahsulotlar.reduce((s, m) => s + m.jami, 0))}</td>
+                          <td className="px-4 py-3"></td>
+                        </tr>
+                      </tfoot>
                     </table>
-                  )
-                })()}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Sotuvlar */}
-            <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
-                <TrendingDown size={15} className="text-red-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Sotuvlar ({detail?.sotuvlar.length ?? 0})</span>
-              </div>
-              <div className="divide-y divide-gray-50 dark:divide-neutral-800 max-h-80 overflow-y-auto">
-                {!detail?.sotuvlar.length ? (
-                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Sotuvlar yo&apos;q</p>
-                ) : detail.sotuvlar.map(s => (
-                  <div key={s.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-mono text-gray-500 dark:text-gray-500">{s.chekRaqami}</span>
-                      <div className="text-right">
-                        <span className="text-sm font-semibold text-red-600 dark:text-red-400">{formatSum(Number(s.yakuniySumma))}</span>
-                        <p className="text-xs text-gray-400 dark:text-gray-600">
-                          {new Date(s.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                        </p>
+                  )}
+                </div>
+              ) : detailTab === 'sotuvlar' ? (
+                /* ─── SOTUVLAR ─── */
+                <div className="space-y-2">
+                  {!detail?.sotuvlar.length ? (
+                    <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-12 text-center text-gray-400 dark:text-gray-600">Sotuvlar yo&apos;q</div>
+                  ) : detail.sotuvlar.map(s => {
+                    const ochiq = ochiqSotuvlar[s.id]
+                    return (
+                      <div key={s.id} className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+                        <button onClick={() => setOchiqSotuvlar(p => ({ ...p, [s.id]: !p[s.id] }))}
+                          className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
+                          <div className="flex items-center gap-3">
+                            {ochiq ? <ChevronDown size={15} className="text-gray-400" /> : <ChevronRight size={15} className="text-gray-400" />}
+                            <span className="text-xs font-mono text-gray-500 dark:text-gray-500">{s.chekRaqami}</span>
+                            <span className="text-xs text-gray-400 dark:text-gray-600">
+                              {new Date(s.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                            </span>
+                            <span className="text-xs text-gray-400 dark:text-gray-600">{s.tarkiblar.length} ta tovar</span>
+                          </div>
+                          <span className="text-sm font-bold text-red-600 dark:text-red-400">{formatSum(Number(s.yakuniySumma))}</span>
+                        </button>
+                        {ochiq && (
+                          <div className="border-t border-gray-100 dark:border-neutral-800 px-4 py-2">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="text-gray-400 dark:text-gray-600 text-xs">
+                                  <th className="text-left pb-1 font-medium">Tovar</th>
+                                  <th className="text-right pb-1 font-medium">Miqdor</th>
+                                  <th className="text-right pb-1 font-medium">Narx</th>
+                                  <th className="text-right pb-1 font-medium">Jami</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {s.tarkiblar.map(t => (
+                                  <tr key={t.id} className="border-t border-gray-50 dark:border-neutral-800/50">
+                                    <td className="py-1.5 text-gray-800 dark:text-gray-200">{t.tovar.nomi}</td>
+                                    <td className="py-1.5 text-right text-gray-600 dark:text-gray-400">{fmt(Number(t.miqdor))} {t.tovar.birlik}</td>
+                                    <td className="py-1.5 text-right text-gray-500 dark:text-gray-500">{formatSum(Number(t.birlikNarxi))}</td>
+                                    <td className="py-1.5 text-right font-semibold text-red-600 dark:text-red-400">{formatSum(Number(t.jami))}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                /* ─── TO'LOVLAR ─── */
+                <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+                  {!detail?.tolovlar.length ? (
+                    <p className="text-center text-gray-400 dark:text-gray-600 py-12 text-sm">Hali yozuv yo&apos;q</p>
+                  ) : (
+                    <div className="divide-y divide-gray-50 dark:divide-neutral-800">
+                      {detail.tolovlar.map(t => {
+                        const isQarz = Number(t.summa) < 0
+                        return (
+                          <div key={t.id} className="px-4 py-3 flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isQarz ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400'}`}>
+                                  {isQarz ? 'QARZ' : "TO'LOV"}
+                                </span>
+                                <p className={`text-sm font-semibold ${isQarz ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                  {isQarz ? '+' : '-'}{formatSum(Math.abs(Number(t.summa)))}
+                                </p>
+                              </div>
+                              {t.izoh && <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{t.izoh}</p>}
+                            </div>
+                            <span className="text-xs text-gray-400 dark:text-gray-600">
+                              {new Date(t.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div className="space-y-0.5">
-                      {s.tarkiblar.map(t => (
-                        <div key={t.id} className="flex justify-between text-xs text-gray-500 dark:text-gray-500">
-                          <span>{t.tovar.nomi}</span>
-                          <span>{fmt(Number(t.miqdor))} {t.tovar.birlik} × {formatSum(Number(t.birlikNarxi))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* To'lovlar va Qarzlar */}
-            <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
-                <Banknote size={15} className="text-green-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">To&apos;lovlar va Qarzlar ({detail?.tolovlar.length ?? 0})</span>
-              </div>
-              <div className="divide-y divide-gray-50 dark:divide-neutral-800 max-h-80 overflow-y-auto">
-                {!detail?.tolovlar.length ? (
-                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Hali yozuv yo&apos;q</p>
-                ) : detail.tolovlar.map(t => {
-                  const isQarz = Number(t.summa) < 0
-                  return (
-                    <div key={t.id} className="px-4 py-3 flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isQarz ? 'bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-950 dark:text-green-400'}`}>
-                            {isQarz ? 'QARZ' : "TO'LOV"}
-                          </span>
-                          <p className={`text-sm font-semibold ${isQarz ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                            {isQarz ? '+' : '-'}{formatSum(Math.abs(Number(t.summa)))}
-                          </p>
-                        </div>
-                        {t.izoh && <p className="text-xs text-gray-400 dark:text-gray-600 mt-0.5">{t.izoh}</p>}
-                      </div>
-                      <span className="text-xs text-gray-400 dark:text-gray-600">
-                        {new Date(t.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-            </div>
-          </div>
-        )}
+                  )}
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* To'lov modal */}
         {tolovModal && (
