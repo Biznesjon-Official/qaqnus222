@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, X, ArrowLeft, Phone,
-  Building2, TrendingDown, Banknote, ChevronRight,
+  Building2, TrendingDown, Banknote, ChevronRight, RotateCcw, Package,
 } from 'lucide-react'
 import { formatSum } from '@/lib/utils'
 
@@ -63,6 +63,11 @@ export default function SherikDokonlarPage() {
   const [qarzSumma, setQarzSumma] = useState('')
   const [qarzIzoh, setQarzIzoh] = useState('')
   const [qarzYuklanmoqda, setQarzYuklanmoqda] = useState(false)
+
+  // Tovar qaytarish modal
+  const [qaytarishModal, setQaytarishModal] = useState(false)
+  const [qaytarishTanlangan, setQaytarishTanlangan] = useState<Record<string, { miqdor: string; checked: boolean }>>({})
+  const [qaytarishYuklanmoqda, setQaytarishYuklanmoqda] = useState(false)
 
   async function yuklash() {
     setYuklanmoqda(true)
@@ -149,6 +154,48 @@ export default function SherikDokonlarPage() {
     } else { const e = await res.json(); toast.error(e.xato || 'Xatolik') }
   }
 
+  // Tovar qaytarish
+  function qaytarishOch() {
+    if (!detail) return
+    const init: Record<string, { miqdor: string; checked: boolean }> = {}
+    detail.sotuvlar.forEach(s => s.tarkiblar.forEach(t => {
+      const key = `${s.id}_${t.tovarId}`
+      if (!init[key]) init[key] = { miqdor: String(Number(t.miqdor)), checked: false }
+    }))
+    setQaytarishTanlangan(init)
+    setQaytarishModal(true)
+  }
+
+  async function qaytarishYubor() {
+    if (!tanlangan || !detail) return
+    const items = detail.sotuvlar.flatMap(s => s.tarkiblar.map(t => ({
+      key: `${s.id}_${t.tovarId}`,
+      tovarId: t.tovarId,
+      narx: Number(t.birlikNarxi),
+    }))).filter(item => qaytarishTanlangan[item.key]?.checked && parseFloat(qaytarishTanlangan[item.key].miqdor) > 0)
+      .map(item => ({
+        tovarId: item.tovarId,
+        miqdor: parseFloat(qaytarishTanlangan[item.key].miqdor),
+        narx: item.narx,
+      }))
+
+    if (!items.length) { toast.error('Hech narsa tanlanmagan'); return }
+
+    setQaytarishYuklanmoqda(true)
+    const res = await fetch(`/api/sherik-dokonlar/${tanlangan.id}/tolov`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tovarQaytarish: items, izoh: 'Tovar qaytarildi' }),
+    })
+    setQaytarishYuklanmoqda(false)
+    if (res.ok) {
+      toast.success('Tovarlar qaytarildi va omborga qo\'shildi')
+      setQaytarishModal(false)
+      detailYuklash(tanlangan)
+      yuklash()
+    } else { const e = await res.json(); toast.error(e.xato || 'Xatolik') }
+  }
+
   // ─── Detail view ───
   if (tanlangan) {
     const sotuvQarz = detail?.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0) ?? 0
@@ -177,6 +224,10 @@ export default function SherikDokonlarPage() {
             className="flex items-center gap-2 px-3 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition text-sm">
             <Plus size={15} /> Qarz
           </button>
+          <button onClick={qaytarishOch}
+            className="flex items-center gap-2 px-3 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-medium transition text-sm">
+            <RotateCcw size={15} /> Qaytarish
+          </button>
           <button onClick={() => setTolovModal(true)}
             className="flex items-center gap-2 px-3 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition text-sm">
             <Banknote size={15} /> To&apos;lov
@@ -201,36 +252,40 @@ export default function SherikDokonlarPage() {
           <div className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Sotuvlar */}
+            {/* Olib ketilgan tovarlar */}
             <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
-                <TrendingDown size={15} className="text-red-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Sotuvlar ({detail?.sotuvlar.length ?? 0})</span>
+                <Package size={15} className="text-red-500" />
+                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Olib ketilgan tovarlar</span>
               </div>
-              <div className="divide-y divide-gray-50 dark:divide-neutral-800 max-h-80 overflow-y-auto">
+              <div className="max-h-96 overflow-y-auto">
                 {!detail?.sotuvlar.length ? (
-                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Sotuvlar yo'q</p>
-                ) : detail.sotuvlar.map(s => (
-                  <div key={s.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs font-mono text-gray-500 dark:text-gray-500">{s.chekRaqami}</span>
-                      <div className="text-right">
-                        <span className="text-sm font-semibold text-red-600 dark:text-red-400">{formatSum(Number(s.yakuniySumma))}</span>
-                        <p className="text-xs text-gray-400 dark:text-gray-600">
-                          {new Date(s.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-0.5">
-                      {s.tarkiblar.map(t => (
-                        <div key={t.id} className="flex justify-between text-xs text-gray-500 dark:text-gray-500">
-                          <span>{t.tovar.nomi}</span>
-                          <span>{fmt(Number(t.miqdor))} {t.tovar.birlik} × {formatSum(Number(t.birlikNarxi))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Tovarlar yo&apos;q</p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-gray-500 dark:text-gray-500 text-xs border-b border-gray-100 dark:border-neutral-800">
+                        <th className="text-left px-4 py-2 font-medium">Tovar</th>
+                        <th className="text-right px-4 py-2 font-medium">Miqdor</th>
+                        <th className="text-right px-4 py-2 font-medium">Narx</th>
+                        <th className="text-right px-4 py-2 font-medium">Jami</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.sotuvlar.flatMap(s => s.tarkiblar.map(t => (
+                        <tr key={t.id} className="border-b border-gray-50 dark:border-neutral-800 last:border-b-0">
+                          <td className="px-4 py-2.5">
+                            <p className="text-gray-900 dark:text-gray-100 font-medium">{t.tovar.nomi}</p>
+                            <p className="text-[10px] text-gray-400 dark:text-gray-600">{s.chekRaqami} — {new Date(s.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}</p>
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">{fmt(Number(t.miqdor))} {t.tovar.birlik}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-500 dark:text-gray-500">{formatSum(Number(t.birlikNarxi))}</td>
+                          <td className="px-4 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">{formatSum(Number(t.jami))}</td>
+                        </tr>
+                      )))}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
 
@@ -323,6 +378,87 @@ export default function SherikDokonlarPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Tovar qaytarish modal */}
+        {qaytarishModal && detail && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-lg max-h-[85vh] flex flex-col">
+              <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold flex items-center gap-2">
+                  <RotateCcw size={16} className="text-amber-600" />
+                  Tovar qaytarish — {tanlangan.nomi}
+                </h3>
+                <button onClick={() => setQaytarishModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition"><X size={18} /></button>
+              </div>
+              <div className="overflow-y-auto flex-1 p-4">
+                <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">Qaytariladigan tovarlarni belgilang va miqdorni kiriting. Tovarlar omborga qaytariladi.</p>
+                <div className="space-y-2">
+                  {detail.sotuvlar.flatMap(s => s.tarkiblar.map(t => {
+                    const key = `${s.id}_${t.tovarId}`
+                    const state = qaytarishTanlangan[key]
+                    if (!state) return null
+                    const jamiSum = parseFloat(state.miqdor || '0') * Number(t.birlikNarxi)
+                    return (
+                      <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer ${state.checked ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/30' : 'border-gray-200 dark:border-neutral-800'}`}>
+                        <input
+                          type="checkbox"
+                          checked={state.checked}
+                          onChange={e => setQaytarishTanlangan(prev => ({ ...prev, [key]: { ...prev[key], checked: e.target.checked } }))}
+                          className="w-4 h-4 rounded accent-amber-600"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{t.tovar.nomi}</p>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-600">
+                            {s.chekRaqami} · {fmt(Number(t.miqdor))} {t.tovar.birlik} × {formatSum(Number(t.birlikNarxi))}
+                          </p>
+                        </div>
+                        {state.checked && (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <input
+                              type="number"
+                              value={state.miqdor}
+                              onChange={e => setQaytarishTanlangan(prev => ({ ...prev, [key]: { ...prev[key], miqdor: e.target.value } }))}
+                              min="0.001"
+                              max={Number(t.miqdor)}
+                              step="any"
+                              className="w-20 px-2 py-1 text-sm text-center border border-gray-300 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100"
+                            />
+                            <span className="text-xs text-amber-600 font-semibold w-24 text-right">{formatSum(jamiSum)}</span>
+                          </div>
+                        )}
+                      </label>
+                    )
+                  }))}
+                </div>
+              </div>
+              <div className="p-4 border-t border-gray-200 dark:border-neutral-800 shrink-0">
+                {(() => {
+                  const jamiQaytarish = detail.sotuvlar.flatMap(s => s.tarkiblar.map(t => {
+                    const key = `${s.id}_${t.tovarId}`
+                    const st = qaytarishTanlangan[key]
+                    return st?.checked ? parseFloat(st.miqdor || '0') * Number(t.birlikNarxi) : 0
+                  })).reduce((a, b) => a + b, 0)
+                  return (
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm text-gray-500 dark:text-gray-500">Qaytarish summasi:</span>
+                      <span className="text-base font-bold text-amber-600">{formatSum(jamiQaytarish)}</span>
+                    </div>
+                  )
+                })()}
+                <div className="flex gap-3">
+                  <button onClick={() => setQaytarishModal(false)} className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium text-sm">Bekor</button>
+                  <button
+                    onClick={qaytarishYubor}
+                    disabled={qaytarishYuklanmoqda}
+                    className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-2"
+                  >
+                    <RotateCcw size={15} />{qaytarishYuklanmoqda ? 'Saqlanmoqda...' : 'Qaytarish'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
