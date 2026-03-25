@@ -251,12 +251,12 @@ export default function SherikDokonlarPage() {
         {detailYuklanmoqda ? (
           <div className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {/* Olib ketilgan tovarlar */}
             <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
                 <Package size={15} className="text-red-500" />
-                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Olib ketilgan tovarlar</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Olib ketilgan tovarlar ({detail?.sotuvlar.reduce((s, sv) => s + sv.tarkiblar.length, 0) ?? 0})</span>
               </div>
               <div className="max-h-96 overflow-y-auto">
                 {!detail?.sotuvlar.length ? (
@@ -286,6 +286,40 @@ export default function SherikDokonlarPage() {
                     </tbody>
                   </table>
                 )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Sotuvlar */}
+            <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-neutral-800 flex items-center gap-2">
+                <TrendingDown size={15} className="text-red-500" />
+                <span className="font-medium text-gray-900 dark:text-gray-100 text-sm">Sotuvlar ({detail?.sotuvlar.length ?? 0})</span>
+              </div>
+              <div className="divide-y divide-gray-50 dark:divide-neutral-800 max-h-80 overflow-y-auto">
+                {!detail?.sotuvlar.length ? (
+                  <p className="text-center text-gray-400 dark:text-gray-600 py-8 text-sm">Sotuvlar yo&apos;q</p>
+                ) : detail.sotuvlar.map(s => (
+                  <div key={s.id} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-mono text-gray-500 dark:text-gray-500">{s.chekRaqami}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-semibold text-red-600 dark:text-red-400">{formatSum(Number(s.yakuniySumma))}</span>
+                        <p className="text-xs text-gray-400 dark:text-gray-600">
+                          {new Date(s.sana).toLocaleDateString('uz-UZ', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-0.5">
+                      {s.tarkiblar.map(t => (
+                        <div key={t.id} className="flex justify-between text-xs text-gray-500 dark:text-gray-500">
+                          <span>{t.tovar.nomi}</span>
+                          <span>{fmt(Number(t.miqdor))} {t.tovar.birlik} × {formatSum(Number(t.birlikNarxi))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -320,6 +354,7 @@ export default function SherikDokonlarPage() {
                   )
                 })}
               </div>
+            </div>
             </div>
           </div>
         )}
