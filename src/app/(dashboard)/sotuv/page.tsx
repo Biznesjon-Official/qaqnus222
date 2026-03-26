@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
@@ -445,79 +446,177 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
     const chekMatn = t(dokonInfo.chek_matn || '')
     const kassirTel = s.kassir?.telefon || ''
 
-    const tovarlarRows = s.tarkiblar?.map((item: any) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [80, 200] })
+    const w = 80
+    const mx = 5 // margin x
+    const cw = w - mx * 2 // content width
+    let y = 8
+
+    // === HEADER ===
+    doc.setFillColor(220, 38, 38)
+    doc.rect(0, 0, w, 26, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text(dokonNomi, w / 2, y + 4, { align: 'center' })
+    y += 9
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'normal')
+    if (manzil) { doc.text(manzil, w / 2, y + 2, { align: 'center' }); y += 4 }
+    if (tel) { doc.text('Tel: ' + tel, w / 2, y + 2, { align: 'center' }); y += 4 }
+    y = 30
+
+    // === META ===
+    doc.setTextColor(80, 80, 80)
+    doc.setFontSize(8)
+    doc.text(t('Chek') + ':', mx, y)
+    doc.setFont('helvetica', 'bold')
+    doc.text(String(s.chekRaqami || ''), w - mx, y, { align: 'right' })
+    y += 4
+    doc.setFont('helvetica', 'normal')
+    doc.text(t('Sana') + ':', mx, y)
+    doc.text(formatSanaVaVaqt(s.sana), w - mx, y, { align: 'right' })
+    y += 4
+    if (kassirTel) {
+      doc.text(t('Kassir') + ':', mx, y)
+      doc.text(kassirTel, w - mx, y, { align: 'right' })
+      y += 4
+    }
+
+    // Separator line
+    y += 1
+    doc.setDrawColor(220, 38, 38)
+    doc.setLineWidth(0.5)
+    doc.line(mx, y, w - mx, y)
+    y += 4
+
+    // === TABLE HEADER ===
+    doc.setFillColor(245, 245, 245)
+    doc.rect(mx, y - 3, cw, 6, 'F')
+    doc.setFontSize(6.5)
+    doc.setTextColor(120, 120, 120)
+    doc.setFont('helvetica', 'bold')
+    doc.text(t('TOVAR'), mx + 1, y)
+    doc.text(t('SONI'), mx + 38, y, { align: 'center' })
+    doc.text(t('NARX'), mx + 52, y, { align: 'right' })
+    doc.text(t('JAMI'), w - mx - 1, y, { align: 'right' })
+    y += 5
+
+    // === TABLE ROWS ===
+    doc.setTextColor(30, 30, 30)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    const tarkiblar = s.tarkiblar || []
+    for (const item of tarkiblar) {
+      if (y > 185) {
+        doc.addPage([80, 200])
+        y = 8
+      }
       const nomi = t(item.tovar?.nomi || '—')
-      const miqdor = Number(item.miqdor)
+      const miqdor = String(Number(item.miqdor))
       const narx = formatSum(item.birlikNarxi)
       const jami = formatSum(item.jami)
-      return `<tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0">${nomi}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:center">${miqdor}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right">${narx}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:600">${jami}</td>
-      </tr>`
-    }).join('') || ''
 
-    const tolovText = s.tolovUsuli === 'ARALASH'
-      ? `<div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t('Naqd')}:</span><span>${formatSum(s.naqdTolangan)}</span></div>
-         <div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t('Karta')}:</span><span>${formatSum(s.kartaTolangan)}</span></div>`
-      : s.tolovUsuli === 'NASIYA'
-      ? `<div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t("To'lov")}:</span><span>${t('Nasiya')}</span></div>
-         <div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t('Mijoz')}:</span><span>${t(s.mijoz?.ism || '—')}</span></div>`
-      : `<div style="display:flex;justify-content:space-between;margin:3px 0"><span>${t("To'lov")}:</span><span>${s.tolovUsuli === 'KARTA' ? t('Karta') : t('Naqd pul')}</span></div>`
+      // Truncate long names
+      const maxNomiW = 34
+      let nomiText = nomi
+      while (doc.getTextWidth(nomiText) > maxNomiW && nomiText.length > 3) {
+        nomiText = nomiText.slice(0, -1)
+      }
+      if (nomiText !== nomi) nomiText += '..'
 
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
-<style>
-  @page{size:80mm auto;margin:0}
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:'Segoe UI',Arial,sans-serif;width:80mm;margin:0 auto;padding:12px;color:#1a1a1a;background:#fff}
-  .header{text-align:center;padding-bottom:12px;border-bottom:2px solid #e53e3e}
-  .logo{font-size:18px;font-weight:800;color:#e53e3e;letter-spacing:1px}
-  .info{font-size:10px;color:#666;margin-top:2px}
-  .meta{padding:10px 0;font-size:11px;color:#444;border-bottom:1px solid #eee}
-  .meta div{display:flex;justify-content:space-between;margin:2px 0}
-  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:11px}
-  thead th{background:#f8f8f8;padding:8px 12px;text-align:left;font-size:10px;color:#666;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #eee}
-  thead th:nth-child(2){text-align:center}
-  thead th:nth-child(3),thead th:nth-child(4){text-align:right}
-  .total-section{border-top:2px solid #e53e3e;padding-top:10px;margin-top:4px}
-  .total-row{display:flex;justify-content:space-between;font-size:16px;font-weight:800;color:#e53e3e}
-  .payment{padding:8px 0;font-size:11px;color:#444;border-top:1px solid #eee;margin-top:8px}
-  .footer{text-align:center;padding-top:12px;border-top:1px solid #eee;margin-top:12px}
-  .footer-msg{font-size:10px;color:#999}
-  .thank{font-size:13px;font-weight:600;color:#e53e3e;margin-bottom:4px}
-</style></head><body>
-<div class="header">
-  <div class="logo">${dokonNomi}</div>
-  ${manzil ? `<div class="info">${manzil}</div>` : ''}
-  ${tel ? `<div class="info">Tel: ${tel}</div>` : ''}
-</div>
-<div class="meta">
-  <div><span>${t('Chek')}:</span><span style="font-weight:600">${s.chekRaqami}</span></div>
-  <div><span>${t('Sana')}:</span><span>${formatSanaVaVaqt(s.sana)}</span></div>
-  ${kassirTel ? `<div><span>${t('Kassir')}:</span><span>${kassirTel}</span></div>` : ''}
-</div>
-<table>
-  <thead><tr><th>${t('Tovar')}</th><th>${t('Soni')}</th><th>${t('Narx')}</th><th>${t('Jami')}</th></tr></thead>
-  <tbody>${tovarlarRows}</tbody>
-</table>
-${Number(s.chegirma) > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;color:#666;padding:4px 0"><span>${t('Chegirma')}:</span><span>-${formatSum(s.chegirma)}</span></div>` : ''}
-<div class="total-section">
-  <div class="total-row"><span>${t('JAMI')}:</span><span>${formatSum(s.yakuniySumma)}</span></div>
-</div>
-<div class="payment">${tolovText}</div>
-<div class="footer">
-  ${chekMatn ? `<div class="footer-msg" style="margin-bottom:6px">${chekMatn}</div>` : ''}
-  <div class="thank">${t('Rahmat')}!</div>
-  <div class="footer-msg">${dokonNomi}</div>
-</div>
-</body></html>`
+      doc.text(nomiText, mx + 1, y)
+      doc.text(miqdor, mx + 38, y, { align: 'center' })
+      doc.text(narx, mx + 52, y, { align: 'right' })
+      doc.setFont('helvetica', 'bold')
+      doc.text(jami, w - mx - 1, y, { align: 'right' })
+      doc.setFont('helvetica', 'normal')
+      y += 4.5
 
-    const win = window.open('', '_blank', 'width=340,height=700')
-    if (!win) { toast.error('Popup bloklanmoqda'); return }
-    win.document.write(html)
-    win.document.close()
-    win.onload = () => { win.focus(); win.print() }
+      // Light row separator
+      doc.setDrawColor(240, 240, 240)
+      doc.setLineWidth(0.1)
+      doc.line(mx, y - 1.5, w - mx, y - 1.5)
+    }
+
+    // === CHEGIRMA ===
+    if (Number(s.chegirma) > 0) {
+      y += 1
+      doc.setFontSize(7.5)
+      doc.setTextColor(100, 100, 100)
+      doc.text(t('Chegirma') + ':', mx, y)
+      doc.text('-' + formatSum(s.chegirma), w - mx, y, { align: 'right' })
+      y += 4
+    }
+
+    // === TOTAL ===
+    y += 1
+    doc.setDrawColor(220, 38, 38)
+    doc.setLineWidth(0.7)
+    doc.line(mx, y, w - mx, y)
+    y += 5
+    doc.setFontSize(12)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(220, 38, 38)
+    doc.text(t('JAMI') + ':', mx, y)
+    doc.text(formatSum(s.yakuniySumma), w - mx, y, { align: 'right' })
+    y += 6
+
+    // === PAYMENT INFO ===
+    doc.setDrawColor(230, 230, 230)
+    doc.setLineWidth(0.2)
+    doc.line(mx, y, w - mx, y)
+    y += 4
+    doc.setFontSize(7.5)
+    doc.setTextColor(80, 80, 80)
+    doc.setFont('helvetica', 'normal')
+    if (s.tolovUsuli === 'ARALASH') {
+      doc.text(t('Naqd') + ':', mx, y)
+      doc.text(formatSum(s.naqdTolangan), w - mx, y, { align: 'right' })
+      y += 4
+      doc.text(t('Karta') + ':', mx, y)
+      doc.text(formatSum(s.kartaTolangan), w - mx, y, { align: 'right' })
+      y += 4
+    } else if (s.tolovUsuli === 'NASIYA') {
+      doc.text(t("To'lov") + ':', mx, y)
+      doc.text(t('Nasiya'), w - mx, y, { align: 'right' })
+      y += 4
+      doc.text(t('Mijoz') + ':', mx, y)
+      doc.text(t(s.mijoz?.ism || '—'), w - mx, y, { align: 'right' })
+      y += 4
+    } else {
+      doc.text(t("To'lov") + ':', mx, y)
+      doc.text(s.tolovUsuli === 'KARTA' ? t('Karta') : t('Naqd pul'), w - mx, y, { align: 'right' })
+      y += 4
+    }
+
+    // === FOOTER ===
+    y += 3
+    doc.setDrawColor(230, 230, 230)
+    doc.setLineWidth(0.2)
+    doc.line(mx, y, w - mx, y)
+    y += 5
+    if (chekMatn) {
+      doc.setFontSize(6.5)
+      doc.setTextColor(150, 150, 150)
+      doc.text(chekMatn, w / 2, y, { align: 'center' })
+      y += 4
+    }
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(220, 38, 38)
+    doc.text(t('Rahmat') + '!', w / 2, y, { align: 'center' })
+    y += 4
+    doc.setFontSize(7)
+    doc.setTextColor(150, 150, 150)
+    doc.setFont('helvetica', 'normal')
+    doc.text(dokonNomi, w / 2, y, { align: 'center' })
+
+    // Trim page height
+    const pageH = y + 10
+    doc.internal.pageSize.height = pageH
+
+    doc.save(`chek-${s.chekRaqami || 'sotuv'}.pdf`)
   }
 
   return (
