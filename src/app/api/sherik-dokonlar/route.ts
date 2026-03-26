@@ -13,7 +13,7 @@ export async function GET() {
           where: { tolovUsuli: 'SHERIK' },
           select: { yakuniySumma: true },
         },
-        tolovlar: { select: { summa: true } },
+        tolovlar: { select: { summa: true, izoh: true } },
       },
       orderBy: { yaratilgan: 'desc' },
     })
@@ -21,12 +21,13 @@ export async function GET() {
     const natija = dokonlar.map(d => {
       const sotuvQarz = d.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0)
       const manualQarz = d.tolovlar.filter(t => Number(t.summa) < 0).reduce((s, t) => s + Math.abs(Number(t.summa)), 0)
-      const jami = sotuvQarz + manualQarz
-      const tolangan = d.tolovlar.filter(t => Number(t.summa) > 0).reduce((s, t) => s + Number(t.summa), 0)
+      const qaytarishSumma = d.tolovlar.filter(t => Number(t.summa) > 0 && t.izoh?.includes('qaytarildi')).reduce((s, t) => s + Number(t.summa), 0)
+      const jami = Math.max(0, sotuvQarz + manualQarz - qaytarishSumma)
+      const tolangan = d.tolovlar.filter(t => Number(t.summa) > 0 && !t.izoh?.includes('qaytarildi')).reduce((s, t) => s + Number(t.summa), 0)
       return {
         id: d.id, nomi: d.nomi, telefon: d.telefon, manzil: d.manzil,
         izoh: d.izoh, yaratilgan: d.yaratilgan,
-        jamiQarz: jami, tolangan, qoldiq: jami - tolangan,
+        jamiQarz: jami, tolangan: Math.min(tolangan, jami), qoldiq: Math.max(0, jami - tolangan),
       }
     })
 

@@ -204,9 +204,13 @@ export default function SherikDokonlarPage() {
   if (tanlangan) {
     const sotuvQarz = detail?.sotuvlar.reduce((s, sv) => s + Number(sv.yakuniySumma), 0) ?? 0
     const manualQarz = detail?.tolovlar.filter(t => Number(t.summa) < 0).reduce((s, t) => s + Math.abs(Number(t.summa)), 0) ?? 0
-    const jami = sotuvQarz + manualQarz
-    const tolangan = detail?.tolovlar.filter(t => Number(t.summa) > 0).reduce((s, t) => s + Number(t.summa), 0) ?? 0
-    const qoldiq = jami - tolangan
+    const qaytarishSumma = detail?.tolovlar.filter(t => Number(t.summa) > 0 && t.izoh?.includes('qaytarildi')).reduce((s, t) => s + Number(t.summa), 0) ?? 0
+    const jami = Math.max(0, sotuvQarz + manualQarz - qaytarishSumma)
+    const tolangan = Math.min(
+      detail?.tolovlar.filter(t => Number(t.summa) > 0 && !t.izoh?.includes('qaytarildi')).reduce((s, t) => s + Number(t.summa), 0) ?? 0,
+      jami
+    )
+    const qoldiq = Math.max(0, jami - tolangan)
 
     return (
       <div className="space-y-4">
