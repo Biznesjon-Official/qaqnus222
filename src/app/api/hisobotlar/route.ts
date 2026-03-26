@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
     const sotuvFilter = {
       holati: 'YAKUNLANGAN' as const,
       sana: { gte: danSana, lt: gachaSana },
+      tolovUsuli: { not: 'SHERIK' as const },
       ...(kassirId ? { kassirId } : {}),
     }
 
@@ -122,7 +123,7 @@ export async function GET(req: NextRequest) {
 
         const kunSotuv = sotuvlar.filter((s) => {
           const sana = new Date(s.sana)
-          return sana >= kun && sana < ertasiKun
+          return sana >= kun && sana < ertasiKun && s.tolovUsuli !== 'SHERIK'
         })
 
         grafikData.push({
