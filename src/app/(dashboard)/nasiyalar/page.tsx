@@ -73,13 +73,15 @@ export default function NasiyalarPage() {
   useEffect(() => { yuklash() }, [filter])
 
   // Stats hisoblash
+  const yopilganlar = barchasi.filter(n => n.holati === 'YOPILGAN')
   const stats = {
     jamiQarz: barchasi.reduce((s, n) => s + Number(n.jamiQarz), 0),
     jamiTolangan: barchasi.reduce((s, n) => s + Number(n.tolangan), 0),
     jamiQoldiq: barchasi.reduce((s, n) => s + Number(n.qoldiq), 0),
     ochiq: barchasi.filter(n => n.holati === 'OCHIQ').length,
     muddatiOtgan: barchasi.filter(n => n.holati === 'MUDDATI_OTGAN').length,
-    yopilgan: barchasi.filter(n => n.holati === 'YOPILGAN').length,
+    yopilgan: yopilganlar.length,
+    yopilganTolangan: yopilganlar.reduce((s, n) => s + Math.min(Number(n.tolangan), Number(n.jamiQarz)), 0),
     mijozlarSoni: new Set(barchasi.map(n => n.mijoz.ism)).size,
   }
 
@@ -264,7 +266,7 @@ export default function NasiyalarPage() {
             <div className="min-w-0 flex-1">
               <p className="text-gray-500 dark:text-gray-500 text-sm">Yopilgan</p>
               <p className="text-2xl font-bold mt-1 text-green-600">{stats.yopilgan} ta</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">To&apos;langan: {formatSum(stats.jamiTolangan)}</p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">To&apos;langan: {formatSum(stats.yopilganTolangan)}</p>
             </div>
             <div className="w-11 h-11 bg-green-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
               <CheckCircle size={20} className="text-white" />

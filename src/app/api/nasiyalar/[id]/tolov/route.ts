@@ -15,14 +15,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!nasiya) return NextResponse.json({ xato: 'Nasiya topilmadi' }, { status: 404 })
 
     const tolovSumma = parseFloat(data.summa)
-    const yangiTolangan = Number(nasiya.tolangan) + tolovSumma
+    const qoldiqQarz = Number(nasiya.jamiQarz) - Number(nasiya.tolangan)
+    const haqiqiyTolov = Math.min(tolovSumma, qoldiqQarz)
+    if (haqiqiyTolov <= 0) return NextResponse.json({ xato: "Bu nasiya allaqachon to'langan" }, { status: 400 })
+    const yangiTolangan = Number(nasiya.tolangan) + haqiqiyTolov
     const yangiQoldiq = Number(nasiya.jamiQarz) - yangiTolangan
 
     const [tolov, yangiNasiya] = await prisma.$transaction([
       prisma.nasiyaTolov.create({
         data: {
           nasiyaId: id,
-          summa: tolovSumma,
+          summa: haqiqiyTolov,
           tolovUsuli: data.tolovUsuli || 'NAQD',
           qabulQiluvchiId: foydalanuvchiId,
           izoh: data.izoh,
