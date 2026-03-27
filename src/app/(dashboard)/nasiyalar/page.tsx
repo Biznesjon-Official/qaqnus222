@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle, Pencil, Users, AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react'
@@ -72,7 +71,6 @@ export default function NasiyalarPage() {
   }, [])
 
   useEffect(() => { yuklash() }, [filter])
-  useAutoRefresh(yuklash)
 
   // Stats hisoblash
   const yopilganlar = barchasi.filter(n => n.holati === 'YOPILGAN')

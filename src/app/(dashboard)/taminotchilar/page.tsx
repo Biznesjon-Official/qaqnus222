@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatPhone } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Plus, Phone, MapPin, User, Truck, X, Trash2 } from 'lucide-react'
@@ -39,7 +38,6 @@ export default function TaminotchilarPage() {
     if (saved === 'table' || saved === 'card') setView(saved)
     yuklash()
   }, [])
-  useAutoRefresh(yuklash)
 
   function changeView(v: 'table' | 'card') {
     setView(v)

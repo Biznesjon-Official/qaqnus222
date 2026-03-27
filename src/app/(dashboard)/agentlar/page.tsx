@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import {
   Plus, Pencil, Trash2, X, ArrowLeft, PackagePlus, PackageCheck,
   Phone, ChevronRight, ChevronDown, AlertCircle, CheckCircle2, Clock
@@ -84,7 +83,6 @@ export default function SheriklamPage() {
   }
 
   useEffect(() => { sherikYuklash() }, [qidiruv])
-  useAutoRefresh(sherikYuklash)
 
   async function qarzlarYuklash(sherik: Sherik) {
     setQarzYuklanmoqda(true)

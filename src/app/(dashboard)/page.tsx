@@ -1,8 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { formatSum } from '@/lib/utils'
-import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { TrendingUp, TrendingDown, Receipt, ShoppingBag, Loader2 } from 'lucide-react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -48,18 +47,18 @@ export default function DashboardPage() {
   const [data, setData] = useState<HisobotData | null>(null)
   const [yuklanmoqda, setYuklanmoqda] = useState(true)
 
-  const yuklash = useCallback(async () => {
-    try {
-      const res = await fetch('/api/hisobotlar?tur=haftalik')
-      const json = await res.json()
-      setData(json)
-    } finally {
-      setYuklanmoqda(false)
+  useEffect(() => {
+    async function yuklash() {
+      try {
+        const res = await fetch('/api/hisobotlar?tur=haftalik')
+        const json = await res.json()
+        setData(json)
+      } finally {
+        setYuklanmoqda(false)
+      }
     }
+    yuklash()
   }, [])
-
-  useEffect(() => { yuklash() }, [yuklash])
-  useAutoRefresh(yuklash)
 
   if (yuklanmoqda) {
     return (
