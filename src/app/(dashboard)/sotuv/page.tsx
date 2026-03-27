@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { useAutoRefresh } from '@/hooks/useAutoRefresh'
+import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages } from 'lucide-react'
@@ -100,22 +99,21 @@ export default function SotuvPage() {
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
   const [saqlanganiModal, setSaqlanganiModal] = useState(false)
 
-  const yuklash = useCallback(async () => {
-    const [tv, mj, sz, sd, sh] = await Promise.all([
-      fetch('/api/tovarlar').then(r => r.json()),
-      fetch('/api/mijozlar').then(r => r.json()),
-      fetch('/api/sozlamalar').then(r => r.json()),
-      fetch('/api/sherik-dokonlar').then(r => r.json()),
-      fetch('/api/sheriklar').then(r => r.json()),
-    ])
-    setTovarlar(tv.tovarlar || [])
-    setMijozlar(mj || [])
-    setDokonInfo(sz || {})
-    setSherikDokonlar(Array.isArray(sd) ? sd : [])
-    setSheriklar(Array.isArray(sh) ? sh : [])
-  }, [])
-
   useEffect(() => {
+    async function yuklash() {
+      const [tv, mj, sz, sd, sh] = await Promise.all([
+        fetch('/api/tovarlar').then(r => r.json()),
+        fetch('/api/mijozlar').then(r => r.json()),
+        fetch('/api/sozlamalar').then(r => r.json()),
+        fetch('/api/sherik-dokonlar').then(r => r.json()),
+        fetch('/api/sheriklar').then(r => r.json()),
+      ])
+      setTovarlar(tv.tovarlar || [])
+      setMijozlar(mj || [])
+      setDokonInfo(sz || {})
+      setSherikDokonlar(Array.isArray(sd) ? sd : [])
+      setSheriklar(Array.isArray(sh) ? sh : [])
+    }
     yuklash()
     // Oxirgi sotuv localStorage dan yuklash
     const saved = localStorage.getItem('oxirgi-sotuv')
@@ -123,8 +121,7 @@ export default function SotuvPage() {
     // Saqlangan savatlarni yuklash
     const drafts = localStorage.getItem('saqlangan-savatlar')
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
-  }, [yuklash])
-  useAutoRefresh(yuklash)
+  }, [])
 
   // O'zbek harflarini normallashtirish (o', oʻ, o', o' -> bitta variant)
   function normUz(s: string) {
@@ -409,11 +406,13 @@ export default function SotuvPage() {
     const kassirHtml = kassirTel ? `<div>${t('Kassir tel')}: ${kassirTel}</div>` : ''
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
 <style>
-  @page{size:${chekEni}mm auto;margin:0}
+  @page{size:${chekEni}mm 3000mm;margin:0}
+  html,body{height:auto!important;overflow:visible!important;page-break-inside:avoid;page-break-before:avoid;page-break-after:avoid}
   body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;width:${chekPx}px;margin:0 auto;padding:6px;color:#000;background:#fff}
-  table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px}
+  table{width:100%;border-collapse:collapse;page-break-inside:avoid}td{vertical-align:top;padding:1px 0;font-size:${sz}px}
   .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:4px 0}
   .total td{font-weight:bold;font-size:${sz + 1}px}
+  *{page-break-inside:avoid}
 </style></head><body>
 <div class="center bold" style="font-size:${sz + 2}px">${dokonNomi}</div>
 ${manzil ? `<div class="center">${manzil}</div>` : ''}
