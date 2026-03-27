@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag, Banknote, Clock } from 'lucide-react'
@@ -89,6 +90,7 @@ export default function XaridlarPage() {
   }
 
   useEffect(() => { yuklash() }, [taminotchiFilter, danFilter, gachaFilter])
+  useAutoRefresh(yuklash)
 
   function tarkibQoshish() {
     setTarkiblar(t => [...t, { tovarNomi: '', miqdor: '', birlikNarxi: '' }])

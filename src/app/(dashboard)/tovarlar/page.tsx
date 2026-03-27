@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import dynamic from 'next/dynamic'
 import { formatSum } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -83,6 +84,7 @@ export default function TovarlarPage() {
   }
 
   useEffect(() => { yuklash() }, [qidiruv, aktifKategoriya])
+  useAutoRefresh(yuklash)
 
   function ochModal(tovar?: Tovar) {
     if (tovar) {

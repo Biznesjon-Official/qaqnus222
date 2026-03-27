@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { useSession } from 'next-auth/react'
 import { formatSum } from '@/lib/utils'
 import { ShoppingBag, TrendingUp, Receipt, Sparkles, Loader2 } from 'lucide-react'
@@ -43,6 +44,7 @@ export default function HisobotlarPage() {
   }
 
   useEffect(() => { yuklash() }, [tur, dan, gacha])
+  useAutoRefresh(yuklash)
 
   // Build pie data from xarajatlarKategoriya
   const pieData = data

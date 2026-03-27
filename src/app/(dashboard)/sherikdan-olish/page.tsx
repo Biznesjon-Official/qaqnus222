@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package, Plus } from 'lucide-react'
@@ -80,6 +81,7 @@ export default function SherikdanOlishPage() {
   }
 
   useEffect(() => { yuklash() }, [])
+  useAutoRefresh(yuklash)
 
   function toggleSherik(sherikId: string) {
     setOchiqSheriklar(prev => ({ ...prev, [sherikId]: !prev[sherikId] }))

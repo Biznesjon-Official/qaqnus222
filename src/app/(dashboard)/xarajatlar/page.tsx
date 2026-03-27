@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Plus, X, Home, Users, Car, Zap, FileText } from 'lucide-react'
@@ -58,6 +59,7 @@ export default function XarajatlarPage() {
   }, [])
 
   useEffect(() => { yuklash() }, [filterKat])
+  useAutoRefresh(yuklash)
 
   function changeView(v: 'table' | 'card') {
     setView(v)

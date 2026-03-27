@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages } from 'lucide-react'
@@ -99,21 +100,22 @@ export default function SotuvPage() {
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
   const [saqlanganiModal, setSaqlanganiModal] = useState(false)
 
+  const yuklash = useCallback(async () => {
+    const [tv, mj, sz, sd, sh] = await Promise.all([
+      fetch('/api/tovarlar').then(r => r.json()),
+      fetch('/api/mijozlar').then(r => r.json()),
+      fetch('/api/sozlamalar').then(r => r.json()),
+      fetch('/api/sherik-dokonlar').then(r => r.json()),
+      fetch('/api/sheriklar').then(r => r.json()),
+    ])
+    setTovarlar(tv.tovarlar || [])
+    setMijozlar(mj || [])
+    setDokonInfo(sz || {})
+    setSherikDokonlar(Array.isArray(sd) ? sd : [])
+    setSheriklar(Array.isArray(sh) ? sh : [])
+  }, [])
+
   useEffect(() => {
-    async function yuklash() {
-      const [tv, mj, sz, sd, sh] = await Promise.all([
-        fetch('/api/tovarlar').then(r => r.json()),
-        fetch('/api/mijozlar').then(r => r.json()),
-        fetch('/api/sozlamalar').then(r => r.json()),
-        fetch('/api/sherik-dokonlar').then(r => r.json()),
-        fetch('/api/sheriklar').then(r => r.json()),
-      ])
-      setTovarlar(tv.tovarlar || [])
-      setMijozlar(mj || [])
-      setDokonInfo(sz || {})
-      setSherikDokonlar(Array.isArray(sd) ? sd : [])
-      setSheriklar(Array.isArray(sh) ? sh : [])
-    }
     yuklash()
     // Oxirgi sotuv localStorage dan yuklash
     const saved = localStorage.getItem('oxirgi-sotuv')
@@ -121,7 +123,8 @@ export default function SotuvPage() {
     // Saqlangan savatlarni yuklash
     const drafts = localStorage.getItem('saqlangan-savatlar')
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
-  }, [])
+  }, [yuklash])
+  useAutoRefresh(yuklash)
 
   // O'zbek harflarini normallashtirish (o', oʻ, o', o' -> bitta variant)
   function normUz(s: string) {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
 import { AlertTriangle, PackagePlus, X, History, Layers } from 'lucide-react'
@@ -66,6 +67,7 @@ export default function OmborPage() {
   }
 
   useEffect(() => { yuklash() }, [qidiruv, kamQolganFilter])
+  useAutoRefresh(yuklash)
 
   async function harakatlarYuklash() {
     setHarakatYuklanmoqda(true)

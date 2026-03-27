@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { toast } from 'sonner'
 import {
   Plus, Pencil, Trash2, X, ArrowLeft, Phone,
@@ -81,6 +82,7 @@ export default function SherikDokonlarPage() {
   }
 
   useEffect(() => { yuklash() }, [])
+  useAutoRefresh(yuklash)
 
   async function detailYuklash(d: SherikDokon) {
     setTanlangan(d)
