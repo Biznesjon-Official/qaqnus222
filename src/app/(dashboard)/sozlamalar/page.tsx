@@ -1193,11 +1193,27 @@ function TizimTab() {
           </h3>
         </div>
         <p className="text-gray-500 dark:text-gray-500 text-sm mb-4">
-          Barcha ma&apos;lumotlarni Excel formatida yuklab olish.
+          Tovarlar, sotuvlar, nasiyalar, xarajatlar va mijozlar Excel formatida yuklanadi.
         </p>
         <button
           type="button"
-          onClick={() => toast.info('Tez kunda!')}
+          onClick={async () => {
+            toast.info('Excel tayyorlanmoqda...')
+            try {
+              const res = await fetch('/api/backup/excel')
+              if (!res.ok) { toast.error('Xatolik yuz berdi'); return }
+              const blob = await res.blob()
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `erp_hisobot_${new Date().toISOString().split('T')[0]}.xlsx`
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              URL.revokeObjectURL(url)
+              toast.success('Excel yuklab olindi!')
+            } catch { toast.error('Tarmoq xatosi') }
+          }}
           className={outlineBtn}
         >
           <Download size={16} />
@@ -1312,22 +1328,59 @@ function ZaxiraTab() {
         </div>
       </div>
 
-      {/* Import section — coming soon */}
+      {/* Import section */}
       <div className={cardCls}>
         <div className="flex items-center gap-2 mb-1">
-          <Database size={18} className="text-gray-400 dark:text-gray-600" />
+          <Database size={18} className="text-red-600" />
           <h3 className="text-gray-900 dark:text-gray-100 font-semibold">
             Import
           </h3>
         </div>
         <p className="text-gray-500 dark:text-gray-500 text-sm mb-4">
-          JSON zaxira faylidan ma&apos;lumotlarni tiklash.
+          JSON zaxira faylidan ma&apos;lumotlarni tiklash (kategoriya, tovar, mijoz, sozlamalar).
         </p>
-        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-xl">
-          <span className="text-amber-600 dark:text-amber-400 text-sm font-medium">
-            Import funksiyasi tez kunda qo&apos;shiladi
-          </span>
-        </div>
+        <input
+          type="file"
+          accept=".json"
+          id="import-file"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            if (!confirm("Import qilish mavjud ma'lumotlarni yangilaydi. Davom etasizmi?")) {
+              e.target.value = ''
+              return
+            }
+            try {
+              const text = await file.text()
+              const json = JSON.parse(text)
+              toast.info('Import qilinmoqda...')
+              const res = await fetch('/api/backup/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(json),
+              })
+              const data = await res.json()
+              if (res.ok) {
+                const parts = Object.entries(data.natija || {}).map(([k, v]) => `${k}: ${v}`).join(', ')
+                toast.success(`Import muvaffaqiyatli! ${parts}`)
+              } else {
+                toast.error(data.xato || 'Import xatosi')
+              }
+            } catch {
+              toast.error("Fayl formati noto'g'ri")
+            }
+            e.target.value = ''
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => document.getElementById('import-file')?.click()}
+          className={outlineBtn}
+        >
+          <Database size={16} />
+          JSON fayldan import
+        </button>
       </div>
 
       {/* System info */}
@@ -1357,16 +1410,25 @@ function ZaxiraTab() {
           Xavfli zona
         </h3>
         <p className="text-red-500 dark:text-red-400/70 text-sm mb-4">
-          Bu amalni ortga qaytarib bo&apos;lmaydi. Diqqat bilan bajaring!
+          Bu amalni ortga qaytarib bo&apos;lmaydi. Barcha sotuvlar, tovarlar, nasiyalar o&apos;chiriladi. Foydalanuvchilar qoladi.
         </p>
         <button
           type="button"
-          onClick={() =>
-            toast.error(
-              "Bu amal ma'lumotlar bazasini tozalaydi! Haqiqiy tizimda bu amalga oshirilmaydi.",
-              { duration: 6000 }
-            )
-          }
+          onClick={async () => {
+            const javob = prompt("Tasdiqlash uchun \"TOZALASH\" deb yozing:")
+            if (javob !== 'TOZALASH') { toast.info('Bekor qilindi'); return }
+            if (!confirm("OXIRGI OGOHLANTIRISH: Haqiqatan barcha ma'lumotlarni o'chirasizmi?")) return
+            try {
+              toast.info('Tozalanmoqda...')
+              const res = await fetch('/api/backup/clean', { method: 'POST' })
+              const data = await res.json()
+              if (res.ok) {
+                toast.success(data.xabar || 'Baza tozalandi!')
+              } else {
+                toast.error(data.xato || 'Xatolik')
+              }
+            } catch { toast.error('Tarmoq xatosi') }
+          }}
           className={dangerBtn}
         >
           <Trash2 size={16} />
