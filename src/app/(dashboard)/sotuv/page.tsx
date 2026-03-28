@@ -386,9 +386,7 @@ export default function SotuvPage() {
     const tel = dokonInfo.telefon || ''
     const chekMatn = t(dokonInfo.chek_matn || '')
     const kassirTel = s.kassir?.telefon || ''
-    const chekEni = dokonInfo.chek_eni === '58' ? 58 : 80
-    const chekPx = chekEni === 58 ? 218 : 302
-    const sz = chekEni === 58 ? 11 : 12
+    const sz = 11
     const tovarlarHtml = s.tarkiblar?.map((item: any) => {
       const nomi = t(item.tovar?.nomi || '—')
       const miqdor = Number(item.miqdor)
@@ -406,13 +404,13 @@ export default function SotuvPage() {
     const kassirHtml = kassirTel ? `<div>${t('Kassir tel')}: ${kassirTel}</div>` : ''
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
 <style>
-  @page{size:${chekEni}mm 3000mm;margin:0}
-  html,body{height:auto!important;overflow:visible!important;page-break-inside:avoid;page-break-before:avoid;page-break-after:avoid}
-  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;width:${chekPx}px;margin:0 auto;padding:6px;color:#000;background:#fff}
-  table{width:100%;border-collapse:collapse;page-break-inside:avoid}td{vertical-align:top;padding:1px 0;font-size:${sz}px}
-  .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:4px 0}
+  @page{size:2.24in auto;margin:0}
+  html,body{height:auto!important;overflow:visible!important}
+  *{page-break-inside:avoid!important;break-inside:avoid!important}
+  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;width:2.24in;margin:0;padding:4px;color:#000;background:#fff}
+  table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px}
+  .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:3px 0}
   .total td{font-weight:bold;font-size:${sz + 1}px}
-  *{page-break-inside:avoid}
 </style></head><body>
 <div class="center bold" style="font-size:${sz + 2}px">${dokonNomi}</div>
 ${manzil ? `<div class="center">${manzil}</div>` : ''}
@@ -434,7 +432,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
   }
 
   function chekChopEtish(s: any) {
-    const win = window.open('', '_blank', 'width=340,height=700')
+    const win = window.open('', '_blank', 'width=220,height=600')
     if (!win) { toast.error('Popup bloklanmoqda'); return }
     win.document.write(chekHtml(s))
     win.document.close()
