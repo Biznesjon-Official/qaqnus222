@@ -412,7 +412,8 @@ ${buyurtma.mijoz ? `<div>Mijoz: ${buyurtma.mijoz.ism}</div>` : ''}
                   { val: 'KARTA',  label: 'Karta',     icon: CreditCard },
                   { val: 'ARALASH',label: 'Aralash',   icon: Layers },
                   { val: 'NASIYA', label: 'Nasiya',    icon: Clock },
-                ].map(({ val, label, icon: Icon }) => (
+                ].filter(({ val }) => val !== 'NASIYA' || !!tasdiqlashModal.mijoz)
+                 .map(({ val, label, icon: Icon }) => (
                   <button
                     key={val}
                     onClick={() => setTolovUsuli(val)}
