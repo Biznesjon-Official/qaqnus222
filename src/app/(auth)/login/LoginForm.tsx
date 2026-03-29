@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Eye, EyeOff, User, Lock, AlertCircle } from 'lucide-react'
 
@@ -29,7 +29,9 @@ export default function LoginForm() {
     if (natija?.error) {
       setXato("Login yoki parol noto'g'ri!")
     } else {
-      router.push('/')
+      const session = await getSession()
+      const rol = (session?.user as any)?.rol
+      router.push(rol === 'SOTUVCHI' ? '/sotuvchi' : '/')
       router.refresh()
     }
   }

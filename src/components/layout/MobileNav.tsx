@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, ShoppingCart, Package, Warehouse, BarChart3 } from 'lucide-react'
 
@@ -15,6 +16,10 @@ const mobileNavItems = [
 
 export default function MobileNav() {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const rol = (session?.user as any)?.rol
+
+  if (rol === 'SOTUVCHI') return null
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800 z-40">
