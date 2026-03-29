@@ -4,13 +4,15 @@ import { NextResponse } from 'next/server'
 // KASSIR faqat bu yo'llarga kira oladi
 const KASSIR_RUXSAT = [
   '/sotuv',
+  '/buyurtmalar',
+  '/tovarlar',
+  '/ombor',
+  '/mijozlar',
+  '/nasiyalar',
+  '/xaridlar',
+  '/sherikdan-olish',
   '/hisobotlar',
-  '/api/sotuvlar',
-  '/api/hisobotlar',
-  '/api/tovarlar',
-  '/api/mijozlar',
-  '/api/sozlamalar',
-  '/api/auth',
+  '/api/',
 ]
 
 export default auth((req) => {
@@ -29,6 +31,8 @@ export default auth((req) => {
   // KASSIR cheklovi
   const rol = (req.auth.user as any)?.rol
   if (rol === 'KASSIR') {
+    // Bosh sahifa — ruxsat
+    if (pathname === '/') return NextResponse.next()
     const ruxsatBor = KASSIR_RUXSAT.some(p => pathname.startsWith(p))
     if (!ruxsatBor) {
       return NextResponse.redirect(new URL('/sotuv', req.url))
