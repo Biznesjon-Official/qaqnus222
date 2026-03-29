@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages, ScanLine } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
@@ -95,6 +95,49 @@ export default function SotuvPage() {
   // Til (lotin / kirill)
   const [til, setTil] = useState<'lotin' | 'kirill'>('lotin')
   const [logoBase64, setLogoBase64] = useState<string>('')
+
+  // Barcode skaner
+  const [skanerOchiq, setSkanerOchiq] = useState(false)
+  const skanerRef = useRef<any>(null)
+
+  const skanerniYopish = useCallback(() => {
+    if (skanerRef.current) {
+      skanerRef.current.stop().catch(() => {})
+      skanerRef.current.clear()
+      skanerRef.current = null
+    }
+    setSkanerOchiq(false)
+  }, [])
+
+  const skanerniOchish = useCallback(async () => {
+    setSkanerOchiq(true)
+    setTimeout(async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode')
+        const scanner = new Html5Qrcode('skaner-reader')
+        skanerRef.current = scanner
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 120 } },
+          (kod) => {
+            const topilgan = tovarlar.find(t => t.shtrixKod === kod)
+            if (topilgan) {
+              savatQosh(topilgan)
+              toast.success(`${topilgan.nomi} qo'shildi`)
+            } else {
+              setQidiruv(kod)
+              toast.error(`Tovar topilmadi: ${kod}`)
+            }
+            skanerniYopish()
+          },
+          () => {}
+        )
+      } catch (err) {
+        toast.error('Kamera ochilmadi')
+        setSkanerOchiq(false)
+      }
+    }, 100)
+  }, [tovarlar, skanerniYopish])
 
   // Saqlangan savatlar
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
@@ -654,15 +697,29 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
 
       {/* Chap: Tovarlar */}
       <div className={`flex-1 flex flex-col gap-4 min-w-0 lg:flex ${mobileTab === 'tovarlar' ? 'flex' : 'hidden'}`}>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600" size={16} />
-          <input
-            value={qidiruv}
-            onChange={e => setQidiruv(e.target.value)}
-            placeholder="Tovar qidirish yoki shtrix-kod..."
-            className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500"
-          />
+        <div className="flex gap-2">
+          <button
+            onClick={skanerOchiq ? skanerniYopish : skanerniOchish}
+            className={`shrink-0 p-2.5 rounded-xl border transition ${skanerOchiq ? 'bg-red-600 border-red-600 text-white' : 'bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-500 dark:text-gray-400 hover:border-red-400 hover:text-red-600'}`}
+            title="Skaner"
+          >
+            <ScanLine size={18} />
+          </button>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-600" size={16} />
+            <input
+              value={qidiruv}
+              onChange={e => setQidiruv(e.target.value)}
+              placeholder="Tovar qidirish yoki shtrix-kod..."
+              className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+          </div>
         </div>
+        {skanerOchiq && (
+          <div className="bg-black rounded-xl overflow-hidden relative">
+            <div id="skaner-reader" style={{ width: '100%' }} />
+          </div>
+        )}
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
             {filteredTovarlar.map(t => (
