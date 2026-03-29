@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { formatSum } from '@/lib/utils'
 import { normalizeUzbek } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight, Camera, CameraOff } from 'lucide-react'
+import { Html5Qrcode } from 'html5-qrcode'
 
 interface Tovar {
   id: string
@@ -52,6 +53,10 @@ export default function SotuvchiPage() {
   const [mijozlar, setMijozlar] = useState<Mijoz[]>([])
   const [mijozYuklash, setMijozYuklash] = useState(false)
   const mijozQidiruvRef = useRef<HTMLInputElement>(null)
+
+  // QR skaner
+  const [qrOchiq, setQrOchiq] = useState(false)
+  const qrScannerRef = useRef<Html5Qrcode | null>(null)
 
   const qidiruvRef = useRef<HTMLInputElement>(null)
   const barcodeBuffer = useRef('')
@@ -170,6 +175,56 @@ export default function SotuvchiPage() {
 
   const jamiSumma = savat.reduce((s, i) => s + i.jami, 0)
 
+  // QR skaner
+  const qrBoshlash = useCallback(async () => {
+    setQrOchiq(true)
+    // Kutib turish — DOM element paydo bo'lgunicha
+    await new Promise(r => setTimeout(r, 100))
+
+    try {
+      const scanner = new Html5Qrcode('qr-reader-sotuvchi')
+      qrScannerRef.current = scanner
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (kod) => {
+          // Skanlangan kod — mahsulotni qidirish
+          const found = tovarlar.find(t => t.shtrixKod === kod || t.id === kod)
+          if (found) {
+            ochNumpad(found)
+            toast.success(`${found.nomi} topildi!`)
+          } else {
+            toast.error(`"${kod}" kodli tovar topilmadi`)
+          }
+          // Skanerni to'xtatish
+          scanner.stop().catch(() => {})
+          setQrOchiq(false)
+        },
+        () => {}
+      )
+    } catch (err: any) {
+      toast.error('Kamerani ishga tushirib bo\'lmadi')
+      setQrOchiq(false)
+    }
+  }, [tovarlar])
+
+  const qrToxtatish = useCallback(async () => {
+    if (qrScannerRef.current?.isScanning) {
+      await qrScannerRef.current.stop().catch(() => {})
+    }
+    setQrOchiq(false)
+  }, [])
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (qrScannerRef.current?.isScanning) {
+        qrScannerRef.current.stop().catch(() => {})
+      }
+    }
+  }, [])
+
   function ochMijozModal() {
     setMijozModalOchiq(true)
     setMijozQidiruv('')
@@ -216,27 +271,50 @@ export default function SotuvchiPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
 
-      {/* Search */}
-      <div className="p-3 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 shrink-0">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            ref={qidiruvRef}
-            value={qidiruv}
-            onChange={e => setQidiruv(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && filteredTovarlar.length === 1) ochNumpad(filteredTovarlar[0])
-            }}
-            placeholder="Mahsulot nomi yoki kodi..."
-            className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-gray-100"
-            autoComplete="off"
-          />
-          {qidiruv && (
-            <button onClick={() => setQidiruv('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-              <X size={14} />
-            </button>
-          )}
+      {/* Search + QR */}
+      <div className="p-3 bg-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 shrink-0 space-y-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              ref={qidiruvRef}
+              value={qidiruv}
+              onChange={e => setQidiruv(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && filteredTovarlar.length === 1) ochNumpad(filteredTovarlar[0])
+              }}
+              placeholder="Mahsulot nomi yoki kodi..."
+              className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-gray-100"
+              autoComplete="off"
+            />
+            {qidiruv && (
+              <button onClick={() => setQidiruv('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <button
+            onClick={qrOchiq ? qrToxtatish : qrBoshlash}
+            className={`shrink-0 w-11 h-11 flex items-center justify-center rounded-xl transition active:scale-95 ${
+              qrOchiq
+                ? 'bg-red-600 text-white hover:bg-red-500'
+                : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-neutral-700'
+            }`}
+            title="QR kod skanerlash"
+          >
+            {qrOchiq ? <CameraOff size={18} /> : <Camera size={18} />}
+          </button>
         </div>
+
+        {/* QR kamera oynasi */}
+        {qrOchiq && (
+          <div className="relative bg-black rounded-xl overflow-hidden">
+            <div id="qr-reader-sotuvchi" className="w-full" />
+            <p className="absolute bottom-2 left-0 right-0 text-center text-white/70 text-xs">
+              QR yoki shtrix kodni kameraga ko'rsating
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Products grid */}
