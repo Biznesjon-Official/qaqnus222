@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatSum } from '@/lib/utils'
 import { normalizeUzbek } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight } from 'lucide-react'
 
 interface Tovar {
   id: string
@@ -25,6 +25,14 @@ interface SavatItem {
   jami: number
 }
 
+interface Mijoz {
+  id: string
+  ism: string
+  telefon: string | null
+}
+
+const ODDIY_MIJOZ: Mijoz = { id: '', ism: 'Oddiy mijoz', telefon: null }
+
 export default function SotuvchiPage() {
   const [tovarlar, setTovarlar] = useState<Tovar[]>([])
   const [qidiruv, setQidiruv] = useState('')
@@ -36,6 +44,14 @@ export default function SotuvchiPage() {
   // Numpad modal
   const [numpadTovar, setNumpadTovar] = useState<Tovar | null>(null)
   const [numpadQiymat, setNumpadQiymat] = useState('1')
+
+  // Mijoz tanlash modal
+  const [mijozModalOchiq, setMijozModalOchiq] = useState(false)
+  const [tanlanganMijoz, setTanlanganMijoz] = useState<Mijoz>(ODDIY_MIJOZ)
+  const [mijozQidiruv, setMijozQidiruv] = useState('')
+  const [mijozlar, setMijozlar] = useState<Mijoz[]>([])
+  const [mijozYuklash, setMijozYuklash] = useState(false)
+  const mijozQidiruvRef = useRef<HTMLInputElement>(null)
 
   const qidiruvRef = useRef<HTMLInputElement>(null)
   const barcodeBuffer = useRef('')
@@ -52,12 +68,24 @@ export default function SotuvchiPage() {
     qidiruvRef.current?.focus()
   }, [])
 
+  // Mijoz qidiruv
+  useEffect(() => {
+    if (!mijozModalOchiq) return
+    const timer = setTimeout(async () => {
+      setMijozYuklash(true)
+      const res = await fetch(`/api/mijozlar?q=${encodeURIComponent(mijozQidiruv)}`).then(r => r.json())
+      setMijozlar(res.mijozlar || res || [])
+      setMijozYuklash(false)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [mijozQidiruv, mijozModalOchiq])
+
   // Barcode scanner listener — global keydown
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      // If focus is on search input, don't intercept
       if (document.activeElement === qidiruvRef.current) return
       if (numpadTovar) return
+      if (mijozModalOchiq) return
 
       if (e.key === 'Enter') {
         const code = barcodeBuffer.current.trim()
@@ -76,7 +104,7 @@ export default function SotuvchiPage() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [tovarlar, numpadTovar])
+  }, [tovarlar, numpadTovar, mijozModalOchiq])
 
   const filteredTovarlar = qidiruv.trim()
     ? tovarlar.filter(t => {
@@ -142,6 +170,17 @@ export default function SotuvchiPage() {
 
   const jamiSumma = savat.reduce((s, i) => s + i.jami, 0)
 
+  function ochMijozModal() {
+    setMijozModalOchiq(true)
+    setMijozQidiruv('')
+    setTimeout(() => mijozQidiruvRef.current?.focus(), 100)
+  }
+
+  function tanla(mijoz: Mijoz) {
+    setTanlanganMijoz(mijoz)
+    setMijozModalOchiq(false)
+  }
+
   async function kassagaYuborish() {
     if (savat.length === 0) return
     setYuborYuklash(true)
@@ -155,13 +194,15 @@ export default function SotuvchiPage() {
             miqdor: s.miqdor,
             birlikNarxi: s.birlikNarxi,
             jami: s.jami,
-          }))
+          })),
+          mijozId: tanlanganMijoz.id || null,
         })
       })
       if (res.ok) {
         toast.success('Buyurtma kassirga yuborildi!')
         setSavat([])
         setSavatOchiq(false)
+        setTanlanganMijoz(ODDIY_MIJOZ)
       } else {
         const d = await res.json()
         toast.error(d.xato || 'Xatolik')
@@ -248,7 +289,7 @@ export default function SotuvchiPage() {
       {savatOchiq && (
         <div className="fixed inset-0 z-50 flex flex-col">
           <div className="flex-1 bg-black/50" onClick={() => setSavatOchiq(false)} />
-          <div className="bg-white dark:bg-neutral-900 rounded-t-2xl max-h-[80vh] flex flex-col">
+          <div className="bg-white dark:bg-neutral-900 rounded-t-2xl max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
               <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <ShoppingCart size={18} className="text-red-500" />
@@ -289,6 +330,23 @@ export default function SotuvchiPage() {
 
             {savat.length > 0 && (
               <div className="p-4 border-t border-gray-200 dark:border-neutral-800 space-y-3">
+                {/* Mijoz tanlash */}
+                <button
+                  onClick={ochMijozModal}
+                  className="w-full flex items-center justify-between bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl px-4 py-2.5 hover:border-red-400 transition"
+                >
+                  <div className="flex items-center gap-2">
+                    <User size={16} className="text-gray-400" />
+                    <div className="text-left">
+                      <p className="text-xs text-gray-400">Mijoz</p>
+                      <p className={`text-sm font-medium ${tanlanganMijoz.id ? 'text-red-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                        {tanlanganMijoz.ism}
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-400" />
+                </button>
+
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 dark:text-gray-400 font-medium">Jami:</span>
                   <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatSum(jamiSumma)}</span>
@@ -307,11 +365,81 @@ export default function SotuvchiPage() {
         </div>
       )}
 
+      {/* Mijoz tanlash modal */}
+      {mijozModalOchiq && (
+        <div className="fixed inset-0 z-[60] flex flex-col">
+          <div className="flex-1 bg-black/50" onClick={() => setMijozModalOchiq(false)} />
+          <div className="bg-white dark:bg-neutral-900 rounded-t-2xl max-h-[75vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
+              <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <User size={18} className="text-red-500" />
+                Mijoz tanlash
+              </h2>
+              <button onClick={() => setMijozModalOchiq(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg">
+                <X size={18} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-3 border-b border-gray-100 dark:border-neutral-800">
+              <div className="relative">
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  ref={mijozQidiruvRef}
+                  value={mijozQidiruv}
+                  onChange={e => setMijozQidiruv(e.target.value)}
+                  placeholder="Ism yoki telefon..."
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto">
+              {/* Oddiy mijoz — doim birinchi */}
+              <button
+                onClick={() => tanla(ODDIY_MIJOZ)}
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-neutral-800 transition border-b border-gray-100 dark:border-neutral-800 ${tanlanganMijoz.id === '' ? 'bg-red-50 dark:bg-red-950/20' : ''}`}
+              >
+                <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
+                  <User size={16} className="text-gray-500" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">Oddiy mijoz</p>
+                  <p className="text-xs text-gray-400">Mijoz tanlanmagan</p>
+                </div>
+                {tanlanganMijoz.id === '' && <span className="ml-auto text-red-500 text-xs font-semibold">Tanlangan</span>}
+              </button>
+
+              {mijozYuklash ? (
+                <div className="text-center text-gray-400 py-8 text-sm">Yuklanmoqda...</div>
+              ) : mijozlar.length === 0 && mijozQidiruv ? (
+                <div className="text-center text-gray-400 py-8 text-sm">Mijoz topilmadi</div>
+              ) : (
+                mijozlar.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => tanla(m)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-neutral-800 transition border-b border-gray-100 dark:border-neutral-800 ${tanlanganMijoz.id === m.id ? 'bg-red-50 dark:bg-red-950/20' : ''}`}
+                  >
+                    <div className="w-9 h-9 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                      <span className="text-red-600 font-bold text-sm">{m.ism[0].toUpperCase()}</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm">{m.ism}</p>
+                      {m.telefon && <p className="text-xs text-gray-400">{m.telefon}</p>}
+                    </div>
+                    {tanlanganMijoz.id === m.id && <span className="ml-auto text-red-500 text-xs font-semibold">Tanlangan</span>}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Numpad Modal */}
       {numpadTovar && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            {/* Header */}
             <div className="bg-red-600 p-4 text-white">
               <button onClick={() => setNumpadTovar(null)} className="float-right opacity-70 hover:opacity-100">
                 <X size={20} />
@@ -321,7 +449,6 @@ export default function SotuvchiPage() {
               <p className="text-red-100 text-sm mt-1">{formatSum(numpadTovar.sotishNarxi)} / {numpadTovar.birlik.toLowerCase()}</p>
             </div>
 
-            {/* Quantity display */}
             <div className="px-6 py-4 bg-gray-50 dark:bg-neutral-800 text-center">
               <p className="text-gray-500 dark:text-gray-400 text-xs mb-1">Miqdor</p>
               <div className="text-5xl font-bold text-gray-900 dark:text-gray-100 tracking-wider">{numpadQiymat}</div>
@@ -332,7 +459,6 @@ export default function SotuvchiPage() {
               )}
             </div>
 
-            {/* Numpad */}
             <div className="p-4 grid grid-cols-3 gap-2">
               {['7','8','9','4','5','6','1','2','3','⌫','0','✓'].map(btn => (
                 <button

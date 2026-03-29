@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       where: holati === 'BARCHASI' ? {} : { holati: holati as any },
       include: {
         sotuvchi: { select: { id: true, ism: true } },
+        mijoz: { select: { id: true, ism: true, telefon: true } },
         tarkiblar: {
           include: { tovar: { select: { id: true, nomi: true, birlik: true } } }
         }
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ xato: 'Ruxsat yo\'q' }, { status: 403 })
     }
 
-    const { tarkiblar, izoh } = await req.json()
+    const { tarkiblar, izoh, mijozId } = await req.json()
     if (!tarkiblar || tarkiblar.length === 0) {
       return NextResponse.json({ xato: 'Savat bo\'sh' }, { status: 400 })
     }
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
     const buyurtma = await prisma.buyurtma.create({
       data: {
         sotuvchiId: (session.user as any).id,
+        mijozId: mijozId || null,
         jamiSumma,
         izoh: izoh || null,
         tarkiblar: {
@@ -60,6 +62,7 @@ export async function POST(req: NextRequest) {
       },
       include: {
         sotuvchi: { select: { id: true, ism: true } },
+        mijoz: { select: { id: true, ism: true, telefon: true } },
         tarkiblar: {
           include: { tovar: { select: { id: true, nomi: true, birlik: true } } }
         }

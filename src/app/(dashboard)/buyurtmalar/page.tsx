@@ -21,6 +21,7 @@ interface Buyurtma {
   izoh: string | null
   yaratilgan: string
   sotuvchi: { id: string; ism: string }
+  mijoz: { id: string; ism: string; telefon: string | null } | null
   tarkiblar: BuyurtmaItem[]
 }
 
@@ -159,6 +160,7 @@ export default function BuyurtmalarPage() {
 <div class="sep"></div>
 <div>Chek: ${sotuv.chekRaqami || '#' + Date.now()}</div>
 <div>Sotuvchi: ${buyurtma.sotuvchi.ism}</div>
+${buyurtma.mijoz ? `<div>Mijoz: ${buyurtma.mijoz.ism}</div>` : ''}
 <div class="sep"></div>
 <table>${tovarlarHtml}</table>
 <div class="sep"></div>
@@ -245,7 +247,10 @@ export default function BuyurtmalarPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{b.sotuvchi.ism}</p>
-                    <p className="text-xs text-gray-400 flex items-center gap-1"><Clock size={10} />{vaqtFormat(b.yaratilgan)}</p>
+                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <Clock size={10} />{vaqtFormat(b.yaratilgan)}
+                      {b.mijoz && <span className="ml-1 text-blue-500">· {b.mijoz.ism}</span>}
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
