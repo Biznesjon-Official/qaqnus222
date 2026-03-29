@@ -60,6 +60,19 @@ export async function GET(req: NextRequest) {
   }
 }
 
+async function keyingiShtrixKod(): Promise<string> {
+  const barchasi = await prisma.tovar.findMany({
+    where: { shtrixKod: { not: null } },
+    select: { shtrixKod: true }
+  })
+  const raqamlar = new Set(
+    barchasi.map(t => parseInt(t.shtrixKod!)).filter(n => Number.isInteger(n) && n > 0)
+  )
+  let keyingi = 1
+  while (raqamlar.has(keyingi)) keyingi++
+  return String(keyingi)
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
@@ -67,9 +80,8 @@ export async function POST(req: NextRequest) {
 
     const data = await req.json()
 
-    // Shtrix kod yo'q bo'lsa auto-generate
-    const autoShtrixKod = data.shtrixKod?.trim()
-      || `OPT${String(Date.now()).slice(-8)}${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`
+    // Shtrix kod yo'q bo'lsa ketma-ketlikdagi bo'sh raqamni topib berish
+    const autoShtrixKod = data.shtrixKod?.trim() || await keyingiShtrixKod()
 
     const tovar = await prisma.tovar.create({
       data: {

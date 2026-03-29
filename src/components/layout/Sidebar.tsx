@@ -9,24 +9,26 @@ import { useSidebar } from '@/components/SidebarContext'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, CreditCard, Truck, Receipt, BarChart3, Settings,
-  X, Store, ChevronLeft, ChevronRight, ShoppingBag, Users2, Building2, Handshake,
+  X, Store, ChevronLeft, ChevronRight, ShoppingBag, Users2, Building2, Handshake, ClipboardList,
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/', label: 'Bosh sahifa', icon: LayoutDashboard },
-  { href: '/sotuv', label: 'Sotuv (POS)', icon: ShoppingCart },
-  { href: '/tovarlar', label: 'Tovarlar', icon: Package },
-  { href: '/ombor', label: 'Ombor', icon: Warehouse },
-  { href: '/mijozlar', label: 'Mijozlar', icon: Users },
-  { href: '/nasiyalar', label: 'Nasiyalar', icon: CreditCard },
-  { href: '/taminotchilar', label: "Ta'minotchilar", icon: Truck },
-  { href: '/xaridlar', label: 'Xaridlar', icon: ShoppingBag },
-  { href: '/xarajatlar', label: 'Xarajatlar', icon: Receipt },
-  { href: '/sheriklar', label: 'Sheriklar', icon: Building2 },
-  { href: '/sherikdan-olish', label: 'Sherikdan olish', icon: Handshake },
-  { href: '/agentlar', label: 'Agentlar', icon: Users2 },
-  { href: '/hisobotlar', label: 'Hisobotlar', icon: BarChart3 },
-  { href: '/sozlamalar', label: 'Sozlamalar', icon: Settings },
+  { href: '/', label: 'Bosh sahifa', icon: LayoutDashboard, roles: ['ADMIN', 'KASSIR', 'OMBORCHI'] },
+  { href: '/sotuv', label: 'Sotuv (POS)', icon: ShoppingCart, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/buyurtmalar', label: 'Buyurtmalar', icon: ClipboardList, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/sotuvchi', label: 'Sotuvchi paneli', icon: ShoppingCart, roles: ['SOTUVCHI'] },
+  { href: '/tovarlar', label: 'Tovarlar', icon: Package, roles: ['ADMIN', 'KASSIR', 'OMBORCHI'] },
+  { href: '/ombor', label: 'Ombor', icon: Warehouse, roles: ['ADMIN', 'KASSIR', 'OMBORCHI'] },
+  { href: '/mijozlar', label: 'Mijozlar', icon: Users, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/nasiyalar', label: 'Nasiyalar', icon: CreditCard, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/taminotchilar', label: "Ta'minotchilar", icon: Truck, roles: ['ADMIN'] },
+  { href: '/xaridlar', label: 'Xaridlar', icon: ShoppingBag, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/xarajatlar', label: 'Xarajatlar', icon: Receipt, roles: ['ADMIN'] },
+  { href: '/sheriklar', label: 'Sheriklar', icon: Building2, roles: ['ADMIN'] },
+  { href: '/sherikdan-olish', label: 'Sherikdan olish', icon: Handshake, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/agentlar', label: 'Agentlar', icon: Users2, roles: ['ADMIN'] },
+  { href: '/hisobotlar', label: 'Hisobotlar', icon: BarChart3, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/sozlamalar', label: 'Sozlamalar', icon: Settings, roles: ['ADMIN'] },
 ]
 
 export default function Sidebar() {
@@ -36,8 +38,8 @@ export default function Sidebar() {
   const { data: session } = useSession()
   const rol = (session?.user as any)?.rol
 
-  const visibleItems = rol === 'KASSIR'
-    ? navItems.filter(item => item.href === '/sotuv' || item.href === '/hisobotlar')
+  const visibleItems = rol
+    ? navItems.filter(item => item.roles.includes(rol))
     : navItems
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { formatSum } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, X, Upload, Loader2, SlidersHorizontal, QrCode, Printer } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Upload, Loader2, SlidersHorizontal, QrCode, Printer, CheckSquare2 } from 'lucide-react'
 import { normalizeUzbek } from '@/lib/utils'
 import ViewToggle from '@/components/ViewToggle'
 import Combobox from '@/components/ui/combobox'
@@ -54,7 +54,55 @@ export default function TovarlarPage() {
 
   // Barcode print state
   const [barcodeModal, setBarcodeModal] = useState(false)
-  const [barcodeTovar, setBarcodeTovar] = useState<{ id: string; nomi: string; shtrixKod: string | null } | null>(null)
+  const [barcodeTovar, setBarcodeTovar] = useState<{ id: string; nomi: string; shtrixKod: string | null; sotishNarxi: number } | null>(null)
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll(filtered: Tovar[]) {
+    const withCode = filtered.filter(t => t.shtrixKod)
+    const allSelected = withCode.every(t => selectedIds.has(t.id))
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(withCode.map(t => t.id)))
+    }
+  }
+
+  async function barcodeBatchPrint() {
+    const selected = tovarlar.filter(t => selectedIds.has(t.id) && t.shtrixKod)
+    if (selected.length === 0) { toast.error('Shtrix kodi mavjud tovar tanlanmagan'); return }
+    const JsBarcode = (await import('jsbarcode')).default
+    const labelsHtml = selected.map((t, i) => {
+      const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+      JsBarcode(svgEl, t.shtrixKod!, { format: 'CODE128', width: 1.5, height: 45, fontSize: 12, margin: 2, displayValue: true, xmlDocument: document })
+      svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+      svgEl.setAttribute('width', '90%')
+      svgEl.removeAttribute('height')
+      const isLast = i === selected.length - 1
+      return `<div class="label"${isLast ? '' : ' style="page-break-after:always"'}><div class="nomi">${t.nomi}</div>${svgEl.outerHTML}</div>`
+    }).join('')
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:2.24in 1.54in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff;width:2.24in}.label{width:2.24in;height:1.54in;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 6px;overflow:hidden;page-break-inside:avoid}.nomi{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.5px;color:#000}</style></head><body>${labelsHtml}</body></html>`
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank', 'width=215,height=148,toolbar=no,menubar=no,location=no')
+    if (!win) { URL.revokeObjectURL(url); return }
+    win.addEventListener('load', () => {
+      setTimeout(() => {
+        win.print()
+        win.addEventListener('afterprint', () => { win.close(); URL.revokeObjectURL(url) })
+      }, 300)
+    })
+    setSelectedIds(new Set())
+  }
 
   useEffect(() => {
     const saved = localStorage.getItem('view-preference') as 'table' | 'card' | null
@@ -263,6 +311,8 @@ export default function TovarlarPage() {
       {/* Table view */}
       {(() => {
         const filteredTovarlar = tovarlar
+        const withCode = filteredTovarlar.filter(t => t.shtrixKod)
+        const allSelected = withCode.length > 0 && withCode.every(t => selectedIds.has(t.id))
         return (<>
       {view === 'table' && (
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
@@ -270,6 +320,9 @@ export default function TovarlarPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
+                  <th className="px-4 py-3 w-8">
+                    <input type="checkbox" checked={allSelected} onChange={() => toggleSelectAll(filteredTovarlar)} className="w-4 h-4 rounded accent-red-600 cursor-pointer" />
+                  </th>
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Tovar nomi</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Miqdori</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Kelish narxi</th>
@@ -284,7 +337,10 @@ export default function TovarlarPage() {
                 ) : filteredTovarlar.length === 0 ? (
                   <tr><td colSpan={6} className="text-center text-gray-400 dark:text-gray-600 py-12">Tovarlar topilmadi</td></tr>
                 ) : filteredTovarlar.map((t, idx) => (
-                  <tr key={t.id} className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${idx % 2 === 0 ? '' : 'bg-gray-50/40 dark:bg-neutral-800/40'}`}>
+                  <tr key={t.id} className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${selectedIds.has(t.id) ? 'bg-red-50 dark:bg-red-950/20' : idx % 2 === 0 ? '' : 'bg-gray-50/40 dark:bg-neutral-800/40'}`}>
+                    <td className="px-4 py-3 w-8">
+                      {t.shtrixKod && <input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelect(t.id)} className="w-4 h-4 rounded accent-red-600 cursor-pointer" />}
+                    </td>
                     {/* Tovar nomi — title for full text on hover */}
                     <td className="px-4 py-3 whitespace-nowrap max-w-[200px]">
                       <p className="text-gray-900 dark:text-gray-100 text-sm font-medium truncate" title={t.nomi}>{t.nomi}</p>
@@ -316,7 +372,7 @@ export default function TovarlarPage() {
                         </button>
                         {/* Barcode print button */}
                         <button
-                          onClick={() => { setBarcodeTovar({ id: t.id, nomi: t.nomi, shtrixKod: t.shtrixKod }); setBarcodeModal(true) }}
+                          onClick={() => { setBarcodeTovar({ id: t.id, nomi: t.nomi, shtrixKod: t.shtrixKod, sotishNarxi: Number(t.sotishNarxi) }); setBarcodeModal(true) }}
                           className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 rounded-lg transition"
                           title="Shtrix kod"
                         >
@@ -346,9 +402,13 @@ export default function TovarlarPage() {
           ) : filteredTovarlar.length === 0 ? (
             <p className="text-gray-400 dark:text-gray-600 col-span-3 text-center py-12">Tovarlar topilmadi</p>
           ) : filteredTovarlar.map(t => (
-            <div key={t.id} className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-4 hover:shadow-md transition-shadow">
+            <div key={t.id} className={`relative bg-white dark:bg-neutral-900 border rounded-2xl p-4 hover:shadow-md transition-shadow ${selectedIds.has(t.id) ? 'border-red-400 dark:border-red-600 bg-red-50 dark:bg-red-950/20' : 'border-gray-200 dark:border-neutral-800'}`}>
+              {t.shtrixKod && (
+                <input type="checkbox" checked={selectedIds.has(t.id)} onChange={() => toggleSelect(t.id)}
+                  className="absolute top-3 left-3 w-4 h-4 rounded accent-red-600 cursor-pointer" />
+              )}
               <div className="flex items-start justify-between">
-                <div className="min-w-0 flex-1">
+                <div className={`min-w-0 flex-1 ${t.shtrixKod ? 'pl-6' : ''}`}>
                   <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{t.nomi}</p>
                   {t.shtrixKod && <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">{t.shtrixKod}</p>}
                 </div>
@@ -363,7 +423,7 @@ export default function TovarlarPage() {
                   </button>
                   {/* Barcode print button */}
                   <button
-                    onClick={() => { setBarcodeTovar({ id: t.id, nomi: t.nomi, shtrixKod: t.shtrixKod }); setBarcodeModal(true) }}
+                    onClick={() => { setBarcodeTovar({ id: t.id, nomi: t.nomi, shtrixKod: t.shtrixKod, sotishNarxi: Number(t.sotishNarxi) }); setBarcodeModal(true) }}
                     className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950 rounded-lg transition"
                     title="Shtrix kod"
                   >
@@ -402,6 +462,24 @@ export default function TovarlarPage() {
       )}
 
       </>)})()}
+
+      {/* Bulk selection floating bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-5 py-3 rounded-2xl shadow-2xl">
+          <CheckSquare2 size={18} className="text-red-400 dark:text-red-600" />
+          <span className="text-sm font-medium">{selectedIds.size} ta tanlandi</span>
+          <button
+            onClick={barcodeBatchPrint}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-xl text-sm font-semibold transition"
+          >
+            <Printer size={15} />
+            Barchasini chop etish
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-gray-400 dark:text-gray-500 hover:text-white dark:hover:text-gray-900 transition">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Import rejimi tanlash modali */}
       {importModal && (
@@ -552,16 +630,15 @@ export default function TovarlarPage() {
                 <X size={18} />
               </button>
             </div>
-            <div className="p-5 text-center space-y-4" id="barcode-print-area">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{barcodeTovar.nomi}</p>
+            <div className="px-3 pt-3 pb-2 text-center bg-white" id="barcode-print-area">
+              <p className="font-bold tracking-wide uppercase text-gray-900 mb-3" style={{ fontFamily: 'Arial, sans-serif', fontSize: 24 }}>{barcodeTovar.nomi}</p>
               {barcodeTovar.shtrixKod ? (
-                <div className="flex justify-center bg-white dark:bg-neutral-800 rounded-xl p-4">
-                  <Barcode value={barcodeTovar.shtrixKod} width={1.5} height={60} fontSize={12} />
+                <div className="flex justify-center" style={{ width: '90%', margin: '0 auto' }}>
+                  <Barcode value={barcodeTovar.shtrixKod} width={1.0} height={28} fontSize={9} margin={0} />
                 </div>
               ) : (
                 <p className="text-gray-400 text-sm">Shtrix kod mavjud emas</p>
               )}
-              <p className="text-xs text-gray-400 dark:text-gray-600">{barcodeTovar.shtrixKod}</p>
             </div>
             <div className="p-4 flex gap-3">
               <button
@@ -572,15 +649,21 @@ export default function TovarlarPage() {
               </button>
               <button
                 onClick={() => {
-                  const area = document.getElementById('barcode-print-area')
-                  if (!area) return
-                  const win = window.open('', '_blank', 'width=300,height=300')
-                  if (!win) return
-                  win.document.write(
-                    `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;font-family:sans-serif}p{margin:4px 0;font-size:13px;text-align:center}</style></head><body>${area.innerHTML}</body></html>`
-                  )
-                  win.document.close()
-                  win.onload = () => { win.focus(); win.print() }
+                  if (!barcodeTovar.shtrixKod) return
+                  const svgEl = document.querySelector('#barcode-print-area svg')
+                  if (svgEl) { svgEl.setAttribute('width', '100%'); svgEl.removeAttribute('height') }
+                  const svgHtml = svgEl ? svgEl.outerHTML : ''
+                  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:2.24in 1.54in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;padding:4px 6px;width:2.24in;height:1.54in;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;background:#fff}.nomi{font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;color:#000;-webkit-font-smoothing:none;text-rendering:geometricPrecision}svg{width:90%}</style></head><body><div class="nomi">${barcodeTovar.nomi}</div>${svgHtml}</body></html>`
+                  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+                  const url = URL.createObjectURL(blob)
+                  const win = window.open(url, '_blank', 'width=300,height=250,toolbar=no,menubar=no,location=no')
+                  if (!win) { URL.revokeObjectURL(url); return }
+                  win.addEventListener('load', () => {
+                    setTimeout(() => {
+                      win.print()
+                      win.addEventListener('afterprint', () => { win.close(); URL.revokeObjectURL(url) })
+                    }, 200)
+                  })
                 }}
                 className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
               >

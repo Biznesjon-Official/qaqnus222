@@ -28,6 +28,7 @@ model Foydalanuvchi {
   nasiyaTolovlar NasiyaTolov[]
   xaridTolovlar  XaridTolov[] @relation("xaridTolovlar")
   qaytarishlar Qaytarish[]
+  buyurtmalar  Buyurtma[]
 
   @@map("foydalanuvchilar")
 }
@@ -36,6 +37,7 @@ enum Rol {
   ADMIN
   KASSIR
   OMBORCHI
+  SOTUVCHI
 }
 
 // ========================
@@ -74,6 +76,7 @@ model Tovar {
   sotuvTarkibi     SotuvTarkibi[]
   qaytarishTarkibi QaytarishTarkibi[]
   sherikdanOlishlar SherikdanOlish[]
+  buyurtmaTarkibi  BuyurtmaTarkibi[]
 
   @@map("tovarlar")
 }
@@ -509,6 +512,43 @@ model QaytarishTarkibi {
   tovar     Tovar     @relation(fields: [tovarId], references: [id])
 
   @@map("qaytarish_tarkibi")
+}
+
+// ========================
+// BUYURTMALAR (SOTUVCHI → KASSIR)
+// ========================
+model Buyurtma {
+  id          String         @id @default(cuid())
+  sotuvchiId  String
+  holati      BuyurtmaHolati @default(KUTILMOQDA)
+  jamiSumma   Decimal        @db.Decimal(12, 2)
+  izoh        String?
+  yaratilgan  DateTime       @default(now())
+
+  sotuvchi    Foydalanuvchi  @relation(fields: [sotuvchiId], references: [id])
+  tarkiblar   BuyurtmaTarkibi[]
+
+  @@map("buyurtmalar")
+}
+
+model BuyurtmaTarkibi {
+  id          String   @id @default(cuid())
+  buyurtmaId  String
+  tovarId     String
+  miqdor      Decimal  @db.Decimal(12, 3)
+  birlikNarxi Decimal  @db.Decimal(12, 2)
+  jami        Decimal  @db.Decimal(12, 2)
+
+  buyurtma    Buyurtma @relation(fields: [buyurtmaId], references: [id], onDelete: Cascade)
+  tovar       Tovar    @relation(fields: [tovarId], references: [id])
+
+  @@map("buyurtma_tarkibi")
+}
+
+enum BuyurtmaHolati {
+  KUTILMOQDA
+  TASDIQLANGAN
+  BEKOR_QILINGAN
 }
 
 // ========================

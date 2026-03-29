@@ -15,9 +15,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const nasiya = await prisma.nasiya.findUnique({ where: { id } })
     if (!nasiya) return NextResponse.json({ xato: 'Nasiya topilmadi' }, { status: 404 })
-    if (nasiya.holati === 'YOPILGAN') return NextResponse.json({ xato: 'Yopilgan nasiyaga qarz qo\'shib bo\'lmaydi' }, { status: 400 })
 
     const qoshilganSumma = Number(summa)
+
+    // YOPILGAN nasiyaga qarz qo'shilsa — shu mijoz uchun yangi nasiya yaratiladi
+    if (nasiya.holati === 'YOPILGAN') {
+      const yangi = await prisma.nasiya.create({
+        data: {
+          mijozId: nasiya.mijozId,
+          jamiQarz: qoshilganSumma,
+          qoldiq: qoshilganSumma,
+          holati: 'OCHIQ',
+          sana: new Date(),
+        },
+      })
+      return NextResponse.json({ yangiNasiya: true, nasiya: yangi }, { status: 201 })
+    }
+
     const yangiJamiQarz = Number(nasiya.jamiQarz) + qoshilganSumma
     const yangiQoldiq = Number(nasiya.qoldiq) + qoshilganSumma
 

@@ -30,7 +30,7 @@ const outlineBtn =
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-type Rol = 'ADMIN' | 'KASSIR' | 'OMBORCHI'
+type Rol = 'ADMIN' | 'KASSIR' | 'OMBORCHI' | 'SOTUVCHI'
 
 interface Kategoriya {
   id: string
@@ -71,6 +71,7 @@ const TABS: Tab[] = [
 const ROL_MAP: Record<Rol, string> = {
   ADMIN: 'Administrator',
   KASSIR: 'Kassir',
+  SOTUVCHI: 'Sotuvchi',
   OMBORCHI: 'Omborchi',
 }
 
@@ -676,6 +677,7 @@ function FoydalanuvchilarTab() {
                 className={inputCls}
               >
                 <option value="KASSIR">Kassir</option>
+                <option value="SOTUVCHI">Sotuvchi</option>
                 <option value="OMBORCHI">Omborchi</option>
                 <option value="ADMIN">Administrator</option>
               </select>
@@ -752,6 +754,7 @@ function FoydalanuvchilarTab() {
                 className={inputCls}
               >
                 <option value="KASSIR">Kassir</option>
+                <option value="SOTUVCHI">Sotuvchi</option>
                 <option value="OMBORCHI">Omborchi</option>
                 <option value="ADMIN">Administrator</option>
               </select>

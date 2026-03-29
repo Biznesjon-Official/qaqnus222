@@ -94,6 +94,7 @@ export default function SotuvPage() {
 
   // Til (lotin / kirill)
   const [til, setTil] = useState<'lotin' | 'kirill'>('lotin')
+  const [logoBase64, setLogoBase64] = useState<string>('')
 
   // Saqlangan savatlar
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
@@ -115,6 +116,11 @@ export default function SotuvPage() {
       setSheriklar(Array.isArray(sh) ? sh : [])
     }
     yuklash()
+    fetch('/chek.png').then(r => r.blob()).then(blob => new Promise<string>(resolve => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.readAsDataURL(blob)
+    })).then(setLogoBase64).catch(() => {})
     // Oxirgi sotuv localStorage dan yuklash
     const saved = localStorage.getItem('oxirgi-sotuv')
     if (saved) { try { setOxirgiSotuv(JSON.parse(saved)) } catch {} }
@@ -392,7 +398,7 @@ export default function SotuvPage() {
       const miqdor = Number(item.miqdor)
       const narx = formatSum(item.birlikNarxi)
       const jami = formatSum(item.jami)
-      return `<tr><td>${nomi}</td><td style="text-align:right">${miqdor} x ${narx}</td></tr><tr><td></td><td style="text-align:right;font-weight:bold">${jami}</td></tr>`
+      return `<tr><td style="font-weight:600">${nomi}</td><td style="text-align:right">${miqdor} x ${narx}</td></tr><tr><td></td><td style="text-align:right;font-weight:bold">${jami}</td></tr>`
     }).join('') || ''
     const chegirmaHtml = Number(s.chegirma) > 0
       ? `<tr><td>${t('Chegirma')}:</td><td style="text-align:right;color:#666">-${formatSum(s.chegirma)}</td></tr>` : ''
@@ -402,16 +408,19 @@ export default function SotuvPage() {
       ? `<tr><td>${t("To'lov")}:</td><td style="text-align:right">${t('Nasiya')}</td></tr><tr><td>${t('Mijoz')}:</td><td style="text-align:right">${t(s.mijoz?.ism || '—')}</td></tr>`
       : `<tr><td>${t("To'lov")}:</td><td style="text-align:right">${s.tolovUsuli === 'KARTA' ? t('Karta') : t('Naqd pul')}</td></tr>`
     const kassirHtml = kassirTel ? `<div>${t('Kassir tel')}: ${kassirTel}</div>` : ''
+    const logoHtml = ''
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
 <style>
-  @page{size:2.24in auto;margin:0}
-  html,body{height:auto!important;overflow:visible!important}
+  @page{size:76mm auto;margin:0mm}
+  html{margin:0;padding:0}
+  html,body{height:auto!important;overflow:visible!important;margin:0!important;padding:0!important}
   *{page-break-inside:avoid!important;break-inside:avoid!important}
-  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;width:2.24in;margin:0;padding:4px;color:#000;background:#fff}
-  table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px}
+  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;font-weight:bold;width:76mm;margin:0!important;margin-top:0!important;padding:0 3mm;color:#000;background:#fff}
+  table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px;font-weight:bold}
   .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:3px 0}
-  .total td{font-weight:bold;font-size:${sz + 1}px}
+  .total td{font-weight:bold;font-size:${sz + 2}px}
 </style></head><body>
+${logoHtml}
 <div class="center bold" style="font-size:${sz + 2}px">${dokonNomi}</div>
 ${manzil ? `<div class="center">${manzil}</div>` : ''}
 ${tel ? `<div class="center">Tel: ${tel}</div>` : ''}
@@ -432,11 +441,17 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
   }
 
   function chekChopEtish(s: any) {
-    const win = window.open('', '_blank', 'width=220,height=600')
-    if (!win) { toast.error('Popup bloklanmoqda'); return }
-    win.document.write(chekHtml(s))
-    win.document.close()
-    win.onload = () => { win.focus(); win.print() }
+    const html = chekHtml(s)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank', 'width=250,height=600,toolbar=no,menubar=no,location=no,status=no')
+    if (!win) { URL.revokeObjectURL(url); return }
+    win.addEventListener('load', () => {
+      setTimeout(() => {
+        win.print()
+        win.addEventListener('afterprint', () => { win.close(); URL.revokeObjectURL(url) })
+      }, 200)
+    })
   }
 
   function chekPdfYuklash(s: any) {

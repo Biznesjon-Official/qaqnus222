@@ -358,21 +358,19 @@ export default function NasiyalarPage() {
                       <td className="px-4 py-3 text-center whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-center gap-1">
                           {n.holati !== 'YOPILGAN' && (
-                            <>
-                              <button
-                                onClick={() => openTolovModal(n)}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
-                                <Banknote size={12} />
-                                To&apos;lov
-                              </button>
-                              <button
-                                onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
-                                className="inline-flex items-center p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition"
-                                title="Qarz qo'shish">
-                                <PlusCircle size={14} />
-                              </button>
-                            </>
+                            <button
+                              onClick={() => openTolovModal(n)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
+                              <Banknote size={12} />
+                              To&apos;lov
+                            </button>
                           )}
+                          <button
+                            onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
+                            className="inline-flex items-center p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition"
+                            title="Qarz qo'shish">
+                            <PlusCircle size={14} />
+                          </button>
                           <button
                             onClick={() => openTahrirlash(n)}
                             className="inline-flex items-center p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition"
@@ -446,21 +444,19 @@ export default function NasiyalarPage() {
                 {/* Action buttons */}
                 <div className="mt-3 flex gap-2" onClick={e => e.stopPropagation()}>
                   {n.holati !== 'YOPILGAN' && (
-                    <>
-                      <button
-                        onClick={() => openTolovModal(n)}
-                        className="flex-1 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
-                        <Banknote size={15} />
-                        To&apos;lov
-                      </button>
-                      <button
-                        onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
-                        className="px-3 py-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-900/30 rounded-xl transition"
-                        title="Qarz qo'shish">
-                        <PlusCircle size={15} />
-                      </button>
-                    </>
+                    <button
+                      onClick={() => openTolovModal(n)}
+                      className="flex-1 py-2 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-xl text-sm font-medium transition flex items-center justify-center gap-2">
+                      <Banknote size={15} />
+                      To&apos;lov
+                    </button>
                   )}
+                  <button
+                    onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
+                    className="px-3 py-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-900/30 rounded-xl transition"
+                    title="Qarz qo'shish">
+                    <PlusCircle size={15} />
+                  </button>
                   <button
                     onClick={() => openTahrirlash(n)}
                     className="px-3 py-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl transition"
