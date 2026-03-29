@@ -294,6 +294,16 @@ export default function SotuvchiPage() {
             )}
           </div>
           <button
+            onClick={() => setSavatOchiq(true)}
+            className="shrink-0 h-11 flex items-center gap-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-xl px-4 transition font-medium text-sm"
+          >
+            <ShoppingCart size={16} />
+            {savat.length > 0 && (
+              <span className="bg-white/20 text-xs font-bold px-1.5 py-0.5 rounded-full">{savat.length}</span>
+            )}
+            {savat.length > 0 && <span className="hidden sm:inline font-bold">{formatSum(jamiSumma)}</span>}
+          </button>
+          <button
             onClick={qrOchiq ? qrToxtatish : qrBoshlash}
             className={`shrink-0 w-11 h-11 flex items-center justify-center rounded-xl transition active:scale-95 ${
               qrOchiq
@@ -346,22 +356,6 @@ export default function SotuvchiPage() {
         )}
       </div>
 
-      {/* Bottom bar */}
-      <div className="shrink-0 bg-white dark:bg-neutral-900 border-t border-gray-200 dark:border-neutral-800 p-3">
-        <button
-          onClick={() => setSavatOchiq(true)}
-          className="w-full flex items-center justify-between bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-xl px-4 py-3 transition font-medium"
-        >
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={18} />
-            <span>Savat</span>
-            {savat.length > 0 && (
-              <span className="bg-white/20 text-white text-xs font-bold px-2 py-0.5 rounded-full">{savat.length}</span>
-            )}
-          </div>
-          {savat.length > 0 && <span className="font-bold">{formatSum(jamiSumma)}</span>}
-        </button>
-      </div>
 
       {/* Savat slide-up */}
       {savatOchiq && (
