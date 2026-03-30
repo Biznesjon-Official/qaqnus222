@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { AlertTriangle, PackagePlus, X, History, Layers } from 'lucide-react'
+import { AlertTriangle, PackagePlus, X, History, Layers, ArrowRightLeft } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
@@ -12,7 +12,7 @@ import SearchBar from '@/components/ui/search-bar'
 interface QoldiqItem {
   id: string; nomi: string; kategoriya: { nomi: string }
   birlik: string; sotishNarxi: number; kelishNarxi: number
-  minimalQoldiq: number; qoldiq: number; kamQolgan: boolean
+  minimalQoldiq: number; qoldiq: number; omborQoldiq: number; dokonQoldiq: number; kamQolgan: boolean
 }
 interface Taminotchi { id: string; nomi: string }
 interface OmborHarakat {
@@ -43,6 +43,10 @@ export default function OmborPage() {
   const [ommaviyModal, setOmmaviyModal] = useState(false)
   const [ommaviyForm, setOmmaviyForm] = useState({ miqdor: '', izoh: '' })
   const [ommaviyYuklanmoqda, setOmmaviyYuklanmoqda] = useState(false)
+  // O'tkazma (ombordan do'konga)
+  const [otkazmaModal, setOtkazmaModal] = useState(false)
+  const [otkazmaTovar, setOtkazmaTovar] = useState<QoldiqItem | null>(null)
+  const [otkazmaMiqdor, setOtkazmaMiqdor] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem('view-preference') as 'table' | 'card' | null
@@ -118,6 +122,27 @@ export default function OmborPage() {
     }
   }
 
+  async function otkazmaQilish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!otkazmaTovar) return
+    const res = await fetch('/api/ombor/otkazma', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tovarId: otkazmaTovar.id, miqdor: otkazmaMiqdor }),
+    })
+    if (res.ok) {
+      toast.success(`${otkazmaTovar.nomi} — ${otkazmaMiqdor} ta do'konga o'tkazildi`)
+      setOtkazmaModal(false)
+      setOtkazmaTovar(null)
+      setOtkazmaMiqdor('')
+      yuklash()
+      if (tarix) harakatlarYuklash()
+    } else {
+      const err = await res.json()
+      toast.error(err.xato || 'Xatolik')
+    }
+  }
+
   const kamQolganSoni = qoldiqlar.filter(q => q.kamQolgan).length
 
   // Build combobox options from loaded data
@@ -163,10 +188,10 @@ export default function OmborPage() {
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Tovar</th>
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden sm:table-cell whitespace-nowrap">Kategoriya</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qoldiq</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Ombor</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Do&apos;kon</th>
                   <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Kelish narxi</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Sotish narxi</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Holati</th>
+                  <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap"></th>
                 </tr>
               </thead>
               <tbody>
@@ -183,22 +208,27 @@ export default function OmborPage() {
                       <span className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded-lg font-medium">{q.kategoriya.nomi}</span>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <span className={`font-bold text-sm ${q.kamQolgan ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>
-                        {q.qoldiq} {q.birlik.toLowerCase()}
+                      <span className={`font-bold text-sm ${q.omborQoldiq <= 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                        {q.omborQoldiq} {q.birlik.toLowerCase()}
                       </span>
-                      <p className="text-gray-400 dark:text-gray-600 text-xs">Min: {q.minimalQoldiq}</p>
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <span className={`font-bold text-sm ${q.dokonQoldiq <= 0 ? 'text-gray-400' : 'text-green-600'}`}>
+                        {q.dokonQoldiq} {q.birlik.toLowerCase()}
+                      </span>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">
                       {formatSum(q.kelishNarxi)}
                     </td>
-                    <td className="px-4 py-3 text-right text-green-600 text-sm font-medium hidden md:table-cell whitespace-nowrap">
-                      {formatSum(q.sotishNarxi)}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      {q.kamQolgan ? (
-                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-lg font-medium">Kam qoldi</span>
-                      ) : (
-                        <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-lg font-medium">Normal</span>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      {q.omborQoldiq > 0 && (
+                        <button
+                          onClick={() => { setOtkazmaTovar(q); setOtkazmaMiqdor(''); setOtkazmaModal(true) }}
+                          className="text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-600 px-2.5 py-1.5 rounded-lg font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition flex items-center gap-1 mx-auto"
+                        >
+                          <ArrowRightLeft size={12} />
+                          Do&apos;konga
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -233,18 +263,27 @@ export default function OmborPage() {
               </div>
               <div className="mt-3 pt-3 border-t border-gray-100 dark:border-neutral-800 grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-gray-400 dark:text-gray-600 text-xs">Qoldiq</p>
-                  <p className={`font-bold text-sm ${q.kamQolgan ? 'text-red-600' : 'text-gray-900 dark:text-gray-100'}`}>{q.qoldiq} {q.birlik.toLowerCase()}</p>
+                  <p className="text-gray-400 dark:text-gray-600 text-xs">Ombor</p>
+                  <p className={`font-bold text-sm ${q.omborQoldiq <= 0 ? 'text-red-600' : 'text-blue-600'}`}>{q.omborQoldiq} {q.birlik.toLowerCase()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-400 dark:text-gray-600 text-xs">Do&apos;kon</p>
+                  <p className={`font-bold text-sm ${q.dokonQoldiq <= 0 ? 'text-gray-400' : 'text-green-600'}`}>{q.dokonQoldiq} {q.birlik.toLowerCase()}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 dark:text-gray-600 text-xs">Kelish</p>
                   <p className="text-gray-700 dark:text-gray-300 font-medium text-sm">{formatSum(q.kelishNarxi)}</p>
                 </div>
-                <div>
-                  <p className="text-gray-400 dark:text-gray-600 text-xs">Sotish</p>
-                  <p className="text-green-600 font-semibold text-sm">{formatSum(q.sotishNarxi)}</p>
-                </div>
               </div>
+              {q.omborQoldiq > 0 && (
+                <button
+                  onClick={() => { setOtkazmaTovar(q); setOtkazmaMiqdor(''); setOtkazmaModal(true) }}
+                  className="mt-2 w-full text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-600 px-3 py-2 rounded-lg font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition flex items-center justify-center gap-1"
+                >
+                  <ArrowRightLeft size={12} />
+                  Do&apos;konga o&apos;tkazish
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -260,7 +299,7 @@ export default function OmborPage() {
                 Ombor harakatlari tarixi
               </h2>
               <div className="flex items-center gap-2 flex-wrap">
-                {['', 'KIRIM', 'CHIQIM', 'QAYTARISH', 'YOQOTISH'].map(t => (
+                {['', 'KIRIM', 'CHIQIM', 'OTKAZMA', 'QAYTARISH', 'YOQOTISH'].map(t => (
                   <button
                     key={t}
                     onClick={() => setHarakatTur(t)}
@@ -297,6 +336,7 @@ export default function OmborPage() {
                       CHIQIM: { cls: 'bg-red-100 text-red-700', label: 'Chiqim' },
                       QAYTARISH: { cls: 'bg-blue-100 text-blue-700', label: 'Qaytarish' },
                       YOQOTISH: { cls: 'bg-orange-100 text-orange-700', label: "Yo'qotish" },
+                      OTKAZMA: { cls: 'bg-purple-100 text-purple-700', label: "O'tkazma" },
                     }
                     const tc = turConfig[h.turi] || { cls: 'bg-gray-100 text-gray-700', label: h.turi }
                     return (
@@ -307,7 +347,7 @@ export default function OmborPage() {
                           <span className={`text-xs px-2 py-0.5 rounded-lg font-medium ${tc.cls}`}>{tc.label}</span>
                         </td>
                         <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100 text-sm font-semibold whitespace-nowrap">
-                          {(h.turi === 'CHIQIM' || h.turi === 'YOQOTISH') ? '-' : '+'}{h.miqdor} {h.tovar.birlik.toLowerCase()}
+                          {(h.turi === 'CHIQIM' || h.turi === 'YOQOTISH' || h.turi === 'OTKAZMA') ? '-' : '+'}{h.miqdor} {h.tovar.birlik.toLowerCase()}
                         </td>
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden md:table-cell whitespace-nowrap">
                           {h.taminotchi?.nomi || <span className="text-gray-300 dark:text-gray-700">—</span>}
@@ -452,6 +492,54 @@ export default function OmborPage() {
                 </button>
                 <button type="submit" className="flex-1 py-2.5 bg-green-600 hover:bg-green-500 text-white rounded-xl font-medium transition">
                   Kirim qilish
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* O'tkazma modal */}
+      {otkazmaModal && otkazmaTovar && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-sm">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold flex items-center gap-2">
+                <ArrowRightLeft size={18} className="text-blue-500" />
+                Do&apos;konga o&apos;tkazma
+              </h3>
+              <button onClick={() => setOtkazmaModal(false)} className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={otkazmaQilish} className="p-5 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-xl p-3">
+                <p className="text-blue-800 dark:text-blue-200 font-semibold text-sm">{otkazmaTovar.nomi}</p>
+                <p className="text-blue-600 dark:text-blue-400 text-xs mt-1">Omborda: <strong>{otkazmaTovar.omborQoldiq}</strong> {otkazmaTovar.birlik.toLowerCase()} | Do&apos;konda: <strong>{otkazmaTovar.dokonQoldiq}</strong> {otkazmaTovar.birlik.toLowerCase()}</p>
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Miqdor *</label>
+                <input
+                  type="number"
+                  value={otkazmaMiqdor}
+                  onChange={e => setOtkazmaMiqdor(e.target.value)}
+                  required
+                  min="0.01"
+                  max={otkazmaTovar.omborQoldiq}
+                  step="0.01"
+                  placeholder={`Maks: ${otkazmaTovar.omborQoldiq}`}
+                  className={inputCls}
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setOtkazmaModal(false)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium">
+                  Bekor
+                </button>
+                <button type="submit"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium transition flex items-center justify-center gap-2">
+                  <ArrowRightLeft size={15} />
+                  O&apos;tkazish
                 </button>
               </div>
             </form>

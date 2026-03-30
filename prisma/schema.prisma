@@ -102,6 +102,7 @@ model OmborHarakati {
   id              String         @id @default(cuid())
   tovarId         String
   turi            HarakatTuri
+  joy             Joylashuv      @default(OMBOR)
   miqdor          Decimal        @db.Decimal(12, 3)
   narx            Decimal        @db.Decimal(12, 2)
   taminotchiId    String?
@@ -123,6 +124,12 @@ enum HarakatTuri {
   CHIQIM
   QAYTARISH
   YOQOTISH
+  OTKAZMA
+}
+
+enum Joylashuv {
+  OMBOR
+  DOKON
 }
 
 // ========================

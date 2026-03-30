@@ -12,9 +12,11 @@ export async function GET(req: NextRequest) {
     const tovarId = searchParams.get('tovarId') || ''
     const limit = parseInt(searchParams.get('limit') || '50')
 
+    const joy = searchParams.get('joy') || ''
     const where: any = {}
     if (tur) where.turi = tur
     if (tovarId) where.tovarId = tovarId
+    if (joy) where.joy = joy
 
     const harakatlar = await prisma.omborHarakati.findMany({
       where,

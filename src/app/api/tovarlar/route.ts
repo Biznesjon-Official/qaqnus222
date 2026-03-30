@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         include: {
           kategoriya: true,
           omborHarakati: {
-            select: { miqdor: true, turi: true },
+            select: { miqdor: true, turi: true, joy: true },
           },
         },
         orderBy: { nomi: 'asc' },
@@ -44,13 +44,15 @@ export async function GET(req: NextRequest) {
       prisma.tovar.count({ where }),
     ])
 
-    // Hisoblash: qoldiq = kirim - chiqim - yo'qotish + qaytarish
+    // Do'kon qoldig'i: OTKAZMA + KIRIM(DOKON) - CHIQIM(DOKON) + QAYTARISH(DOKON) - YOQOTISH(DOKON)
     const tovarlarQoldiq = tovarlar.map((t) => {
-      const qoldiq = t.omborHarakati.reduce((sum, h) => {
+      const dokonQoldiq = t.omborHarakati.reduce((sum, h) => {
+        if (h.turi === 'OTKAZMA') return sum + Number(h.miqdor)
+        if (h.joy !== 'DOKON') return sum
         if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
         return sum - Number(h.miqdor)
       }, 0)
-      return { ...t, qoldiq, omborHarakati: undefined }
+      return { ...t, qoldiq: dokonQoldiq, omborHarakati: undefined }
     })
 
     return NextResponse.json({ tovarlar: tovarlarQoldiq, jami, page, limit })

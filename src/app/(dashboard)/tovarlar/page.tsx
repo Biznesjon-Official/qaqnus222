@@ -55,6 +55,7 @@ export default function TovarlarPage() {
   // Barcode print state
   const [barcodeModal, setBarcodeModal] = useState(false)
   const [barcodeTovar, setBarcodeTovar] = useState<{ id: string; nomi: string; shtrixKod: string | null; sotishNarxi: number } | null>(null)
+  const [senik, setSenik] = useState<'57x39' | '40x30'>('57x39')
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -81,19 +82,26 @@ export default function TovarlarPage() {
     const selected = tovarlar.filter(t => selectedIds.has(t.id) && t.shtrixKod)
     if (selected.length === 0) { toast.error('Shtrix kodi mavjud tovar tanlanmagan'); return }
     const JsBarcode = (await import('jsbarcode')).default
+    const is40 = senik === '40x30'
+    const pw = is40 ? '40mm' : '2.24in'
+    const ph = is40 ? '30mm' : '1.54in'
+    const bw = is40 ? 1.2 : 1.5
+    const bh = is40 ? 30 : 45
+    const bf = is40 ? 10 : 12
+    const nf = is40 ? 11 : 15
     const labelsHtml = selected.map((t, i) => {
       const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-      JsBarcode(svgEl, t.shtrixKod!, { format: 'CODE128', width: 1.5, height: 45, fontSize: 12, margin: 2, displayValue: true, xmlDocument: document })
+      JsBarcode(svgEl, t.shtrixKod!, { format: 'CODE128', width: bw, height: bh, fontSize: bf, margin: 2, displayValue: true, xmlDocument: document })
       svgEl.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
       svgEl.setAttribute('width', '90%')
       svgEl.removeAttribute('height')
       const isLast = i === selected.length - 1
       return `<div class="label"${isLast ? '' : ' style="page-break-after:always"'}><div class="nomi">${t.nomi}</div>${svgEl.outerHTML}</div>`
     }).join('')
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:2.24in 1.54in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff;width:2.24in}.label{width:2.24in;height:1.54in;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 6px;overflow:hidden;page-break-inside:avoid}.nomi{font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.5px;color:#000}</style></head><body>${labelsHtml}</body></html>`
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:${pw} ${ph};margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{margin:0;padding:0;background:#fff;width:${pw}}.label{width:${pw};height:${ph};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${is40 ? '1px' : '2px'};padding:${is40 ? '2px 4px' : '4px 6px'};overflow:hidden;page-break-inside:avoid}.nomi{font-family:Arial,Helvetica,sans-serif;font-size:${nf}px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.5px;color:#000}</style></head><body>${labelsHtml}</body></html>`
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
-    const win = window.open(url, '_blank', 'width=215,height=148,toolbar=no,menubar=no,location=no')
+    const win = window.open(url, '_blank', `width=${is40 ? 170 : 215},height=${is40 ? 120 : 148},toolbar=no,menubar=no,location=no`)
     if (!win) { URL.revokeObjectURL(url); return }
     win.addEventListener('load', () => {
       setTimeout(() => {
@@ -630,11 +638,15 @@ export default function TovarlarPage() {
                 <X size={18} />
               </button>
             </div>
+            <div className="px-3 pt-2 flex justify-center gap-2">
+              <button onClick={() => setSenik('57x39')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${senik === '57x39' ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400'}`}>57×39mm</button>
+              <button onClick={() => setSenik('40x30')} className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${senik === '40x30' ? 'bg-red-600 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400'}`}>40×30mm</button>
+            </div>
             <div className="px-3 pt-3 pb-2 text-center bg-white" id="barcode-print-area">
-              <p className="font-bold tracking-wide uppercase text-gray-900 mb-3" style={{ fontFamily: 'Arial, sans-serif', fontSize: 24 }}>{barcodeTovar.nomi}</p>
+              <p className="font-bold tracking-wide uppercase text-gray-900" style={{ fontFamily: 'Arial, sans-serif', fontSize: senik === '40x30' ? 16 : 24, marginBottom: senik === '40x30' ? 4 : 12 }}>{barcodeTovar.nomi}</p>
               {barcodeTovar.shtrixKod ? (
                 <div className="flex justify-center" style={{ width: '90%', margin: '0 auto' }}>
-                  <Barcode value={barcodeTovar.shtrixKod} width={1.0} height={28} fontSize={9} margin={0} />
+                  <Barcode value={barcodeTovar.shtrixKod} width={senik === '40x30' ? 0.8 : 1.0} height={senik === '40x30' ? 22 : 28} fontSize={senik === '40x30' ? 8 : 9} margin={0} />
                 </div>
               ) : (
                 <p className="text-gray-400 text-sm">Shtrix kod mavjud emas</p>
@@ -653,10 +665,14 @@ export default function TovarlarPage() {
                   const svgEl = document.querySelector('#barcode-print-area svg')
                   if (svgEl) { svgEl.setAttribute('width', '100%'); svgEl.removeAttribute('height') }
                   const svgHtml = svgEl ? svgEl.outerHTML : ''
-                  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:2.24in 1.54in;margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;padding:4px 6px;width:2.24in;height:1.54in;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden;background:#fff}.nomi{font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;color:#000;-webkit-font-smoothing:none;text-rendering:geometricPrecision}svg{width:90%}</style></head><body><div class="nomi">${barcodeTovar.nomi}</div>${svgHtml}</body></html>`
+                  const is40 = senik === '40x30'
+                  const pw = is40 ? '40mm' : '2.24in'
+                  const ph = is40 ? '30mm' : '1.54in'
+                  const nf = is40 ? 14 : 20
+                  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:${pw} ${ph};margin:0}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;padding:${is40 ? '2px 4px' : '4px 6px'};width:${pw};height:${ph};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${is40 ? '1px' : '2px'};overflow:hidden;background:#fff}.nomi{font-family:Arial,Helvetica,sans-serif;font-size:${nf}px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.5px;line-height:1.2;color:#000;-webkit-font-smoothing:none;text-rendering:geometricPrecision}svg{width:90%}</style></head><body><div class="nomi">${barcodeTovar.nomi}</div>${svgHtml}</body></html>`
                   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
                   const url = URL.createObjectURL(blob)
-                  const win = window.open(url, '_blank', 'width=300,height=250,toolbar=no,menubar=no,location=no')
+                  const win = window.open(url, '_blank', `width=${is40 ? 200 : 300},height=${is40 ? 180 : 250},toolbar=no,menubar=no,location=no`)
                   if (!win) { URL.revokeObjectURL(url); return }
                   win.addEventListener('load', () => {
                     setTimeout(() => {

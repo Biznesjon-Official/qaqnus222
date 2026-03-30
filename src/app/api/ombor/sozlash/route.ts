@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
     if (!session) return NextResponse.json({ xato: "Ruxsat yo'q" }, { status: 401 })
 
     const foydalanuvchiId = (session.user as any).id
-    const { tovarId, yangiQoldiq } = await req.json()
+    const data = await req.json()
+    const { tovarId, yangiQoldiq } = data
 
     if (!tovarId || yangiQoldiq === undefined || yangiQoldiq === null) {
       return NextResponse.json({ xato: "tovarId va yangiQoldiq majburiy" }, { status: 400 })
@@ -19,17 +20,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ xato: "Noto'g'ri qoldiq" }, { status: 400 })
     }
 
-    // Hozirgi qoldiqni hisoblash
+    const joy = data?.joy || 'OMBOR'
+
+    // Hozirgi qoldiqni hisoblash (joy bo'yicha)
     const harakatlar = await prisma.omborHarakati.findMany({
       where: { tovarId },
-      select: { turi: true, miqdor: true },
+      select: { turi: true, miqdor: true, joy: true },
     })
 
-    const hozirgi = harakatlar.reduce((sum, h) => {
-      const m = Number(h.miqdor)
-      if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + m
-      return sum - m
-    }, 0)
+    const hozirgi = joy === 'OMBOR'
+      ? harakatlar.reduce((sum, h) => {
+          if (h.joy === 'DOKON') return sum
+          const m = Number(h.miqdor)
+          if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + m
+          if (h.turi === 'OTKAZMA') return sum - m
+          return sum - m
+        }, 0)
+      : harakatlar.reduce((sum, h) => {
+          const m = Number(h.miqdor)
+          if (h.turi === 'OTKAZMA') return sum + m
+          if (h.joy !== 'DOKON') return sum
+          if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + m
+          return sum - m
+        }, 0)
 
     const farq = yangi - hozirgi
 
@@ -41,6 +54,7 @@ export async function POST(req: NextRequest) {
       data: {
         tovarId,
         turi: farq > 0 ? 'KIRIM' : 'YOQOTISH',
+        joy,
         miqdor: Math.abs(farq),
         narx: 0,
         izoh: `Qoldiq sozlash: ${hozirgi.toFixed(2)} → ${yangi.toFixed(2)}`,

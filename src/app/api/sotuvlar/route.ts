@@ -105,11 +105,12 @@ export async function POST(req: NextRequest) {
           },
         })
 
-        // Ombor harakati - chiqim
+        // Ombor harakati - chiqim (do'kondan sotuv)
         await tx.omborHarakati.create({
           data: {
             tovarId: item.tovarId,
             turi: 'CHIQIM',
+            joy: 'DOKON',
             miqdor: parseFloat(item.miqdor),
             narx: parseFloat(item.birlikNarxi),
             sotuvId: yangiSotuv.id,

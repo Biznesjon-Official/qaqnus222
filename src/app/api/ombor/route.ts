@@ -18,13 +18,23 @@ export async function GET(req: NextRequest) {
       },
       include: {
         kategoriya: true,
-        omborHarakati: { select: { miqdor: true, turi: true } },
+        omborHarakati: { select: { miqdor: true, turi: true, joy: true } },
       },
       orderBy: { nomi: 'asc' },
     })
 
     const qoldiqlar = tovarlar.map((t) => {
-      const qoldiq = t.omborHarakati.reduce((sum, h) => {
+      // Ombor qoldig'i: KIRIM(OMBOR) - OTKAZMA - CHIQIM(OMBOR) - YOQOTISH(OMBOR) + QAYTARISH(OMBOR)
+      const omborQoldiq = t.omborHarakati.reduce((sum, h) => {
+        if (h.joy === 'DOKON') return sum
+        if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
+        if (h.turi === 'OTKAZMA') return sum - Number(h.miqdor)
+        return sum - Number(h.miqdor) // CHIQIM, YOQOTISH
+      }, 0)
+      // Do'kon qoldig'i: OTKAZMA + KIRIM(DOKON) - CHIQIM(DOKON) + QAYTARISH(DOKON) - YOQOTISH(DOKON)
+      const dokonQoldiq = t.omborHarakati.reduce((sum, h) => {
+        if (h.turi === 'OTKAZMA') return sum + Number(h.miqdor)
+        if (h.joy !== 'DOKON') return sum
         if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
         return sum - Number(h.miqdor)
       }, 0)
@@ -36,8 +46,10 @@ export async function GET(req: NextRequest) {
         sotishNarxi: t.sotishNarxi,
         kelishNarxi: t.kelishNarxi,
         minimalQoldiq: t.minimalQoldiq,
-        qoldiq: Math.max(0, qoldiq),
-        kamQolgan: qoldiq <= t.minimalQoldiq,
+        omborQoldiq: Math.max(0, omborQoldiq),
+        dokonQoldiq: Math.max(0, dokonQoldiq),
+        qoldiq: Math.max(0, omborQoldiq + dokonQoldiq),
+        kamQolgan: (omborQoldiq + dokonQoldiq) <= t.minimalQoldiq,
       }
     })
 
@@ -61,6 +73,7 @@ export async function POST(req: NextRequest) {
       data: {
         tovarId: data.tovarId,
         turi: data.turi || 'KIRIM',
+        joy: data.joy || 'OMBOR',
         miqdor: parseFloat(data.miqdor),
         narx: parseFloat(data.narx),
         taminotchiId: data.taminotchiId || null,

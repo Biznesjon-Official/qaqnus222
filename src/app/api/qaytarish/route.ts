@@ -71,12 +71,13 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // 2. Har tovar uchun QAYTARISH harakati (qoldiq ortadi)
+      // 2. Har tovar uchun QAYTARISH harakati (do'konga qaytarish)
       for (const t of tarkiblar) {
         await tx.omborHarakati.create({
           data: {
             tovarId: t.tovarId,
             turi: 'QAYTARISH',
+            joy: 'DOKON',
             miqdor: parseFloat(t.miqdor),
             narx: parseFloat(t.birlikNarxi),
             sotuvId: aslSotuvId,
