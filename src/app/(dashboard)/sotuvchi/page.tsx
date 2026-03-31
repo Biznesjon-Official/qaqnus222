@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { formatSum, normalizeUzbek, playBeep } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight, Camera, CameraOff } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight, Camera, CameraOff, Pause, Play, Archive } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
 
 interface Tovar {
@@ -31,7 +31,12 @@ interface Mijoz {
   telefon: string | null
 }
 
+interface SaqlanganiSavat {
+  id: string; savat: SavatItem[]; mijoz: Mijoz; sana: string; jami: number
+}
+
 const ODDIY_MIJOZ: Mijoz = { id: '', ism: 'Oddiy mijoz', telefon: null }
+const SAQLANGAN_KEY = 'sotuvchi-savatlar'
 
 export default function SotuvchiPage() {
   const [tovarlar, setTovarlar] = useState<Tovar[]>([])
@@ -40,6 +45,10 @@ export default function SotuvchiPage() {
   const [savatOchiq, setSavatOchiq] = useState(false)
   const [yuklash, setYuklash] = useState(false)
   const [yuborYuklash, setYuborYuklash] = useState(false)
+
+  // Saqlangan savatlar
+  const [saqlanganilar, setSaqlanganilar] = useState<SaqlanganiSavat[]>([])
+  const [saqlanganilarOchiq, setSaqlanganilarOchiq] = useState(false)
 
   // Numpad modal
   const [numpadTovar, setNumpadTovar] = useState<Tovar | null>(null)
@@ -70,6 +79,8 @@ export default function SotuvchiPage() {
     }
     load()
     qidiruvRef.current?.focus()
+    // Saqlangan savatlarni yuklash
+    try { const d = localStorage.getItem(SAQLANGAN_KEY); if (d) setSaqlanganilar(JSON.parse(d)) } catch {}
   }, [])
 
   // Mijoz qidiruv
@@ -274,6 +285,45 @@ export default function SotuvchiPage() {
     setYuborYuklash(false)
   }
 
+  function savatniSaqlash() {
+    if (savat.length === 0) { toast.error('Savat bo\'sh'); return }
+    const yangi: SaqlanganiSavat = {
+      id: Date.now().toString(),
+      savat: [...savat],
+      mijoz: { ...tanlanganMijoz },
+      sana: new Date().toISOString(),
+      jami: jamiSumma,
+    }
+    const yangilangan = [...saqlanganilar, yangi]
+    setSaqlanganilar(yangilangan)
+    localStorage.setItem(SAQLANGAN_KEY, JSON.stringify(yangilangan))
+    setSavat([])
+    setTanlanganMijoz(ODDIY_MIJOZ)
+    toast.success('Savat saqlandi!')
+  }
+
+  function saqlanganiOchish(s: SaqlanganiSavat) {
+    // Hozirgi savatni saqlash (agar bo'sh bo'lmasa)
+    if (savat.length > 0) {
+      savatniSaqlash()
+    }
+    setSavat(s.savat)
+    setTanlanganMijoz(s.mijoz)
+    // Saqlanganlardan o'chirish
+    const yangilangan = saqlanganilar.filter(x => x.id !== s.id)
+    setSaqlanganilar(yangilangan)
+    localStorage.setItem(SAQLANGAN_KEY, JSON.stringify(yangilangan))
+    setSaqlanganilarOchiq(false)
+    setSavatOchiq(true)
+    toast.success('Savat yuklandi')
+  }
+
+  function saqlanganiOchirish(id: string) {
+    const yangilangan = saqlanganilar.filter(x => x.id !== id)
+    setSaqlanganilar(yangilangan)
+    localStorage.setItem(SAQLANGAN_KEY, JSON.stringify(yangilangan))
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
 
@@ -299,6 +349,15 @@ export default function SotuvchiPage() {
               </button>
             )}
           </div>
+          {saqlanganilar.length > 0 && (
+            <button
+              onClick={() => setSaqlanganilarOchiq(true)}
+              className="shrink-0 h-11 flex items-center gap-2 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-white rounded-xl px-3 transition font-medium text-sm"
+            >
+              <Archive size={16} />
+              <span className="bg-white/20 text-xs font-bold px-1.5 py-0.5 rounded-full">{saqlanganilar.length}</span>
+            </button>
+          )}
           <button
             onClick={() => setSavatOchiq(true)}
             className="shrink-0 h-11 flex items-center gap-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-xl px-4 transition font-medium text-sm"
@@ -429,14 +488,23 @@ export default function SotuvchiPage() {
                   <span className="text-gray-600 dark:text-gray-400 font-medium">Jami:</span>
                   <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatSum(jamiSumma)}</span>
                 </div>
-                <button
-                  onClick={kassagaYuborish}
-                  disabled={yuborYuklash}
-                  className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white rounded-xl py-3.5 font-semibold transition"
-                >
-                  <Send size={18} />
-                  {yuborYuklash ? 'Yuborilmoqda...' : 'Kassaga yuborish'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={savatniSaqlash}
+                    className="flex-1 flex items-center justify-center gap-2 border border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-xl py-3 font-semibold transition"
+                  >
+                    <Pause size={16} />
+                    Saqlash
+                  </button>
+                  <button
+                    onClick={kassagaYuborish}
+                    disabled={yuborYuklash}
+                    className="flex-[2] flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white rounded-xl py-3 font-semibold transition"
+                  >
+                    <Send size={18} />
+                    {yuborYuklash ? 'Yuborilmoqda...' : 'Kassaga yuborish'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -554,6 +622,55 @@ export default function SotuvchiPage() {
                 >
                   {btn}
                 </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Saqlanganlar modal */}
+      {saqlanganilarOchiq && (
+        <div className="fixed inset-0 z-[60] flex flex-col">
+          <div className="flex-1 bg-black/50" onClick={() => setSaqlanganilarOchiq(false)} />
+          <div className="bg-white dark:bg-neutral-900 rounded-t-2xl max-h-[75vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800">
+              <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Archive size={18} className="text-amber-500" />
+                Saqlanganlar ({saqlanganilar.length})
+              </h2>
+              <button onClick={() => setSaqlanganilarOchiq(false)} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-xl transition">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-3 space-y-2">
+              {saqlanganilar.length === 0 ? (
+                <p className="text-center text-gray-400 dark:text-gray-600 py-8">Saqlangan savatlar yo&apos;q</p>
+              ) : saqlanganilar.map(s => (
+                <div key={s.id} className="bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {s.savat.length} ta tovar — {formatSum(s.jami)}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-600">
+                        {s.mijoz.ism} · {new Date(s.sana).toLocaleString('uz')}
+                      </p>
+                    </div>
+                    <button onClick={() => saqlanganiOchirish(s.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mb-2 truncate">
+                    {s.savat.map(i => i.nomi).join(', ')}
+                  </p>
+                  <button
+                    onClick={() => saqlanganiOchish(s)}
+                    className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 text-white rounded-lg py-2 text-sm font-medium transition"
+                  >
+                    <Play size={14} />
+                    Davom ettirish
+                  </button>
+                </div>
               ))}
             </div>
           </div>
