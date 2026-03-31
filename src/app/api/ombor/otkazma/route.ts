@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { getStockMap } from '@/lib/stock'
 
 // Ombordan do'konga o'tkazma
 export async function POST(req: NextRequest) {
@@ -17,24 +18,15 @@ export async function POST(req: NextRequest) {
 
     const qty = parseFloat(miqdor)
 
-    // Ombor qoldig'ini tekshirish
-    const harakatlar = await prisma.omborHarakati.findMany({
-      where: { tovarId },
-      select: { turi: true, miqdor: true, joy: true },
-    })
-
-    const omborQoldiq = harakatlar.reduce((sum, h) => {
-      if (h.joy === 'DOKON') return sum
-      if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
-      if (h.turi === 'OTKAZMA') return sum - Number(h.miqdor)
-      return sum - Number(h.miqdor)
-    }, 0)
+    // SQL aggregatsiya bilan ombor qoldig'ini tekshirish
+    const stockMap = await getStockMap([tovarId])
+    const stock = stockMap.get(tovarId)
+    const omborQoldiq = stock?.omborQoldiq ?? 0
 
     if (qty > omborQoldiq) {
       return NextResponse.json({ xato: `Omborda yetarli emas. Mavjud: ${omborQoldiq}` }, { status: 400 })
     }
 
-    // Tovar narxini olish
     const tovar = await prisma.tovar.findUnique({ where: { id: tovarId }, select: { kelishNarxi: true } })
 
     const harakat = await prisma.omborHarakati.create({

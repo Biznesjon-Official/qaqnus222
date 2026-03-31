@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { normalizeUzbek } from '@/lib/utils'
+import { getStockMap } from '@/lib/stock'
 
 export async function GET(req: NextRequest) {
   try {
@@ -32,27 +33,19 @@ export async function GET(req: NextRequest) {
     const [tovarlar, jami] = await Promise.all([
       prisma.tovar.findMany({
         where,
-        include: {
-          kategoriya: true,
-          omborHarakati: {
-            select: { miqdor: true, turi: true, joy: true },
-          },
-        },
+        include: { kategoriya: true },
         orderBy: { nomi: 'asc' },
         ...(limit > 0 ? { skip: (page - 1) * limit, take: limit } : {}),
       }),
       prisma.tovar.count({ where }),
     ])
 
-    // Do'kon qoldig'i: OTKAZMA + KIRIM(DOKON) - CHIQIM(DOKON) + QAYTARISH(DOKON) - YOQOTISH(DOKON)
+    // SQL aggregatsiya — omborHarakati yuklanmaydi
+    const stockMap = await getStockMap(tovarlar.map(t => t.id))
+
     const tovarlarQoldiq = tovarlar.map((t) => {
-      const dokonQoldiq = t.omborHarakati.reduce((sum, h) => {
-        if (h.turi === 'OTKAZMA') return sum + Number(h.miqdor)
-        if (h.joy !== 'DOKON') return sum
-        if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
-        return sum - Number(h.miqdor)
-      }, 0)
-      return { ...t, qoldiq: dokonQoldiq, omborHarakati: undefined }
+      const stock = stockMap.get(t.id)
+      return { ...t, qoldiq: stock?.dokonQoldiq ?? 0 }
     })
 
     return NextResponse.json({ tovarlar: tovarlarQoldiq, jami, page, limit })

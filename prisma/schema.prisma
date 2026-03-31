@@ -78,6 +78,8 @@ model Tovar {
   sherikdanOlishlar SherikdanOlish[]
   buyurtmaTarkibi  BuyurtmaTarkibi[]
 
+  @@index([holati])
+  @@index([kategoriyaId])
   @@map("tovarlar")
 }
 
@@ -116,6 +118,10 @@ model OmborHarakati {
   sotuv           Sotuv?         @relation(fields: [sotuvId], references: [id])
   foydalanuvchi   Foydalanuvchi  @relation(fields: [foydalanuvchiId], references: [id])
 
+  @@index([tovarId])
+  @@index([tovarId, turi, joy])
+  @@index([sotuvId])
+  @@index([sana])
   @@map("ombor_harakati")
 }
 

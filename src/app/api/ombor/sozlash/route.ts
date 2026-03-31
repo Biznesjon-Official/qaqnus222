@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { getStockMap } from '@/lib/stock'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,27 +23,10 @@ export async function POST(req: NextRequest) {
 
     const joy = data?.joy || 'OMBOR'
 
-    // Hozirgi qoldiqni hisoblash (joy bo'yicha)
-    const harakatlar = await prisma.omborHarakati.findMany({
-      where: { tovarId },
-      select: { turi: true, miqdor: true, joy: true },
-    })
-
-    const hozirgi = joy === 'OMBOR'
-      ? harakatlar.reduce((sum, h) => {
-          if (h.joy === 'DOKON') return sum
-          const m = Number(h.miqdor)
-          if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + m
-          if (h.turi === 'OTKAZMA') return sum - m
-          return sum - m
-        }, 0)
-      : harakatlar.reduce((sum, h) => {
-          const m = Number(h.miqdor)
-          if (h.turi === 'OTKAZMA') return sum + m
-          if (h.joy !== 'DOKON') return sum
-          if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + m
-          return sum - m
-        }, 0)
+    // SQL aggregatsiya bilan hozirgi qoldiqni olish
+    const stockMap = await getStockMap([tovarId])
+    const stock = stockMap.get(tovarId) || { omborQoldiq: 0, dokonQoldiq: 0 }
+    const hozirgi = joy === 'OMBOR' ? stock.omborQoldiq : stock.dokonQoldiq
 
     const farq = yangi - hozirgi
 

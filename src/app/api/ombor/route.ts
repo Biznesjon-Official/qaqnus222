@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { getStockMap } from '@/lib/stock'
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,33 +12,23 @@ export async function GET(req: NextRequest) {
     const kamQolgan = searchParams.get('kamQolgan') === 'true'
     const qidiruv = searchParams.get('q') || ''
 
+    // 1. Faqat tovar ma'lumotlarini olish (omborHarakati YUKLANMAYDI)
     const tovarlar = await prisma.tovar.findMany({
       where: {
         holati: 'FAOL',
         ...(qidiruv ? { nomi: { contains: qidiruv, mode: 'insensitive' } } : {}),
       },
-      include: {
-        kategoriya: true,
-        omborHarakati: { select: { miqdor: true, turi: true, joy: true } },
-      },
+      include: { kategoriya: true },
       orderBy: { nomi: 'asc' },
     })
 
+    // 2. Qoldiqni SQL aggregatsiya bilan hisoblash (bitta query)
+    const stockMap = await getStockMap()
+
+    // 3. Natijani birlashtirish
     const qoldiqlar = tovarlar.map((t) => {
-      // Ombor qoldig'i: KIRIM(OMBOR) - OTKAZMA - CHIQIM(OMBOR) - YOQOTISH(OMBOR) + QAYTARISH(OMBOR)
-      const omborQoldiq = t.omborHarakati.reduce((sum, h) => {
-        if (h.joy === 'DOKON') return sum
-        if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
-        if (h.turi === 'OTKAZMA') return sum - Number(h.miqdor)
-        return sum - Number(h.miqdor) // CHIQIM, YOQOTISH
-      }, 0)
-      // Do'kon qoldig'i: OTKAZMA + KIRIM(DOKON) - CHIQIM(DOKON) + QAYTARISH(DOKON) - YOQOTISH(DOKON)
-      const dokonQoldiq = t.omborHarakati.reduce((sum, h) => {
-        if (h.turi === 'OTKAZMA') return sum + Number(h.miqdor)
-        if (h.joy !== 'DOKON') return sum
-        if (h.turi === 'KIRIM' || h.turi === 'QAYTARISH') return sum + Number(h.miqdor)
-        return sum - Number(h.miqdor)
-      }, 0)
+      const stock = stockMap.get(t.id) || { omborQoldiq: 0, dokonQoldiq: 0 }
+      const jami = stock.omborQoldiq + stock.dokonQoldiq
       return {
         id: t.id,
         nomi: t.nomi,
@@ -48,17 +39,18 @@ export async function GET(req: NextRequest) {
         sotishNarxi: t.sotishNarxi,
         kelishNarxi: t.kelishNarxi,
         minimalQoldiq: t.minimalQoldiq,
-        omborQoldiq: Math.max(0, omborQoldiq),
-        dokonQoldiq: Math.max(0, dokonQoldiq),
-        qoldiq: Math.max(0, omborQoldiq + dokonQoldiq),
-        kamQolgan: (omborQoldiq + dokonQoldiq) <= t.minimalQoldiq,
+        omborQoldiq: stock.omborQoldiq,
+        dokonQoldiq: stock.dokonQoldiq,
+        qoldiq: Math.max(0, jami),
+        kamQolgan: jami <= t.minimalQoldiq,
       }
     })
 
     const natija = kamQolgan ? qoldiqlar.filter((q) => q.kamQolgan) : qoldiqlar
 
     return NextResponse.json(natija)
-  } catch {
+  } catch (e) {
+    console.error(e)
     return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
   }
 }
