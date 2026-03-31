@@ -270,7 +270,7 @@ export default function OmborPage() {
           <PackagePlus size={16} />
           Kirim qilish
         </button>
-        <button onClick={() => { setYangiForm({ nomi: '', kategoriyaId: kategoriyalar[0]?.id || '', kelishNarxi: '', sotishNarxi: '', birlik: 'DONA', minimalQoldiq: '5', shtrixKod: '', miqdor: '', taminotchiId: '', izoh: '' }); setYangiModal(true) }} className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition whitespace-nowrap">
+        <button onClick={async () => { setYangiForm({ nomi: '', kategoriyaId: kategoriyalar[0]?.id || '', kelishNarxi: '', sotishNarxi: '', birlik: 'DONA', minimalQoldiq: '5', shtrixKod: '', miqdor: '', taminotchiId: '', izoh: '' }); setYangiModal(true); const r = await fetch('/api/tovarlar/keyingi-kod').then(r => r.json()); if (r.kod) setYangiForm(f => ({ ...f, shtrixKod: r.kod })) }} className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition whitespace-nowrap">
           <Plus size={16} />
           Yangi mahsulot
         </button>
