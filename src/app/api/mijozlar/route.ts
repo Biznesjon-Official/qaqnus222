@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
               { ism: { contains: qidiruv, mode: 'insensitive' } },
               { telefon: { contains: qidiruv } },
               { maxsus_kod: { contains: qidiruv } },
+              { manzil: { contains: qidiruv, mode: 'insensitive' } },
             ],
           }
         : {},
