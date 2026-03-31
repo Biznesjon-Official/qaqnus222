@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { toKirill, toLotin } from '@/lib/utils'
 
 async function generateUniqueKod(): Promise<string> {
   while (true) {
@@ -19,14 +20,21 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const qidiruv = searchParams.get('q') || ''
 
+    const kirillVariant = toKirill(qidiruv)
+    const lotinVariant = toLotin(qidiruv)
+
     const mijozlar = await prisma.mijoz.findMany({
       where: qidiruv
         ? {
             OR: [
               { ism: { contains: qidiruv, mode: 'insensitive' } },
+              ...(kirillVariant !== qidiruv ? [{ ism: { contains: kirillVariant, mode: 'insensitive' as const } }] : []),
+              ...(lotinVariant !== qidiruv ? [{ ism: { contains: lotinVariant, mode: 'insensitive' as const } }] : []),
               { telefon: { contains: qidiruv } },
               { maxsus_kod: { contains: qidiruv } },
               { manzil: { contains: qidiruv, mode: 'insensitive' } },
+              ...(kirillVariant !== qidiruv ? [{ manzil: { contains: kirillVariant, mode: 'insensitive' as const } }] : []),
+              ...(lotinVariant !== qidiruv ? [{ manzil: { contains: lotinVariant, mode: 'insensitive' as const } }] : []),
             ],
           }
         : {},

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { formatSum, normalizeUzbek, playBeep } from '@/lib/utils'
+import { formatSum, playBeep, uzSearch } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight, Camera, CameraOff, Pause, Play, Archive } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
@@ -123,11 +123,7 @@ export default function SotuvchiPage() {
   }, [tovarlar, numpadTovar, mijozModalOchiq])
 
   const filteredTovarlar = qidiruv.trim()
-    ? tovarlar.filter(t => {
-        const q = normalizeUzbek(qidiruv.toLowerCase())
-        return normalizeUzbek(t.nomi.toLowerCase()).includes(q) ||
-          (t.shtrixKod || '').includes(qidiruv.trim())
-      })
+    ? tovarlar.filter(t => uzSearch(t.nomi, qidiruv) || (t.shtrixKod || '').includes(qidiruv.trim()))
     : tovarlar
 
   function ochNumpad(tovar: Tovar) {
@@ -149,8 +145,6 @@ export default function SotuvchiPage() {
     if (!numpadTovar) return
     const miqdor = parseFloat(numpadQiymat) || 0
     if (miqdor <= 0) { toast.error('Miqdor 0 dan katta bo\'lsin'); return }
-    if (numpadTovar.qoldiq <= 0) { toast.error(`${numpadTovar.nomi} — qoldiq 0`); return }
-    if (miqdor > numpadTovar.qoldiq) { toast.error(`Qoldiq yetarli emas. Mavjud: ${numpadTovar.qoldiq}`); return }
 
     setSavat(prev => {
       const existing = prev.find(s => s.tovarId === numpadTovar.id)

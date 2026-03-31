@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { formatSum, formatSanaVaVaqt, playBeep } from '@/lib/utils'
+import { formatSum, formatSanaVaVaqt, playBeep, uzSearch } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages, ScanLine } from 'lucide-react'
 import { jsPDF } from 'jspdf'
@@ -180,16 +180,9 @@ export default function SotuvPage() {
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
   }, [])
 
-  // O'zbek harflarini normallashtirish (o', oʻ, o', o' -> bitta variant)
-  function normUz(s: string) {
-    return s.toLowerCase()
-      .replace(/[oо][''ʻʼ`']/g, "o'")
-      .replace(/[gг][''ʻʼ`']/g, "g'")
-  }
-
   const [renderLimit, setRenderLimit] = useState(50)
   const filteredTovarlar = tovarlar.filter(t =>
-    normUz(t.nomi).includes(normUz(qidiruv)) ||
+    uzSearch(t.nomi, qidiruv) ||
     (t.shtrixKod && t.shtrixKod.includes(qidiruv))
   )
   const korsatiladiganTovarlar = filteredTovarlar.slice(0, renderLimit)

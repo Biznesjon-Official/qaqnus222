@@ -60,6 +60,48 @@ export function normalizeUzbek(text: string): string {
   return text.replace(/[`ʻʼ\u2018\u2019\u02BC]/g, "'")
 }
 
+// Lotin → Kirill transliteratsiya
+const L2K: Record<string, string> = {
+  'Sh':'Ш','sh':'ш','Ch':'Ч','ch':'ч','Ng':'Нг','ng':'нг',
+  "O'":'Ў',"o'":'ў',"G'":'Ғ',"g'":'ғ',
+  'Yo':'Ё','yo':'ё','Yu':'Ю','yu':'ю','Ya':'Я','ya':'я',
+  'Ye':'Е','ye':'е','Ts':'Ц','ts':'ц',
+  'A':'А','a':'а','B':'Б','b':'б','D':'Д','d':'д','E':'Э','e':'э',
+  'F':'Ф','f':'ф','G':'Г','g':'г','H':'Ҳ','h':'ҳ','I':'И','i':'и',
+  'J':'Ж','j':'ж','K':'К','k':'к','L':'Л','l':'л','M':'М','m':'м',
+  'N':'Н','n':'н','O':'О','o':'о','P':'П','p':'п','Q':'Қ','q':'қ',
+  'R':'Р','r':'р','S':'С','s':'с','T':'Т','t':'т','U':'У','u':'у',
+  'V':'В','v':'в','X':'Х','x':'х','Y':'Й','y':'й','Z':'З','z':'з',
+}
+const K2L: Record<string, string> = {}
+for (const [lat, kir] of Object.entries(L2K)) K2L[kir] = lat
+const l2kKeys = Object.keys(L2K).sort((a, b) => b.length - a.length)
+const k2lKeys = Object.keys(K2L).sort((a, b) => b.length - a.length)
+
+export function toKirill(text: string): string {
+  let r = text
+  for (const k of l2kKeys) r = r.split(k).join(L2K[k])
+  return r
+}
+export function toLotin(text: string): string {
+  let r = text
+  for (const k of k2lKeys) r = r.split(k).join(K2L[k])
+  return r
+}
+
+/** Universal qidiruv — lotin yoki kirill yozilsa ham ikkalasini tekshiradi */
+export function uzSearch(haystack: string, needle: string): boolean {
+  if (!needle) return true
+  const h = normalizeUzbek(haystack.toLowerCase())
+  const n = normalizeUzbek(needle.toLowerCase())
+  if (h.includes(n)) return true
+  // Kirill varianti bilan qidirish
+  if (h.includes(toKirill(n).toLowerCase())) return true
+  // Lotin varianti bilan qidirish
+  if (h.includes(toLotin(n).toLowerCase())) return true
+  return false
+}
+
 // Skaner beep ovozi
 export function playBeep() {
   try {

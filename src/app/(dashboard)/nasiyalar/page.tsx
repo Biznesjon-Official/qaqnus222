@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { formatSum, formatSana } from '@/lib/utils'
+import { formatSum, formatSana, uzSearch } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Phone, Banknote, X, Clock, Plus, Trash2, PlusCircle, Pencil, Users, AlertTriangle, CheckCircle, TrendingDown } from 'lucide-react'
 import ViewToggle from '@/components/ViewToggle'
@@ -212,9 +212,9 @@ export default function NasiyalarPage() {
 
   const filteredNasiyalar = qidiruv
     ? nasiyalar.filter(n =>
-        n.mijoz.ism.toLowerCase().includes(qidiruv.toLowerCase()) ||
+        uzSearch(n.mijoz.ism, qidiruv) ||
         (n.sotuv?.chekRaqami || '').toLowerCase().includes(qidiruv.toLowerCase()) ||
-        (n.mijoz.manzil || '').toLowerCase().includes(qidiruv.toLowerCase())
+        uzSearch(n.mijoz.manzil || '', qidiruv)
       )
     : nasiyalar
 
