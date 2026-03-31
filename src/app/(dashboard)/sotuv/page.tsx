@@ -102,9 +102,9 @@ export default function SotuvPage() {
   const oxirgiSkanRef = useRef<string>('')
 
   const skanerniYopish = useCallback(() => {
-    if (skanerRef.current) {
-      skanerRef.current.stop().catch(() => {})
-      skanerRef.current.clear()
+    const s = skanerRef.current
+    if (s) {
+      s.isScanning && s.stop().then(() => s.clear()).catch(() => {})
       skanerRef.current = null
     }
     oxirgiSkanRef.current = ''
