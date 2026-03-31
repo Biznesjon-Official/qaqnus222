@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { formatSum } from '@/lib/utils'
-import { normalizeUzbek } from '@/lib/utils'
+import { formatSum, normalizeUzbek, playBeep } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, Send, X, Package, Plus, Minus, User, ChevronRight, Camera, CameraOff } from 'lucide-react'
 import { Html5Qrcode } from 'html5-qrcode'
@@ -97,6 +96,7 @@ export default function SotuvchiPage() {
         barcodeBuffer.current = ''
         clearTimeout(barcodeTimer.current)
         if (code.length >= 2) {
+          playBeep()
           const found = tovarlar.find(t => t.shtrixKod === code)
           if (found) ochNumpad(found)
           else toast.error(`"${code}" kodli tovar topilmadi`)
@@ -176,9 +176,21 @@ export default function SotuvchiPage() {
   const jamiSumma = savat.reduce((s, i) => s + i.jami, 0)
 
   // QR skaner
+  const oxirgiQrRef = useRef<string>('')
+
+  const qrToxtatish = useCallback(async () => {
+    const s = qrScannerRef.current
+    if (s) {
+      s.isScanning && await s.stop().then(() => s.clear()).catch(() => {})
+      qrScannerRef.current = null
+    }
+    oxirgiQrRef.current = ''
+    setQrOchiq(false)
+  }, [])
+
   const qrBoshlash = useCallback(async () => {
     setQrOchiq(true)
-    // Kutib turish — DOM element paydo bo'lgunicha
+    oxirgiQrRef.current = ''
     await new Promise(r => setTimeout(r, 100))
 
     try {
@@ -187,9 +199,13 @@ export default function SotuvchiPage() {
 
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
+        { fps: 10, qrbox: { width: 220, height: 120 } },
         (kod) => {
-          // Skanlangan kod — mahsulotni qidirish
+          if (oxirgiQrRef.current === kod) return
+          oxirgiQrRef.current = kod
+          setTimeout(() => { oxirgiQrRef.current = '' }, 2000)
+
+          playBeep()
           const found = tovarlar.find(t => t.shtrixKod === kod || t.id === kod)
           if (found) {
             ochNumpad(found)
@@ -197,9 +213,6 @@ export default function SotuvchiPage() {
           } else {
             toast.error(`"${kod}" kodli tovar topilmadi`)
           }
-          // Skanerni to'xtatish
-          scanner.stop().catch(() => {})
-          setQrOchiq(false)
         },
         () => {}
       )
@@ -207,14 +220,7 @@ export default function SotuvchiPage() {
       toast.error('Kamerani ishga tushirib bo\'lmadi')
       setQrOchiq(false)
     }
-  }, [tovarlar])
-
-  const qrToxtatish = useCallback(async () => {
-    if (qrScannerRef.current?.isScanning) {
-      await qrScannerRef.current.stop().catch(() => {})
-    }
-    setQrOchiq(false)
-  }, [])
+  }, [tovarlar, qrToxtatish])
 
   // Cleanup
   useEffect(() => {

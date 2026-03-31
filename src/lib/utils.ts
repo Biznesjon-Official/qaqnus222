@@ -60,6 +60,22 @@ export function normalizeUzbek(text: string): string {
   return text.replace(/[`ʻʼ\u2018\u2019\u02BC]/g, "'")
 }
 
+// Skaner beep ovozi
+export function playBeep() {
+  try {
+    const ctx = new AudioContext()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = 1200
+    gain.gain.value = 0.3
+    osc.start()
+    osc.stop(ctx.currentTime + 0.15)
+    setTimeout(() => ctx.close(), 200)
+  } catch {}
+}
+
 // Format a phone number string to +998 (XX) XXX-XX-XX display format
 export function formatPhone(phone: string | null | undefined): string {
   if (!phone) return ''

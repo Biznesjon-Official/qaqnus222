@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
+import { formatSum, formatSanaVaVaqt, playBeep } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages, ScanLine } from 'lucide-react'
 import { jsPDF } from 'jspdf'
@@ -128,6 +128,7 @@ export default function SotuvPage() {
             oxirgiSkanRef.current = kod
             setTimeout(() => { oxirgiSkanRef.current = '' }, 2000)
 
+            playBeep()
             const topilgan = tovarlar.find(t => t.shtrixKod === kod)
             if (topilgan) {
               savatQosh(topilgan)
