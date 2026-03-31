@@ -121,14 +121,14 @@ export default function SotuvchiPage() {
 
   function ochNumpad(tovar: Tovar) {
     setNumpadTovar(tovar)
-    setNumpadQiymat('1')
+    setNumpadQiymat('')
     setQidiruv('')
   }
 
   function numpadPress(val: string) {
     setNumpadQiymat(prev => {
-      if (val === '⌫') return prev.length > 1 ? prev.slice(0, -1) : '0'
-      if (val === 'C') return '0'
+      if (val === '⌫') return prev.length > 1 ? prev.slice(0, -1) : ''
+      if (val === 'C') return ''
       if (prev === '0') return val
       return prev + val
     })
