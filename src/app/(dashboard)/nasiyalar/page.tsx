@@ -213,7 +213,8 @@ export default function NasiyalarPage() {
   const filteredNasiyalar = qidiruv
     ? nasiyalar.filter(n =>
         n.mijoz.ism.toLowerCase().includes(qidiruv.toLowerCase()) ||
-        (n.sotuv?.chekRaqami || '').toLowerCase().includes(qidiruv.toLowerCase())
+        (n.sotuv?.chekRaqami || '').toLowerCase().includes(qidiruv.toLowerCase()) ||
+        (n.mijoz.manzil || '').toLowerCase().includes(qidiruv.toLowerCase())
       )
     : nasiyalar
 
@@ -331,6 +332,9 @@ export default function NasiyalarPage() {
                         {n.mijoz.telefon && (
                           <div className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 mt-0.5"><Phone size={10} />{n.mijoz.telefon}</div>
                         )}
+                        {n.mijoz.manzil && (
+                          <div className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{n.mijoz.manzil}</div>
+                        )}
                       </td>
                       {/* Chek */}
                       <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">{n.sotuv?.chekRaqami || <span className="text-gray-300 dark:text-gray-700">—</span>}</td>
@@ -420,6 +424,9 @@ export default function NasiyalarPage() {
                       <p className="text-gray-500 dark:text-gray-500 text-sm mt-0.5 flex items-center gap-1">
                         <Phone size={12} /> {n.mijoz.telefon}
                       </p>
+                    )}
+                    {n.mijoz.manzil && (
+                      <p className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{n.mijoz.manzil}</p>
                     )}
                     <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">
                       {n.sotuv ? `Chek: ${n.sotuv.chekRaqami} • ` : ''}{formatSana(n.sana)}
