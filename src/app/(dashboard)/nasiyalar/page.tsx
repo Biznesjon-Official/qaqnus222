@@ -94,7 +94,7 @@ export default function NasiyalarPage() {
   function openTolovModal(n: Nasiya) {
     if (n.holati === 'YOPILGAN') return
     setTolovModal(n)
-    setTolovForm({ summa: String(n.qoldiq), tolovUsuli: 'NAQD', izoh: '' })
+    setTolovForm({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
   }
 
   async function tolovQilish(e: React.FormEvent) {
