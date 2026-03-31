@@ -42,6 +42,8 @@ export async function GET(req: NextRequest) {
         id: t.id,
         nomi: t.nomi,
         kategoriya: t.kategoriya,
+        kategoriyaId: t.kategoriyaId,
+        shtrixKod: t.shtrixKod,
         birlik: t.birlik,
         sotishNarxi: t.sotishNarxi,
         kelishNarxi: t.kelishNarxi,
