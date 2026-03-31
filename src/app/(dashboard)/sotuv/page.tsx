@@ -99,6 +99,7 @@ export default function SotuvPage() {
   // Barcode skaner
   const [skanerOchiq, setSkanerOchiq] = useState(false)
   const skanerRef = useRef<any>(null)
+  const oxirgiSkanRef = useRef<string>('')
 
   const skanerniYopish = useCallback(() => {
     if (skanerRef.current) {
@@ -106,11 +107,13 @@ export default function SotuvPage() {
       skanerRef.current.clear()
       skanerRef.current = null
     }
+    oxirgiSkanRef.current = ''
     setSkanerOchiq(false)
   }, [])
 
   const skanerniOchish = useCallback(async () => {
     setSkanerOchiq(true)
+    oxirgiSkanRef.current = ''
     setTimeout(async () => {
       try {
         const { Html5Qrcode } = await import('html5-qrcode')
@@ -120,6 +123,11 @@ export default function SotuvPage() {
           { facingMode: 'environment' },
           { fps: 10, qrbox: { width: 250, height: 120 } },
           (kod) => {
+            // Bir xil kodni ketma-ket scan qilmasligi uchun
+            if (oxirgiSkanRef.current === kod) return
+            oxirgiSkanRef.current = kod
+            setTimeout(() => { oxirgiSkanRef.current = '' }, 2000)
+
             const topilgan = tovarlar.find(t => t.shtrixKod === kod)
             if (topilgan) {
               savatQosh(topilgan)
@@ -128,7 +136,6 @@ export default function SotuvPage() {
               setQidiruv(kod)
               toast.error(`Tovar topilmadi: ${kod}`)
             }
-            skanerniYopish()
           },
           () => {}
         )
