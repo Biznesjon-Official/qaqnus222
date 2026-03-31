@@ -226,8 +226,8 @@ export default function NasiyalarPage() {
           className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === '' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Barchasi</p>
-              <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-gray-100">{formatSum(stats.jamiQarz)}</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Qolgan qarz</p>
+              <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-gray-100">{formatSum(stats.jamiQoldiq)}</p>
               <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.mijozlarSoni} ta mijoz</p>
             </div>
             <div className="w-11 h-11 bg-red-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
