@@ -57,6 +57,9 @@ export default function TovarlarPage() {
   const [barcodeTovar, setBarcodeTovar] = useState<{ id: string; nomi: string; shtrixKod: string | null; sotishNarxi: number } | null>(null)
   const [senik, setSenik] = useState<'57x39' | '40x30'>('57x39')
 
+  // Render limit
+  const [renderLimit, setRenderLimit] = useState(50)
+
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
@@ -318,8 +321,8 @@ export default function TovarlarPage() {
 
       {/* Table view */}
       {(() => {
-        const filteredTovarlar = tovarlar
-        const withCode = filteredTovarlar.filter(t => t.shtrixKod)
+        const filteredTovarlar = tovarlar.slice(0, renderLimit)
+        const withCode = tovarlar.filter(t => t.shtrixKod)
         const allSelected = withCode.length > 0 && withCode.every(t => selectedIds.has(t.id))
         return (<>
       {view === 'table' && (
@@ -399,6 +402,11 @@ export default function TovarlarPage() {
               </tbody>
             </table>
           </div>
+          {tovarlar.length > renderLimit && (
+            <button onClick={() => setRenderLimit(r => r + 50)} className="w-full py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-neutral-800 transition border-t border-gray-200 dark:border-neutral-800">
+              Yana ko&apos;rsatish ({tovarlar.length - renderLimit} ta qoldi)
+            </button>
+          )}
         </div>
       )}
 

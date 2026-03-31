@@ -232,7 +232,11 @@ export default function OmborPage() {
     }
   }
 
+  const [renderLimit, setRenderLimit] = useState(50)
+  useEffect(() => { setRenderLimit(50) }, [qidiruv, kamQolganFilter])
+
   const kamQolganSoni = qoldiqlar.filter(q => q.kamQolgan).length
+  const korsatiladiganQoldiqlar = qoldiqlar.slice(0, renderLimit)
 
   // Build combobox options from loaded data
   const tovarOptions = qoldiqlar.map(q => ({ value: q.id, label: q.nomi }))
@@ -292,7 +296,7 @@ export default function OmborPage() {
                   <tr><td colSpan={6} className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</td></tr>
                 ) : qoldiqlar.length === 0 ? (
                   <tr><td colSpan={6} className="text-center text-gray-400 dark:text-gray-600 py-12">Ma&apos;lumot topilmadi</td></tr>
-                ) : qoldiqlar.map((q, idx) => (
+                ) : korsatiladiganQoldiqlar.map((q, idx) => (
                   <tr key={q.id} className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${q.kamQolgan ? 'bg-red-50/50 dark:bg-red-950/20' : idx % 2 === 1 ? 'bg-gray-50/40 dark:bg-neutral-800/40' : ''}`}>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{q.nomi}</p>
@@ -333,6 +337,11 @@ export default function OmborPage() {
               </tbody>
             </table>
           </div>
+          {qoldiqlar.length > renderLimit && (
+            <button onClick={() => setRenderLimit(r => r + 50)} className="w-full py-2.5 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-neutral-800 transition border-t border-gray-200 dark:border-neutral-800">
+              Yana {Math.min(50, qoldiqlar.length - renderLimit)} ta ko&apos;rsatish ({qoldiqlar.length - renderLimit} ta qoldi)
+            </button>
+          )}
         </div>
       )}
 
@@ -343,7 +352,7 @@ export default function OmborPage() {
             <p className="text-gray-400 dark:text-gray-600 col-span-3 text-center py-12">Yuklanmoqda...</p>
           ) : qoldiqlar.length === 0 ? (
             <p className="text-gray-400 dark:text-gray-600 col-span-3 text-center py-12">Ma&apos;lumot topilmadi</p>
-          ) : qoldiqlar.map(q => (
+          ) : korsatiladiganQoldiqlar.map(q => (
             <div key={q.id} className={`bg-white dark:bg-neutral-900 border rounded-2xl p-4 hover:shadow-md transition-shadow ${q.kamQolgan ? 'border-red-200 dark:border-red-900' : 'border-gray-200 dark:border-neutral-800'}`}>
               <div className="flex items-start justify-between">
                 <div className="min-w-0 flex-1">

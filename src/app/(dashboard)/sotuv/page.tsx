@@ -187,10 +187,15 @@ export default function SotuvPage() {
       .replace(/[gг][''ʻʼ`']/g, "g'")
   }
 
+  const [renderLimit, setRenderLimit] = useState(50)
   const filteredTovarlar = tovarlar.filter(t =>
     normUz(t.nomi).includes(normUz(qidiruv)) ||
     (t.shtrixKod && t.shtrixKod.includes(qidiruv))
   )
+  const korsatiladiganTovarlar = filteredTovarlar.slice(0, renderLimit)
+
+  // Qidiruv o'zgarganda limitni qayta boshlash
+  useEffect(() => { setRenderLimit(50) }, [qidiruv])
 
   function savatQosh(tovar: Tovar) {
     setSavat(prev => {
@@ -730,7 +735,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
         )}
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-y-auto max-h-[calc(100vh-280px)]">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
-            {filteredTovarlar.map(t => (
+            {korsatiladiganTovarlar.map(t => (
               <button
                 key={t.id}
                 onClick={() => savatQosh(t)}
@@ -744,6 +749,11 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
               </button>
             ))}
           </div>
+          {filteredTovarlar.length > renderLimit && (
+            <button onClick={() => setRenderLimit(r => r + 50)} className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
+              Yana {Math.min(50, filteredTovarlar.length - renderLimit)} ta ko&apos;rsatish ({filteredTovarlar.length - renderLimit} ta qoldi)
+            </button>
+          )}
         </div>
       </div>
 
