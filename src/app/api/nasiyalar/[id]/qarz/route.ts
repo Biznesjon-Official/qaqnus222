@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { qarzQoshildiXabar } from '@/lib/telegram'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,6 +30,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           sana: new Date(),
         },
       })
+      qarzQoshildiXabar(yangi.id, nasiya.mijozId, qoshilganSumma, qoshilganSumma)
+        .catch(e => console.error('[Telegram] Qarz xabar xatosi:', e))
       return NextResponse.json({ yangiNasiya: true, nasiya: yangi }, { status: 201 })
     }
 
@@ -43,6 +46,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         holati: 'OCHIQ',
       },
     })
+
+    qarzQoshildiXabar(id, nasiya.mijozId, qoshilganSumma, yangiQoldiq)
+      .catch(e => console.error('[Telegram] Qarz xabar xatosi:', e))
 
     return NextResponse.json(yangilangan)
   } catch {

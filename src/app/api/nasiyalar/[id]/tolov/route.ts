@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { tolovQilindiXabar } from '@/lib/telegram'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -40,6 +41,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
       }),
     ])
+
+    tolovQilindiXabar(id, nasiya.mijozId, haqiqiyTolov, Math.max(0, yangiQoldiq))
+      .catch(e => console.error('[Telegram] Tolov xabar xatosi:', e))
 
     return NextResponse.json({ tolov, nasiya: yangiNasiya }, { status: 201 })
   } catch {

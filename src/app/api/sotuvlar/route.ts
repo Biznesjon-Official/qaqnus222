@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { generateChekRaqami } from '@/lib/utils'
+import { nasiyaYaratildiXabarToliq } from '@/lib/telegram'
 
 export async function GET(req: NextRequest) {
   try {
@@ -173,6 +174,20 @@ export async function POST(req: NextRequest) {
         nasiya: true,
       },
     })
+
+    // Telegram bildirishnoma — nasiya yaratilganda mijozga xabar
+    if (toliSotuv?.nasiya && toliSotuv.mijoz) {
+      nasiyaYaratildiXabarToliq(
+        toliSotuv.nasiya.id,
+        toliSotuv.mijoz.id,
+        {
+          chekRaqami: toliSotuv.chekRaqami,
+          summasi: Number(toliSotuv.yakuniySumma),
+          qoldiqQarz: Number(toliSotuv.nasiya.qoldiq),
+          muddat: toliSotuv.nasiya.muddat,
+        }
+      ).catch(e => console.error('[Telegram] Nasiya xabar xatosi:', e))
+    }
 
     return NextResponse.json(toliSotuv, { status: 201 })
   } catch (e) {

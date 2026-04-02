@@ -9,6 +9,7 @@ import {
   Plus, Pencil, Trash2, Eye, EyeOff, Shield,
   Sun, Moon, Monitor, Bell, Download, Save,
   Check, X, ToggleLeft, ToggleRight, Loader2, Tag,
+  Send, MessageSquare, CheckCircle, XCircle, RefreshCw,
 } from 'lucide-react'
 import SearchBar from '@/components/ui/search-bar'
 
@@ -50,7 +51,7 @@ interface Foydalanuvchi {
 }
 
 // Tab definitions — Foydalanuvchilar tab is ADMIN-only (hidden for others)
-type TabId = 'dokon' | 'foydalanuvchilar' | 'profil' | 'tizim' | 'zaxira'
+type TabId = 'dokon' | 'telegram' | 'foydalanuvchilar' | 'profil' | 'tizim' | 'zaxira'
 
 interface Tab {
   id: TabId
@@ -61,6 +62,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: 'dokon', label: "Do'kon ma'lumotlari", icon: <Store size={16} />, adminOnly: false },
+  { id: 'telegram', label: 'Telegram', icon: <Send size={16} />, adminOnly: true },
   { id: 'foydalanuvchilar', label: 'Foydalanuvchilar', icon: <Users size={16} />, adminOnly: true },
   { id: 'profil', label: 'Profil', icon: <User size={16} />, adminOnly: false },
   { id: 'tizim', label: 'Tizim sozlamalari', icon: <Settings size={16} />, adminOnly: false },
@@ -1031,6 +1033,487 @@ function ProfilTab() {
 }
 
 // ---------------------------------------------------------------------------
+// Tab — Telegram sozlamalari (ADMIN only)
+// ---------------------------------------------------------------------------
+interface TgBildirishnomLog {
+  id: string
+  xabarTuri: string
+  yuborildi: boolean
+  xato: string | null
+  sana: string
+  mijoz: { ism: string } | null
+}
+
+function TelegramTab() {
+  const [yuklanmoqda, setYuklanmoqda] = useState(true)
+  const [bildirishnoma, setBildirishnoma] = useState(true)
+  const [ulanganMijozlar, setUlanganMijozlar] = useState(0)
+  const [loglar, setLoglar] = useState<TgBildirishnomLog[]>([])
+
+  // Telegram ulanish holati
+  const [ulangan, setUlangan] = useState(false)
+  const [tgTelefon, setTgTelefon] = useState<string | null>(null)
+  const [tgFoydalanuvchi, setTgFoydalanuvchi] = useState<string | null>(null)
+
+  // Ulanish formasi
+  const [step, setStep] = useState<'form' | 'code'>('form')
+  const [connectForm, setConnectForm] = useState({ apiId: '', apiHash: '', phone: '' })
+  const [codeForm, setCodeForm] = useState({ code: '', password: '' })
+  const [phoneCodeHash, setPhoneCodeHash] = useState('')
+  const [connecting, setConnecting] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [needs2FA, setNeeds2FA] = useState(false)
+
+  // Test xabar
+  const [testTelefon, setTestTelefon] = useState('')
+  const [testYuborilmoqda, setTestYuborilmoqda] = useState(false)
+
+  async function yuklash() {
+    setYuklanmoqda(true)
+    try {
+      const res = await fetch('/api/telegram')
+      const data = await res.json()
+      setUlangan(data.ulangan)
+      setTgTelefon(data.telefon)
+      setTgFoydalanuvchi(data.foydalanuvchi)
+      setBildirishnoma(data.bildirishnoma)
+      setUlanganMijozlar(data.ulanganMijozlar)
+      setLoglar(data.songgiBildirishnomlar || [])
+    } catch {
+      toast.error('Telegram sozlamalarini yuklashda xatolik')
+    } finally {
+      setYuklanmoqda(false)
+    }
+  }
+
+  useEffect(() => { yuklash() }, [])
+
+  async function ulanish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!connectForm.apiId || !connectForm.apiHash || !connectForm.phone) return
+    setConnecting(true)
+    try {
+      const res = await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'connect', ...connectForm }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setPhoneCodeHash(data.phoneCodeHash)
+        setStep('code')
+        toast.success('Kod yuborildi! Telegram ga keling.')
+      } else {
+        toast.error(data.xato || 'Ulanishda xatolik')
+      }
+    } catch {
+      toast.error('Tarmoq xatosi')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  async function kodTasdiqlash(e: React.FormEvent) {
+    e.preventDefault()
+    if (!codeForm.code) return
+    setVerifying(true)
+    try {
+      const res = await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          apiId: connectForm.apiId,
+          apiHash: connectForm.apiHash,
+          phone: connectForm.phone,
+          code: codeForm.code,
+          phoneCodeHash,
+          password: codeForm.password || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        toast.success('Telegram muvaffaqiyatli ulandi!')
+        setStep('form')
+        setConnectForm({ apiId: '', apiHash: '', phone: '' })
+        setCodeForm({ code: '', password: '' })
+        setNeeds2FA(false)
+        yuklash()
+      } else {
+        if (data.xato?.includes('2FA')) {
+          setNeeds2FA(true)
+          toast.error('2FA parolingizni kiriting')
+        } else {
+          toast.error(data.xato || 'Tasdiqlashda xatolik')
+        }
+      }
+    } catch {
+      toast.error('Tarmoq xatosi')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  async function uzish() {
+    if (!confirm("Telegram ni uzmoqchimisiz?")) return
+    try {
+      await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'disconnect' }),
+      })
+      toast.success('Telegram uzildi')
+      yuklash()
+    } catch {
+      toast.error('Xatolik')
+    }
+  }
+
+  async function bildirishnomaToggle() {
+    const yangiQiymat = !bildirishnoma
+    setBildirishnoma(yangiQiymat)
+    try {
+      await fetch('/api/telegram', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ telegram_bildirishnoma: yangiQiymat }),
+      })
+      toast.success(yangiQiymat ? 'Bildirishnomalar yoqildi' : "Bildirishnomalar o'chirildi")
+    } catch {
+      setBildirishnoma(!yangiQiymat)
+      toast.error('Xatolik yuz berdi')
+    }
+  }
+
+  async function testYuborish() {
+    if (!testTelefon.trim()) { toast.error('Telefon raqam kiriting'); return }
+    setTestYuborilmoqda(true)
+    try {
+      const res = await fetch('/api/telegram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'test', telefon: testTelefon.trim() }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        toast.success('Test xabar yuborildi!')
+      } else {
+        toast.error(data.xato || 'Xabar yuborishda xatolik')
+      }
+    } catch {
+      toast.error('Tarmoq xatosi')
+    } finally {
+      setTestYuborilmoqda(false)
+    }
+  }
+
+  const XABAR_TURI_MAP: Record<string, string> = {
+    nasiya_yaratildi: 'Nasiya ochildi',
+    qarz_qoshildi: "Qarz qo'shildi",
+    tolov_qilindi: "To'lov qilindi",
+    '3_kun': '3 kun qoldi',
+    '2_kun': '2 kun qoldi',
+    '1_kun': '1 kun qoldi',
+    muddati_otgan: "Muddati o'tgan",
+  }
+
+  if (yuklanmoqda) {
+    return (
+      <div className={cardCls}>
+        <div className="flex items-center justify-center py-10 text-gray-400">
+          <Loader2 size={20} className="animate-spin mr-2" /> Yuklanmoqda...
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Telegram ulanishi */}
+      <div className={cardCls}>
+        <div className="flex items-center gap-2 mb-6">
+          <Send size={18} className="text-red-600" />
+          <h2 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
+            Telegram ulanish
+          </h2>
+        </div>
+
+        {/* Ulangan holat */}
+        {ulangan ? (
+          <>
+            <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-xl mb-5">
+              <CheckCircle size={20} className="text-green-500 shrink-0" />
+              <div className="flex-1">
+                <p className="text-green-700 dark:text-green-400 font-medium text-sm">Telegram ulangan</p>
+                <p className="text-green-600 dark:text-green-500 text-xs">
+                  {tgFoydalanuvchi && <span>{tgFoydalanuvchi} &mdash; </span>}
+                  {tgTelefon}
+                </p>
+              </div>
+              <button onClick={uzish} className={dangerBtn}>
+                <X size={16} /> Uzish
+              </button>
+            </div>
+            <p className="text-gray-500 dark:text-gray-500 text-sm">
+              Xabarlar shu raqamdan ({tgTelefon}) mijozlarga yuboriladi.
+            </p>
+          </>
+        ) : step === 'form' ? (
+          <>
+            <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-neutral-800 rounded-xl mb-5">
+              <XCircle size={20} className="text-gray-400 shrink-0" />
+              <div>
+                <p className="text-gray-500 text-sm">Telegram hali ulanmagan.</p>
+                <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">
+                  my.telegram.org saytidan API ID va API Hash oling.
+                </p>
+              </div>
+            </div>
+            <form onSubmit={ulanish} className="space-y-4">
+              <div>
+                <label className={labelCls}>API ID</label>
+                <input
+                  type="text"
+                  value={connectForm.apiId}
+                  onChange={e => setConnectForm(f => ({ ...f, apiId: e.target.value }))}
+                  placeholder="12345678"
+                  required
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>API Hash</label>
+                <input
+                  type="text"
+                  value={connectForm.apiHash}
+                  onChange={e => setConnectForm(f => ({ ...f, apiHash: e.target.value }))}
+                  placeholder="0123456789abcdef0123456789abcdef"
+                  required
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Telefon raqam</label>
+                <input
+                  type="text"
+                  value={connectForm.phone}
+                  onChange={e => setConnectForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="+998901234567"
+                  required
+                  className={inputCls}
+                />
+                <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">
+                  Xabarlar shu raqamdan yuboriladi
+                </p>
+              </div>
+              <button type="submit" disabled={connecting} className={primaryBtn}>
+                {connecting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                {connecting ? 'Kod yuborilmoqda...' : 'Kod yuborish'}
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl mb-5">
+              <MessageSquare size={20} className="text-blue-500 shrink-0" />
+              <p className="text-blue-700 dark:text-blue-400 text-sm">
+                Telegram ga kod yuborildi. Kodni kiriting.
+              </p>
+            </div>
+            <form onSubmit={kodTasdiqlash} className="space-y-4">
+              <div>
+                <label className={labelCls}>Tasdiqlash kodi</label>
+                <input
+                  type="text"
+                  value={codeForm.code}
+                  onChange={e => setCodeForm(f => ({ ...f, code: e.target.value }))}
+                  placeholder="12345"
+                  required
+                  autoFocus
+                  className={inputCls}
+                />
+              </div>
+              {needs2FA && (
+                <div>
+                  <label className={labelCls}>2FA Parol</label>
+                  <input
+                    type="password"
+                    value={codeForm.password}
+                    onChange={e => setCodeForm(f => ({ ...f, password: e.target.value }))}
+                    placeholder="Ikki bosqichli parol"
+                    className={inputCls}
+                  />
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setStep('form'); setNeeds2FA(false) }}
+                  className={outlineBtn}
+                >
+                  Orqaga
+                </button>
+                <button type="submit" disabled={verifying} className={`${primaryBtn} flex-1 justify-center`}>
+                  {verifying ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  {verifying ? 'Tekshirilmoqda...' : 'Tasdiqlash'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+
+      {/* Bildirishnoma sozlamalari */}
+      <div className={cardCls}>
+        <div className="flex items-center gap-2 mb-6">
+          <Bell size={18} className="text-red-600" />
+          <h2 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
+            Bildirishnomalar
+          </h2>
+        </div>
+
+        <div className="flex items-center justify-between py-3 px-4 bg-gray-50 dark:bg-neutral-800 rounded-xl mb-4">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={16} className="text-gray-500" />
+            <div>
+              <p className="text-gray-700 dark:text-gray-300 text-sm font-medium">
+                Avtomatik bildirishnomalar
+              </p>
+              <p className="text-gray-400 dark:text-gray-600 text-xs">
+                Nasiya ochilda, to&apos;lov qilinganda, qarz qo&apos;shilganda xabar yuboriladi
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={bildirishnomaToggle}
+            className={`transition ${bildirishnoma ? 'text-green-500' : 'text-gray-400 dark:text-gray-600'}`}
+          >
+            {bildirishnoma ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}
+          </button>
+        </div>
+
+        <div className="space-y-2 mb-4">
+          <p className="text-gray-500 dark:text-gray-500 text-xs font-medium uppercase tracking-wide">Qachon xabar yuboriladi:</p>
+          <div className="grid gap-2 text-sm">
+            {[
+              { icon: '📋', label: 'Mijoz nasiyaga mahsulot sotib olganda' },
+              { icon: '📦', label: "Mijozga qo'shimcha qarz qo'shilganda" },
+              { icon: '💳', label: "Mijoz to'lov qilganda" },
+              { icon: '⚠️', label: 'Nasiya muddati yaqinlashganda (3, 2, 1 kun)' },
+              { icon: '🚨', label: "Nasiya muddati o'tganda" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-xl">
+          <Users size={16} className="text-blue-500" />
+          <p className="text-blue-700 dark:text-blue-400 text-sm">
+            <span className="font-semibold">{ulanganMijozlar}</span> ta mijozda telefon raqam bor (xabar yuboriladi)
+          </p>
+        </div>
+      </div>
+
+      {/* Test xabar */}
+      {ulangan && (
+        <div className={cardCls}>
+          <div className="flex items-center gap-2 mb-4">
+            <Send size={18} className="text-red-600" />
+            <h2 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
+              Test xabar yuborish
+            </h2>
+          </div>
+          <p className="text-gray-500 dark:text-gray-500 text-sm mb-4">
+            Telefon raqam kiriting va test xabar yuboring.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={testTelefon}
+              onChange={e => setTestTelefon(e.target.value)}
+              placeholder="+998901234567"
+              className={`${inputCls} flex-1`}
+            />
+            <button
+              type="button"
+              onClick={testYuborish}
+              disabled={testYuborilmoqda || !testTelefon.trim()}
+              className={primaryBtn}
+            >
+              {testYuborilmoqda ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              Yuborish
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* So'nggi bildirishnomalar */}
+      {loglar.length > 0 && (
+        <div className={cardCls}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={18} className="text-red-600" />
+              <h2 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
+                So&apos;nggi bildirishnomalar
+              </h2>
+            </div>
+            <button onClick={yuklash} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+              <RefreshCw size={16} />
+            </button>
+          </div>
+          <div className="overflow-x-auto -mx-6">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-neutral-800 border-y border-gray-200 dark:border-neutral-800">
+                  <th className="text-left text-gray-500 text-xs font-medium px-6 py-2">Mijoz</th>
+                  <th className="text-left text-gray-500 text-xs font-medium px-4 py-2">Turi</th>
+                  <th className="text-left text-gray-500 text-xs font-medium px-4 py-2">Holati</th>
+                  <th className="text-left text-gray-500 text-xs font-medium px-4 py-2">Sana</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loglar.map(l => (
+                  <tr key={l.id} className="border-b border-gray-100 dark:border-neutral-800">
+                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-gray-100">
+                      {l.mijoz?.ism || '—'}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-gray-500">
+                      {XABAR_TURI_MAP[l.xabarTuri] || l.xabarTuri}
+                    </td>
+                    <td className="px-4 py-2">
+                      {l.yuborildi ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                          <CheckCircle size={12} /> Yuborildi
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-red-500" title={l.xato || ''}>
+                          <XCircle size={12} /> Xato
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-gray-500">
+                      {new Date(l.sana).toLocaleString('uz-UZ', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Tab 4 — Tizim sozlamalari
 // ---------------------------------------------------------------------------
 function TizimTab() {
@@ -1490,6 +1973,7 @@ export default function SozlamalarPage() {
 
       {/* Tab content */}
       {activeTab === 'dokon' && <DokonTab isAdmin={isAdmin} />}
+      {activeTab === 'telegram' && isAdmin && <TelegramTab />}
       {activeTab === 'foydalanuvchilar' && isAdmin && <FoydalanuvchilarTab />}
       {activeTab === 'profil' && <ProfilTab />}
       {activeTab === 'tizim' && <TizimTab />}
