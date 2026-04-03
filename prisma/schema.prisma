@@ -234,12 +234,14 @@ model Nasiya {
   muddat      DateTime?
   holati      NasiyaHolati @default(OCHIQ)
   sana        DateTime     @default(now())
+  ochirilgan  Boolean      @default(false)
 
   sotuv       Sotuv?       @relation(fields: [sotuvId], references: [id])
   mijoz       Mijoz        @relation(fields: [mijozId], references: [id])
   tolovlar    NasiyaTolov[]
   bildirishnomlar BildirishnomLog[]
 
+  @@index([holati, muddat])
   @@map("nasiyalar")
 }
 

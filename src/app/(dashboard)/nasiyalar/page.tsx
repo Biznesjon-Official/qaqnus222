@@ -28,6 +28,21 @@ interface Nasiya {
 
 const inputCls = 'w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition'
 
+function formatPhoneInput(raw: string): string {
+  let v = raw.replace(/\D/g, '')
+  if (v.startsWith('998')) v = v
+  else if (v.startsWith('8') && v.length > 1) v = '998' + v.slice(1)
+  else if (v.length > 0 && !v.startsWith('998')) v = '998' + v
+  if (v.length > 12) v = v.slice(0, 12)
+  let formatted = ''
+  if (v.length > 0) formatted = '+' + v.slice(0, 3)
+  if (v.length > 3) formatted += ' ' + v.slice(3, 5)
+  if (v.length > 5) formatted += ' ' + v.slice(5, 8)
+  if (v.length > 8) formatted += ' ' + v.slice(8, 10)
+  if (v.length > 10) formatted += ' ' + v.slice(10, 12)
+  return formatted
+}
+
 const holatiConfig = {
   OCHIQ: { cls: 'text-amber-600 bg-amber-50', label: 'Ochiq' },
   MUDDATI_OTGAN: { cls: 'text-red-600 bg-red-50', label: "Muddati o'tgan" },
@@ -210,13 +225,22 @@ export default function NasiyalarPage() {
     }
   }
 
-  const filteredNasiyalar = qidiruv
-    ? nasiyalar.filter(n =>
+  // Qidiruv — barcha statuslarda qidirish, keyin filtrga qarab ko'rsatish
+  const filteredNasiyalar = (() => {
+    let list = nasiyalar
+    if (qidiruv) {
+      // Barcha nasiyalar ichidan qidirish
+      const topilganlar = barchasi.filter(n =>
         uzSearch(n.mijoz.ism, qidiruv) ||
         (n.sotuv?.chekRaqami || '').toLowerCase().includes(qidiruv.toLowerCase()) ||
-        uzSearch(n.mijoz.manzil || '', qidiruv)
+        uzSearch(n.mijoz.manzil || '', qidiruv) ||
+        (n.mijoz.telefon || '').includes(qidiruv)
       )
-    : nasiyalar
+      // Agar filtr tanlangan bo'lsa — shu filtr ichida qidiradi, aks holda hammasi
+      list = filter ? topilganlar.filter(n => n.holati === filter) : topilganlar
+    }
+    return list
+  })()
 
   return (
     <div className="space-y-4">
@@ -516,20 +540,7 @@ export default function NasiyalarPage() {
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Telefon raqam</label>
                 <input
                   value={tahrirlashForm.telefon}
-                  onChange={e => {
-                    let v = e.target.value.replace(/\D/g, '')
-                    if (v.startsWith('998')) v = v
-                    else if (v.startsWith('8') && v.length > 1) v = '998' + v.slice(1)
-                    else if (v.length > 0 && !v.startsWith('998')) v = '998' + v
-                    if (v.length > 12) v = v.slice(0, 12)
-                    let formatted = ''
-                    if (v.length > 0) formatted = '+' + v.slice(0, 3)
-                    if (v.length > 3) formatted += ' ' + v.slice(3, 5)
-                    if (v.length > 5) formatted += ' ' + v.slice(5, 8)
-                    if (v.length > 8) formatted += ' ' + v.slice(8, 10)
-                    if (v.length > 10) formatted += ' ' + v.slice(10, 12)
-                    setTahrirlashForm(f => ({ ...f, telefon: formatted }))
-                  }}
+                  onChange={e => setTahrirlashForm(f => ({ ...f, telefon: formatPhoneInput(e.target.value) }))}
                   className={inputCls}
                   placeholder="+998 90 123 45 67"
                   type="tel"
@@ -678,20 +689,7 @@ export default function NasiyalarPage() {
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Telefon raqam</label>
                 <input
                   value={qoshishForm.telefon}
-                  onChange={e => {
-                    let v = e.target.value.replace(/\D/g, '')
-                    if (v.startsWith('998')) v = v
-                    else if (v.startsWith('8') && v.length > 1) v = '998' + v.slice(1)
-                    else if (v.length > 0 && !v.startsWith('998')) v = '998' + v
-                    if (v.length > 12) v = v.slice(0, 12)
-                    let formatted = ''
-                    if (v.length > 0) formatted = '+' + v.slice(0, 3)
-                    if (v.length > 3) formatted += ' ' + v.slice(3, 5)
-                    if (v.length > 5) formatted += ' ' + v.slice(5, 8)
-                    if (v.length > 8) formatted += ' ' + v.slice(8, 10)
-                    if (v.length > 10) formatted += ' ' + v.slice(10, 12)
-                    setQoshishForm(f => ({ ...f, telefon: formatted }))
-                  }}
+                  onChange={e => setQoshishForm(f => ({ ...f, telefon: formatPhoneInput(e.target.value) }))}
                   className={inputCls}
                   placeholder="+998 90 123 45 67"
                   type="tel"

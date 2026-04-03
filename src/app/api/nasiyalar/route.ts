@@ -11,18 +11,9 @@ export async function GET(req: NextRequest) {
     const holati = searchParams.get('holati') || ''
     const mijozId = searchParams.get('mijozId') || ''
 
-    const where: any = {}
+    const where: any = { ochirilgan: false }
     if (holati) where.holati = holati
     if (mijozId) where.mijozId = mijozId
-
-    // Muddati o'tganlarni avtomatik yangilash
-    await prisma.nasiya.updateMany({
-      where: {
-        holati: 'OCHIQ',
-        muddat: { lt: new Date() },
-      },
-      data: { holati: 'MUDDATI_OTGAN' },
-    })
 
     const nasiyalar = await prisma.nasiya.findMany({
       where,
@@ -35,7 +26,8 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json(nasiyalar)
-  } catch {
+  } catch (e) {
+    console.error('[Nasiyalar GET]', e)
     return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
   }
 }
@@ -48,28 +40,55 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { ism, manzil, telefon, qarz, muddat, sana } = body
 
-    if (!ism || !manzil || !qarz) {
-      return NextResponse.json({ xato: 'Ism, manzil va qarz majburiy' }, { status: 400 })
+    if (!ism || !qarz) {
+      return NextResponse.json({ xato: 'Ism va qarz majburiy' }, { status: 400 })
     }
 
-    // Mijozni topish yoki yaratish
-    let mijoz = await prisma.mijoz.findFirst({
-      where: { ism, manzil },
-    })
+    // Telefon raqamdan faqat raqamlarni olish
+    const cleanPhone = telefon ? telefon.replace(/\D/g, '') : null
+    const finalPhone = cleanPhone && cleanPhone.length >= 9 ? `+${cleanPhone}` : null
+
+    // Mijozni topish — ism bo'yicha qidirib, manzilni ham solishtirish (kichik harfda, probelsiz)
+    const normalizeManzil = (m: string) => m.trim().toLowerCase().replace(/\s+/g, ' ')
+
+    let mijoz = null
+    if (manzil) {
+      const candidates = await prisma.mijoz.findMany({
+        where: { ism: { equals: ism, mode: 'insensitive' } },
+      })
+      mijoz = candidates.find(c =>
+        c.manzil && normalizeManzil(c.manzil) === normalizeManzil(manzil)
+      ) || null
+    }
+
+    if (!mijoz) {
+      // Agar telefon bor bo'lsa, telefon bo'yicha ham tekshirish
+      if (finalPhone) {
+        mijoz = await prisma.mijoz.findFirst({
+          where: { telefon: finalPhone },
+        })
+      }
+    }
 
     if (!mijoz) {
       mijoz = await prisma.mijoz.create({
         data: {
           ism,
-          manzil,
-          telefon: telefon || null,
+          manzil: manzil || null,
+          telefon: finalPhone,
         },
       })
-    } else if (telefon && mijoz.telefon !== telefon) {
-      mijoz = await prisma.mijoz.update({
-        where: { id: mijoz.id },
-        data: { telefon },
-      })
+    } else {
+      // Mavjud mijozni yangilash (telefon yoki manzil o'zgarganda)
+      const updateData: any = {}
+      if (finalPhone && mijoz.telefon !== finalPhone) updateData.telefon = finalPhone
+      if (manzil && mijoz.manzil !== manzil) updateData.manzil = manzil
+      if (Object.keys(updateData).length > 0) {
+        mijoz = await prisma.mijoz.update({
+          where: { id: mijoz.id },
+          data: updateData,
+        })
+      }
     }
 
     const nasiya = await prisma.nasiya.create({
@@ -83,7 +102,8 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(nasiya, { status: 201 })
-  } catch {
+  } catch (e) {
+    console.error('[Nasiyalar POST]', e)
     return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
   }
 }

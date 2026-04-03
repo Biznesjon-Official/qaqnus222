@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { Prisma } from '@prisma/client'
 import { tolovQilindiXabar } from '@/lib/telegram'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -12,41 +13,59 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const data = await req.json()
     const foydalanuvchiId = (session.user as any).id
 
-    const nasiya = await prisma.nasiya.findUnique({ where: { id } })
-    if (!nasiya) return NextResponse.json({ xato: 'Nasiya topilmadi' }, { status: 404 })
+    // tolovUsuli validatsiya
+    const USULLAR = ['NAQD', 'KARTA'] as const
+    const tolovUsuli = USULLAR.includes(data.tolovUsuli) ? data.tolovUsuli : 'NAQD'
 
-    const tolovSumma = parseFloat(data.summa)
-    const qoldiqQarz = Number(nasiya.jamiQarz) - Number(nasiya.tolangan)
-    const haqiqiyTolov = Math.min(tolovSumma, qoldiqQarz)
-    if (haqiqiyTolov <= 0) return NextResponse.json({ xato: "Bu nasiya allaqachon to'langan" }, { status: 400 })
-    const yangiTolangan = Number(nasiya.tolangan) + haqiqiyTolov
-    const yangiQoldiq = Number(nasiya.jamiQarz) - yangiTolangan
+    const tolovSumma = new Prisma.Decimal(data.summa || 0)
+    if (tolovSumma.lte(0)) return NextResponse.json({ xato: "Summa 0 dan katta bo'lishi kerak" }, { status: 400 })
 
-    const [tolov, yangiNasiya] = await prisma.$transaction([
-      prisma.nasiyaTolov.create({
+    // Race condition oldini olish — transaction ichida hamma narsa
+    const natija = await prisma.$transaction(async (tx) => {
+      const nasiya = await tx.nasiya.findUnique({ where: { id } })
+      if (!nasiya) throw new Error('NOT_FOUND')
+
+      const qoldiqQarz = nasiya.jamiQarz.sub(nasiya.tolangan)
+      if (qoldiqQarz.lte(0)) throw new Error('ALREADY_PAID')
+
+      // Qoldiqdan oshmasin
+      const haqiqiyTolov = tolovSumma.gt(qoldiqQarz) ? qoldiqQarz : tolovSumma
+      const yangiTolangan = nasiya.tolangan.add(haqiqiyTolov)
+      const yangiQoldiq = nasiya.jamiQarz.sub(yangiTolangan)
+      const yopildimi = yangiQoldiq.lte(0)
+
+      const tolov = await tx.nasiyaTolov.create({
         data: {
           nasiyaId: id,
           summa: haqiqiyTolov,
-          tolovUsuli: data.tolovUsuli || 'NAQD',
+          tolovUsuli,
           qabulQiluvchiId: foydalanuvchiId,
-          izoh: data.izoh,
+          izoh: data.izoh || null,
         },
-      }),
-      prisma.nasiya.update({
+      })
+
+      const yangiNasiya = await tx.nasiya.update({
         where: { id },
         data: {
           tolangan: yangiTolangan,
-          qoldiq: Math.max(0, yangiQoldiq),
-          holati: yangiQoldiq <= 0 ? 'YOPILGAN' : 'OCHIQ',
+          qoldiq: yopildimi ? new Prisma.Decimal(0) : yangiQoldiq,
+          holati: yopildimi ? 'YOPILGAN' : nasiya.holati === 'YOPILGAN' ? 'OCHIQ' : nasiya.holati,
         },
-      }),
-    ])
+      })
 
-    tolovQilindiXabar(id, nasiya.mijozId, haqiqiyTolov, Math.max(0, yangiQoldiq))
+      return { tolov, nasiya: yangiNasiya, haqiqiyTolov, yangiQoldiq: yopildimi ? 0 : yangiQoldiq.toNumber() }
+    })
+
+    // Telegram — xatolik loglash
+    tolovQilindiXabar(id, natija.nasiya.mijozId, natija.haqiqiyTolov.toNumber(), natija.yangiQoldiq)
+      .then(r => { if (r && !r.ok) console.error('[Telegram] Tolov xabar xatosi:', r.xato) })
       .catch(e => console.error('[Telegram] Tolov xabar xatosi:', e))
 
-    return NextResponse.json({ tolov, nasiya: yangiNasiya }, { status: 201 })
-  } catch {
+    return NextResponse.json({ tolov: natija.tolov, nasiya: natija.nasiya }, { status: 201 })
+  } catch (e: any) {
+    if (e.message === 'NOT_FOUND') return NextResponse.json({ xato: 'Nasiya topilmadi' }, { status: 404 })
+    if (e.message === 'ALREADY_PAID') return NextResponse.json({ xato: "Bu nasiya allaqachon to'langan" }, { status: 400 })
+    console.error('[Nasiya tolov]', e)
     return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
   }
 }
