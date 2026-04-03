@@ -354,7 +354,7 @@ export default function NasiyalarPage() {
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="text-gray-900 dark:text-gray-100 font-medium text-sm">{n.mijoz.ism}</div>
                         {n.mijoz.telefon && (
-                          <div className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 mt-0.5"><Phone size={10} />{n.mijoz.telefon}</div>
+                          <a href={`tel:${n.mijoz.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-600 text-xs flex items-center gap-1 mt-0.5"><Phone size={10} />{n.mijoz.telefon}</a>
                         )}
                         {n.mijoz.manzil && (
                           <div className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{n.mijoz.manzil}</div>
@@ -445,9 +445,9 @@ export default function NasiyalarPage() {
                       </span>
                     </div>
                     {n.mijoz.telefon && (
-                      <p className="text-gray-500 dark:text-gray-500 text-sm mt-0.5 flex items-center gap-1">
+                      <a href={`tel:${n.mijoz.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-600 text-sm mt-0.5 flex items-center gap-1">
                         <Phone size={12} /> {n.mijoz.telefon}
-                      </p>
+                      </a>
                     )}
                     {n.mijoz.manzil && (
                       <p className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{n.mijoz.manzil}</p>
