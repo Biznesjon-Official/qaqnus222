@@ -24,84 +24,320 @@ async function isTelegramEnabled(): Promise<boolean> {
   return (await getSozlama('telegram_bildirishnoma')) !== 'false'
 }
 
-async function getTelegramCredentials() {
-  const [apiId, apiHash, session] = await Promise.all([
-    getSozlama('telegram_api_id'),
-    getSozlama('telegram_api_hash'),
-    getSozlama('telegram_session'),
-  ])
-  if (!apiId || !apiHash || !session) return null
-  return { apiId: parseInt(apiId), apiHash, session }
+// ─── Singleton TelegramClient — bitta client qayta ishlatiladi ───────────────
+
+let _client: TelegramClient | null = null
+let _clientReady = false
+let _connectPromise: Promise<TelegramClient | null> | null = null
+
+// Entity cache — telefon raqamdan Telegram user ID ga
+const _entityCache = new Map<string, { userId: bigint; accessHash: bigint; cachedAt: number }>()
+const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 soat
+
+// Rate limit — xabarlar orasida minimal kutish
+let _lastSendTime = 0
+const MIN_SEND_INTERVAL = 3000 // 3 soniya
+
+// ImportContacts cheklovi
+let _importCount = 0
+let _importResetTime = 0
+const MAX_IMPORTS_PER_HOUR = 20
+
+async function getClient(): Promise<TelegramClient | null> {
+  // Agar client tayyor bo'lsa — qaytarish
+  if (_client && _clientReady) {
+    try {
+      // Session hali amalda ekanligini tekshirish
+      if (_client.connected) return _client
+      await _client.connect()
+      return _client
+    } catch {
+      _client = null
+      _clientReady = false
+    }
+  }
+
+  // Agar boshqa joy allaqachon ulanmoqda bo'lsa — kutish
+  if (_connectPromise) return _connectPromise
+
+  _connectPromise = (async () => {
+    try {
+      const [apiId, apiHash, session] = await Promise.all([
+        getSozlama('telegram_api_id'),
+        getSozlama('telegram_api_hash'),
+        getSozlama('telegram_session'),
+      ])
+      if (!apiId || !apiHash || !session) return null
+
+      const client = new TelegramClient(
+        new StringSession(session),
+        parseInt(apiId),
+        apiHash,
+        { connectionRetries: 5, retryDelay: 1000 }
+      )
+
+      await client.connect()
+      _client = client
+      _clientReady = true
+      console.log('[Telegram] Client ulandi (singleton)')
+      return client
+    } catch (e) {
+      console.error('[Telegram] Client ulanish xatosi:', e)
+      return null
+    } finally {
+      _connectPromise = null
+    }
+  })()
+
+  return _connectPromise
 }
 
-// ─── GramJS client yaratish ──────────────────────────────────────────────────
+// ─── Rate limiter ────────────────────────────────────────────────────────────
 
-async function createClient(): Promise<TelegramClient | null> {
-  const creds = await getTelegramCredentials()
-  if (!creds) return null
+async function waitForRateLimit(): Promise<void> {
+  const now = Date.now()
+  const elapsed = now - _lastSendTime
+  if (elapsed < MIN_SEND_INTERVAL) {
+    await new Promise(resolve => setTimeout(resolve, MIN_SEND_INTERVAL - elapsed))
+  }
+  _lastSendTime = Date.now()
+}
 
-  const client = new TelegramClient(
-    new StringSession(creds.session),
-    creds.apiId,
-    creds.apiHash,
-    { connectionRetries: 3 }
+function canImportContacts(): boolean {
+  const now = Date.now()
+  if (now > _importResetTime) {
+    _importCount = 0
+    _importResetTime = now + 60 * 60 * 1000 // 1 soat
+  }
+  return _importCount < MAX_IMPORTS_PER_HOUR
+}
+
+// ─── Telefon raqam → Telegram entity resolve ────────────────────────────────
+
+async function resolvePhone(client: TelegramClient, telefon: string): Promise<Api.TypeUser | null> {
+  const cleanPhone = telefon.replace(/[\s\-()]/g, '')
+
+  // 1. Avval cache dan qidirish
+  const cached = _entityCache.get(cleanPhone)
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
+    try {
+      const inputUser = new Api.InputUser({ userId: cached.userId as any, accessHash: cached.accessHash as any })
+      const result = await client.invoke(new Api.users.GetUsers({ id: [inputUser] }))
+      if (result.length > 0) return result[0]
+    } catch {
+      _entityCache.delete(cleanPhone)
+    }
+  }
+
+  // 2. ImportContacts — cheklangan
+  if (!canImportContacts()) {
+    console.warn(`[Telegram] ImportContacts limiti (${MAX_IMPORTS_PER_HOUR}/soat) tugadi`)
+    return null
+  }
+
+  _importCount++
+
+  const result = await client.invoke(
+    new Api.contacts.ImportContacts({
+      contacts: [
+        new Api.InputPhoneContact({
+          clientId: 0 as any,
+          phone: cleanPhone,
+          firstName: 'Mijoz',
+          lastName: '',
+        }),
+      ],
+    })
   )
 
-  await client.connect()
-  return client
+  if (!result.users || result.users.length === 0) return null
+
+  const user = result.users[0] as any
+
+  // Cache ga saqlash
+  if (user.id && user.accessHash) {
+    _entityCache.set(cleanPhone, {
+      userId: BigInt(user.id),
+      accessHash: BigInt(user.accessHash),
+      cachedAt: Date.now(),
+    })
+  }
+
+  return result.users[0]
 }
 
-// ─── Telefon raqam bo'yicha xabar yuborish ───────────────────────────────────
+// ─── Xabar yuborish (rate limited, cached, singleton) ────────────────────────
 
 async function sendMessageToPhone(
   telefon: string,
   xabar: string
 ): Promise<{ ok: boolean; xato?: string }> {
-  let client: TelegramClient | null = null
   try {
-    client = await createClient()
+    const client = await getClient()
     if (!client) return { ok: false, xato: 'Telegram ulanmagan. Sozlamalardan telefon raqamni ulang.' }
 
-    // Telefon raqamni tozalash (+998901234567 formatga)
-    const cleanPhone = telefon.replace(/[\s\-()]/g, '')
+    // Rate limit kutish
+    await waitForRateLimit()
 
-    // Kontaktni import qilish orqali foydalanuvchini topish
-    const result = await client.invoke(
-      new Api.contacts.ImportContacts({
-        contacts: [
-          new Api.InputPhoneContact({
-            clientId: 0 as any,
-            phone: cleanPhone,
-            firstName: 'Mijoz',
-            lastName: '',
-          }),
-        ],
-      })
-    )
-
-    if (!result.users || result.users.length === 0) {
-      return { ok: false, xato: `${cleanPhone} raqami Telegram da topilmadi` }
+    const user = await resolvePhone(client, telefon)
+    if (!user) {
+      const cleanPhone = telefon.replace(/[\s\-()]/g, '')
+      return { ok: false, xato: `${cleanPhone} raqami Telegramda topilmadi` }
     }
 
-    const user = result.users[0]
     await client.sendMessage(user, { message: xabar })
-
     return { ok: true }
   } catch (e: any) {
     const msg = e.message || String(e)
-    if (msg.includes('FLOOD_WAIT')) {
-      const seconds = msg.match(/(\d+)/)?.[1] || '?'
+
+    // FloodWait — Telegram cheklovi
+    if (msg.includes('FLOOD_WAIT') || msg.includes('FloodWait')) {
+      const seconds = msg.match(/(\d+)/)?.[1] || '60'
+      console.error(`[Telegram] FloodWait: ${seconds}s kutish kerak`)
+      // Keyingi xabar uchun vaqtni belgilash
+      _lastSendTime = Date.now() + parseInt(seconds) * 1000
       return { ok: false, xato: `Telegram cheklovi: ${seconds} soniya kutish kerak` }
     }
+
     if (msg.includes('PHONE_NOT_OCCUPIED')) {
-      return { ok: false, xato: 'Bu raqam Telegram da ro\'yxatdan o\'tmagan' }
+      return { ok: false, xato: "Bu raqam Telegramda ro'yxatdan o'tmagan" }
     }
+
+    // Session buzilgan — client ni qayta yaratish
+    if (msg.includes('AUTH_KEY') || msg.includes('SESSION_REVOKED') || msg.includes('USER_DEACTIVATED')) {
+      _client = null
+      _clientReady = false
+      return { ok: false, xato: 'Telegram sessiya tugagan. Qayta ulaning.' }
+    }
+
+    console.error('[Telegram] Xabar yuborish xatosi:', msg)
     return { ok: false, xato: msg }
-  } finally {
-    if (client) {
-      await client.disconnect().catch(() => {})
+  }
+}
+
+// ─── Scheduler uchun — kunlik eslatma (shaxsiy raqamdan) ─────────────────────
+
+export async function nasiyaEslatmalarYuborish() {
+  if (!(await isTelegramEnabled())) return
+  console.log('[Scheduler] Nasiya eslatmalar tekshirilmoqda...')
+
+  const bugun = new Date()
+  bugun.setHours(0, 0, 0, 0)
+
+  const nasiyalar = await prisma.nasiya.findMany({
+    where: {
+      holati: { in: ['OCHIQ', 'MUDDATI_OTGAN'] },
+      ochirilgan: false,
+      muddat: { not: null },
+      mijoz: { telefon: { not: null } },
+    },
+    include: {
+      mijoz: true,
+      sotuv: { select: { chekRaqami: true } },
+    },
+  })
+
+  const dokonNomi = (await getSozlama('dokon_nomi')) || "Do'kon"
+  let yuborilgan = 0
+  let xatolik = 0
+
+  for (const nasiya of nasiyalar) {
+    if (!nasiya.mijoz.telefon || !nasiya.muddat) continue
+
+    const muddat = new Date(nasiya.muddat)
+    muddat.setHours(0, 0, 0, 0)
+    const kunFarq = Math.round((muddat.getTime() - bugun.getTime()) / (1000 * 60 * 60 * 24))
+
+    let xabarTuri: string | null = null
+    let xabarMatni: string | null = null
+
+    if (kunFarq === 3) {
+      xabarTuri = '3_kun'
+      xabarMatni =
+        `⚠️ Nasiya eslatma\n\n` +
+        `🏪 ${dokonNomi}\n` +
+        `👤 ${nasiya.mijoz.ism}\n` +
+        `🧾 ${nasiya.sotuv?.chekRaqami || 'Nasiya'}\n` +
+        `💰 Qoldiq qarz: ${formatSum(Number(nasiya.qoldiq))}\n` +
+        `📅 Muddat: ${formatSana(muddat)} (3 kun qoldi)\n\n` +
+        `Iltimos, o'z vaqtida to'lang.`
+    } else if (kunFarq === 2) {
+      xabarTuri = '2_kun'
+      xabarMatni =
+        `⚠️ Nasiya eslatma\n\n` +
+        `🏪 ${dokonNomi}\n` +
+        `👤 ${nasiya.mijoz.ism}\n` +
+        `🧾 ${nasiya.sotuv?.chekRaqami || 'Nasiya'}\n` +
+        `💰 Qoldiq qarz: ${formatSum(Number(nasiya.qoldiq))}\n` +
+        `📅 Muddat: ${formatSana(muddat)} (2 kun qoldi)\n\n` +
+        `Iltimos, o'z vaqtida to'lang.`
+    } else if (kunFarq === 1) {
+      xabarTuri = '1_kun'
+      xabarMatni =
+        `🔴 MUHIM: Nasiya muddati ertaga!\n\n` +
+        `🏪 ${dokonNomi}\n` +
+        `👤 ${nasiya.mijoz.ism}\n` +
+        `🧾 ${nasiya.sotuv?.chekRaqami || 'Nasiya'}\n` +
+        `💰 Qoldiq qarz: ${formatSum(Number(nasiya.qoldiq))}\n` +
+        `📅 Muddat: ${formatSana(muddat)} (ertaga!)\n\n` +
+        `Iltimos, bugun to'lang!`
+    } else if (kunFarq <= 0 && nasiya.holati !== 'YOPILGAN') {
+      xabarTuri = 'muddati_otgan'
+      const otganKun = Math.abs(kunFarq)
+      xabarMatni =
+        `🚨 Nasiya muddati o'tdi!\n\n` +
+        `🏪 ${dokonNomi}\n` +
+        `👤 ${nasiya.mijoz.ism}\n` +
+        `🧾 ${nasiya.sotuv?.chekRaqami || 'Nasiya'}\n` +
+        `💰 Qoldiq qarz: ${formatSum(Number(nasiya.qoldiq))}\n` +
+        `📅 Muddat: ${formatSana(muddat)} (${otganKun} kun o'tdi)\n\n` +
+        `Iltimos, tezroq to'lang.`
+    }
+
+    if (!xabarTuri || !xabarMatni) continue
+
+    // Bugun allaqachon yuborilganmi?
+    const allaqachon = await prisma.bildirishnomLog.findFirst({
+      where: {
+        nasiyaId: nasiya.id,
+        xabarTuri,
+        sana: { gte: bugun },
+      },
+    })
+    if (allaqachon) continue
+
+    // Xabar yuborish
+    const natija = await sendMessageToPhone(nasiya.mijoz.telefon, xabarMatni)
+
+    // Log
+    await prisma.bildirishnomLog.create({
+      data: {
+        nasiyaId: nasiya.id,
+        mijozId: nasiya.mijozId,
+        xabarTuri,
+        yuborildi: natija.ok,
+        xato: natija.xato,
+      },
+    }).catch(() => {})
+
+    if (natija.ok) {
+      yuborilgan++
+      console.log(`[Scheduler] Xabar yuborildi: ${nasiya.mijoz.ism} (${xabarTuri})`)
+    } else {
+      xatolik++
+      console.error(`[Scheduler] Xabar xatosi: ${nasiya.mijoz.ism} — ${natija.xato}`)
+    }
+
+    // Muddati o'tganlarni yangilash
+    if (kunFarq < 0 && nasiya.holati === 'OCHIQ') {
+      await prisma.nasiya.update({
+        where: { id: nasiya.id },
+        data: { holati: 'MUDDATI_OTGAN' },
+      })
     }
   }
+
+  console.log(`[Scheduler] Yakunlandi: ${yuborilgan} yuborildi, ${xatolik} xato`)
 }
 
 // ─── Ulanish (kod yuborish) ──────────────────────────────────────────────────
@@ -130,7 +366,6 @@ export async function telegramConnect(apiId: number, apiHash: string, phone: str
       })
     )
 
-    // Vaqtinchalik sessionni saqlash (kod tasdiqlash uchun kerak)
     const tempSession = client.session.save() as unknown as string
     await prisma.sozlama.upsert({
       where: { kalit: 'telegram_temp_session' },
@@ -176,7 +411,6 @@ export async function telegramVerify(
         })
       )
     } catch (e: any) {
-      // 2FA parol kerak
       if (e.message?.includes('SESSION_PASSWORD_NEEDED')) {
         if (!password) {
           return { ok: false, xato: '2FA parol kiritish kerak' }
@@ -189,7 +423,6 @@ export async function telegramVerify(
       }
     }
 
-    // Muvaffaqiyatli — session va ma'lumotlarni saqlash
     const sessionStr = client.session.save() as unknown as string
     const me = await client.getMe()
 
@@ -219,9 +452,12 @@ export async function telegramVerify(
         update: { qiymat: `${(me as any).firstName || ''} ${(me as any).lastName || ''}`.trim() },
         create: { kalit: 'telegram_user_name', qiymat: `${(me as any).firstName || ''} ${(me as any).lastName || ''}`.trim() },
       }),
-      // Temp session tozalash
       prisma.sozlama.deleteMany({ where: { kalit: 'telegram_temp_session' } }),
     ])
+
+    // Singleton client ni yangilash
+    _client = null
+    _clientReady = false
 
     return { ok: true }
   } catch (e: any) {
@@ -243,26 +479,26 @@ export async function telegramStatus(): Promise<{
     getSozlama('telegram_user_name'),
     getSozlama('telegram_session'),
   ])
-  return {
-    ulangan: !!session,
-    telefon,
-    foydalanuvchi,
-  }
+  return { ulangan: !!session, telefon, foydalanuvchi }
 }
 
 // ─── Uzish ───────────────────────────────────────────────────────────────────
 
 export async function telegramDisconnect(): Promise<{ ok: boolean }> {
+  // Singleton client ni tozalash
+  if (_client) {
+    await _client.disconnect().catch(() => {})
+    _client = null
+    _clientReady = false
+  }
+  _entityCache.clear()
+
   await prisma.sozlama.deleteMany({
     where: {
       kalit: {
         in: [
-          'telegram_session',
-          'telegram_api_id',
-          'telegram_api_hash',
-          'telegram_phone',
-          'telegram_user_name',
-          'telegram_temp_session',
+          'telegram_session', 'telegram_api_id', 'telegram_api_hash',
+          'telegram_phone', 'telegram_user_name', 'telegram_temp_session',
         ],
       },
     },
@@ -297,24 +533,13 @@ export async function nasiyaYaratildiXabarToliq(
   const natija = await sendMessageToPhone(mijoz.telefon, xabar)
 
   await prisma.bildirishnomLog.create({
-    data: {
-      nasiyaId,
-      mijozId,
-      xabarTuri: 'nasiya_yaratildi',
-      yuborildi: natija.ok,
-      xato: natija.xato,
-    },
+    data: { nasiyaId, mijozId, xabarTuri: 'nasiya_yaratildi', yuborildi: natija.ok, xato: natija.xato },
   }).catch(() => {})
 
   return natija
 }
 
-export async function qarzQoshildiXabar(
-  nasiyaId: string,
-  mijozId: string,
-  summasi: number,
-  yangiQoldiq: number
-) {
+export async function qarzQoshildiXabar(nasiyaId: string, mijozId: string, summasi: number, yangiQoldiq: number) {
   if (!(await isTelegramEnabled())) return
 
   const mijoz = await prisma.mijoz.findUnique({ where: { id: mijozId } })
@@ -333,24 +558,13 @@ export async function qarzQoshildiXabar(
   const natija = await sendMessageToPhone(mijoz.telefon, xabar)
 
   await prisma.bildirishnomLog.create({
-    data: {
-      nasiyaId,
-      mijozId,
-      xabarTuri: 'qarz_qoshildi',
-      yuborildi: natija.ok,
-      xato: natija.xato,
-    },
+    data: { nasiyaId, mijozId, xabarTuri: 'qarz_qoshildi', yuborildi: natija.ok, xato: natija.xato },
   }).catch(() => {})
 
   return natija
 }
 
-export async function tolovQilindiXabar(
-  nasiyaId: string,
-  mijozId: string,
-  tolovSummasi: number,
-  qoldiq: number
-) {
+export async function tolovQilindiXabar(nasiyaId: string, mijozId: string, tolovSummasi: number, qoldiq: number) {
   if (!(await isTelegramEnabled())) return
 
   const mijoz = await prisma.mijoz.findUnique({ where: { id: mijozId } })
@@ -360,33 +574,13 @@ export async function tolovQilindiXabar(
   const yopildi = qoldiq <= 0
 
   const xabar = yopildi
-    ? (
-      `✅ Nasiya to'liq to'landi!\n\n` +
-      `🏪 ${dokonNomi}\n` +
-      `👤 Mijoz: ${mijoz.ism}\n` +
-      `💳 To'langan: ${formatSum(tolovSummasi)}\n` +
-      `📊 Qoldiq: 0 so'm\n\n` +
-      `Rahmat, nasiyangiz yopildi! ✅`
-    )
-    : (
-      `💳 To'lov qabul qilindi\n\n` +
-      `🏪 ${dokonNomi}\n` +
-      `👤 Mijoz: ${mijoz.ism}\n` +
-      `💳 To'langan: ${formatSum(tolovSummasi)}\n` +
-      `📊 Qoldiq qarz: ${formatSum(qoldiq)}\n` +
-      `\nRahmat!`
-    )
+    ? `✅ Nasiya to'liq to'landi!\n\n🏪 ${dokonNomi}\n👤 Mijoz: ${mijoz.ism}\n💳 To'langan: ${formatSum(tolovSummasi)}\n📊 Qoldiq: 0 so'm\n\nRahmat, nasiyangiz yopildi! ✅`
+    : `💳 To'lov qabul qilindi\n\n🏪 ${dokonNomi}\n👤 Mijoz: ${mijoz.ism}\n💳 To'langan: ${formatSum(tolovSummasi)}\n📊 Qoldiq qarz: ${formatSum(qoldiq)}\n\nRahmat!`
 
   const natija = await sendMessageToPhone(mijoz.telefon, xabar)
 
   await prisma.bildirishnomLog.create({
-    data: {
-      nasiyaId,
-      mijozId,
-      xabarTuri: 'tolov_qilindi',
-      yuborildi: natija.ok,
-      xato: natija.xato,
-    },
+    data: { nasiyaId, mijozId, xabarTuri: 'tolov_qilindi', yuborildi: natija.ok, xato: natija.xato },
   }).catch(() => {})
 
   return natija
@@ -394,11 +588,6 @@ export async function tolovQilindiXabar(
 
 export async function testXabarYuborish(telefon: string): Promise<{ ok: boolean; xato?: string }> {
   const dokonNomi = (await getSozlama('dokon_nomi')) || "Do'kon"
-
-  const xabar =
-    `✅ Test xabar\n\n` +
-    `🏪 ${dokonNomi}\n\n` +
-    `Telegram bildirishnomalar muvaffaqiyatli ishlayapti!`
-
+  const xabar = `✅ Test xabar\n\n🏪 ${dokonNomi}\n\nTelegram bildirishnomalar muvaffaqiyatli ishlayapti!`
   return sendMessageToPhone(telefon, xabar)
 }
