@@ -127,7 +127,7 @@ export default function MijozlarPage() {
                     {/* Telefon */}
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden sm:table-cell whitespace-nowrap">
                       {m.telefon ? (
-                        <span className="flex items-center gap-1"><Phone size={12} />{formatPhone(m.telefon)}</span>
+                        <a href={`tel:${m.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 text-blue-500 hover:text-blue-600"><Phone size={12} />{formatPhone(m.telefon)}</a>
                       ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                     </td>
                     {/* Manzil */}
@@ -187,7 +187,7 @@ export default function MijozlarPage() {
                   </div>
                   {/* Clickable phone link */}
                   {m.telefon && (
-                    <a href={`tel:+998${m.telefon}`} className="text-gray-500 dark:text-gray-500 text-sm flex items-center gap-1 hover:text-blue-600">
+                    <a href={`tel:${m.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1">
                       <Phone size={12} /> {formatPhone(m.telefon)}
                     </a>
                   )}
