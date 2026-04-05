@@ -92,12 +92,13 @@ export async function POST(req: NextRequest) {
       include: { kategoriya: true },
     })
 
-    // Boshlang'ich ombor qoldig'i kiritilsa
+    // Boshlang'ich qoldiq kiritilsa — to'g'ridan-to'g'ri do'konga (sotuvga tayyor)
     if (data.boshlangichQoldiq && parseFloat(data.boshlangichQoldiq) > 0) {
       await prisma.omborHarakati.create({
         data: {
           tovarId: tovar.id,
           turi: 'KIRIM',
+          joy: 'DOKON',
           miqdor: parseFloat(data.boshlangichQoldiq),
           narx: parseFloat(data.kelishNarxi),
           izoh: 'Boshlang\'ich qoldiq',
