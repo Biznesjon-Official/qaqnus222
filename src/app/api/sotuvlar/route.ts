@@ -185,6 +185,7 @@ export async function POST(req: NextRequest) {
           summasi: Number(toliSotuv.yakuniySumma),
           qoldiqQarz: Number(toliSotuv.nasiya.qoldiq),
           muddat: toliSotuv.nasiya.muddat,
+          sotuvId: toliSotuv.id,
         }
       ).catch(e => console.error('[Telegram] Nasiya xabar xatosi:', e))
     }

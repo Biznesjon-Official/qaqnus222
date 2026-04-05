@@ -573,16 +573,23 @@ enum BuyurtmaHolati {
 // BILDIRISHNOM LOG
 // ========================
 model BildirishnomLog {
-  id         String   @id @default(cuid())
-  nasiyaId   String
-  mijozId    String
-  xabarTuri  String   // "3_kun", "2_kun", "1_kun", "muddati_otgan"
-  yuborildi  Boolean  @default(false)
-  xato       String?
-  sana       DateTime @default(now())
+  id             String   @id @default(cuid())
+  nasiyaId       String?
+  mijozId        String
+  xabarTuri      String   // "nasiya_yaratildi", "qarz_qoshildi", "tolov_qilindi", "3_kun", "2_kun", "1_kun", "muddati_otgan"
+  xabarMatni     String?  // Yuborilgan xabarning to'liq matni
+  telegramTarget String?  // Yuborilgan telefon raqam
+  status         String   @default("pending") // "pending", "sent", "failed", "queued"
+  yuborildi      Boolean  @default(false)
+  xato           String?
+  urinishSoni    Int      @default(0)
+  sana           DateTime @default(now())
+  yuborilganSana DateTime?
 
-  nasiya     Nasiya   @relation(fields: [nasiyaId], references: [id])
-  mijoz      Mijoz    @relation(fields: [mijozId], references: [id])
+  nasiya         Nasiya?  @relation(fields: [nasiyaId], references: [id])
+  mijoz          Mijoz    @relation(fields: [mijozId], references: [id])
 
+  @@index([status, sana])
+  @@index([xabarTuri])
   @@map("bildirishnom_loglar")
 }

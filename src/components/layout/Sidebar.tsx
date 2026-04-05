@@ -9,7 +9,7 @@ import { useSidebar } from '@/components/SidebarContext'
 import {
   LayoutDashboard, ShoppingCart, Package, Warehouse,
   Users, CreditCard, Truck, Receipt, BarChart3, Settings,
-  X, Store, ChevronLeft, ChevronRight, ShoppingBag, Users2, Building2, Handshake, ClipboardList,
+  X, Store, ChevronLeft, ChevronRight, ShoppingBag, Users2, Building2, Handshake, ClipboardList, MessageSquare,
 } from 'lucide-react'
 
 const navItems = [
@@ -28,6 +28,7 @@ const navItems = [
   { href: '/sherikdan-olish', label: 'Sherikdan olish', icon: Handshake, roles: ['ADMIN', 'KASSIR'] },
   { href: '/agentlar', label: 'Agentlar', icon: Users2, roles: ['ADMIN'] },
   { href: '/hisobotlar', label: 'Hisobotlar', icon: BarChart3, roles: ['ADMIN', 'KASSIR'] },
+  { href: '/xabarlar', label: 'Xabarlar', icon: MessageSquare, roles: ['ADMIN'] },
   { href: '/sozlamalar', label: 'Sozlamalar', icon: Settings, roles: ['ADMIN'] },
 ]
 

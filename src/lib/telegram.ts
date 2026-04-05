@@ -489,12 +489,78 @@ export async function telegramDisconnect(): Promise<{ ok: boolean }> {
   return { ok: true }
 }
 
+// ─── Sotuv tarkibidan mahsulotlar ro'yxatini formatlash ─────────────────────
+
+async function getMahsulotlarMatni(sotuvId: string | null, maxQator: number = 10): Promise<string> {
+  if (!sotuvId) return ''
+  const tarkiblar = await prisma.sotuvTarkibi.findMany({
+    where: { sotuvId },
+    include: { tovar: { select: { nomi: true, birlik: true } } },
+  })
+  if (tarkiblar.length === 0) return ''
+
+  const qatorlar: string[] = []
+  const korsatiladigan = tarkiblar.slice(0, maxQator)
+  for (const t of korsatiladigan) {
+    const miqdor = Number(t.miqdor)
+    const narx = Number(t.birlikNarxi)
+    const birlik = t.tovar.birlik === 'DONA' ? 'dona' : t.tovar.birlik.toLowerCase()
+    qatorlar.push(`  • ${t.tovar.nomi} — ${miqdor} ${birlik} × ${formatSum(narx)}`)
+  }
+  if (tarkiblar.length > maxQator) {
+    qatorlar.push(`  ... va yana ${tarkiblar.length - maxQator} ta mahsulot`)
+  }
+  return '\n📦 Mahsulotlar:\n' + qatorlar.join('\n')
+}
+
+// ─── Markazlashtirilgan log + yuborish ───────────────────────────────────────
+
+async function xabarYuborVaSaqla(params: {
+  nasiyaId: string | null
+  mijozId: string
+  xabarTuri: string
+  xabar: string
+  telefon: string
+}): Promise<{ ok: boolean; xato?: string; logId?: string }> {
+  // 1. Log yaratish — pending status
+  const log = await prisma.bildirishnomLog.create({
+    data: {
+      nasiyaId: params.nasiyaId,
+      mijozId: params.mijozId,
+      xabarTuri: params.xabarTuri,
+      xabarMatni: params.xabar,
+      telegramTarget: params.telefon,
+      status: 'pending',
+      urinishSoni: 0,
+    },
+  }).catch(() => null)
+
+  // 2. Yuborish
+  const natija = await sendMessageToPhone(params.telefon, params.xabar)
+
+  // 3. Log yangilash
+  if (log) {
+    await prisma.bildirishnomLog.update({
+      where: { id: log.id },
+      data: {
+        status: natija.ok ? 'sent' : 'failed',
+        yuborildi: natija.ok,
+        xato: natija.xato,
+        urinishSoni: 1,
+        yuborilganSana: natija.ok ? new Date() : null,
+      },
+    }).catch(() => {})
+  }
+
+  return { ...natija, logId: log?.id }
+}
+
 // ─── Bildirishnoma funksiyalari ──────────────────────────────────────────────
 
 export async function nasiyaYaratildiXabarToliq(
   nasiyaId: string,
   mijozId: string,
-  data: { chekRaqami: string; summasi: number; qoldiqQarz: number; muddat?: Date | null; mijozIsm?: string }
+  data: { chekRaqami: string; summasi: number; qoldiqQarz: number; muddat?: Date | null; mijozIsm?: string; sotuvId?: string | null }
 ) {
   if (!(await isTelegramEnabled())) return
 
@@ -502,24 +568,26 @@ export async function nasiyaYaratildiXabarToliq(
   if (!mijoz?.telefon) return
 
   const dokonNomi = (await getSozlama('dokon_nomi')) || "Do'kon"
+  const mahsulotlarMatni = await getMahsulotlarMatni(data.sotuvId || null)
 
   const xabar =
     `📋 Yangi nasiya ochildi\n\n` +
     `🏪 ${dokonNomi}\n` +
     `👤 Mijoz: ${data.mijozIsm || mijoz.ism}\n` +
     `🧾 Chek: ${data.chekRaqami}\n` +
-    `💰 Summa: ${formatSum(data.summasi)}\n` +
+    mahsulotlarMatni +
+    `\n💰 Summa: ${formatSum(data.summasi)}\n` +
     `📊 Qoldiq qarz: ${formatSum(data.qoldiqQarz)}\n` +
     (data.muddat ? `📅 Muddat: ${formatSana(data.muddat)}\n` : '') +
     `\nIltimos, o'z vaqtida to'lang.`
 
-  const natija = await sendMessageToPhone(mijoz.telefon, xabar)
-
-  await prisma.bildirishnomLog.create({
-    data: { nasiyaId, mijozId, xabarTuri: 'nasiya_yaratildi', yuborildi: natija.ok, xato: natija.xato },
-  }).catch(() => {})
-
-  return natija
+  return xabarYuborVaSaqla({
+    nasiyaId,
+    mijozId,
+    xabarTuri: 'nasiya_yaratildi',
+    xabar,
+    telefon: mijoz.telefon,
+  })
 }
 
 export async function qarzQoshildiXabar(nasiyaId: string, mijozId: string, summasi: number, yangiQoldiq: number) {
@@ -538,13 +606,13 @@ export async function qarzQoshildiXabar(nasiyaId: string, mijozId: string, summa
     `📊 Jami qoldiq qarz: ${formatSum(yangiQoldiq)}\n` +
     `\nIltimos, o'z vaqtida to'lang.`
 
-  const natija = await sendMessageToPhone(mijoz.telefon, xabar)
-
-  await prisma.bildirishnomLog.create({
-    data: { nasiyaId, mijozId, xabarTuri: 'qarz_qoshildi', yuborildi: natija.ok, xato: natija.xato },
-  }).catch(() => {})
-
-  return natija
+  return xabarYuborVaSaqla({
+    nasiyaId,
+    mijozId,
+    xabarTuri: 'qarz_qoshildi',
+    xabar,
+    telefon: mijoz.telefon,
+  })
 }
 
 export async function tolovQilindiXabar(nasiyaId: string, mijozId: string, tolovSummasi: number, qoldiq: number) {
@@ -560,17 +628,62 @@ export async function tolovQilindiXabar(nasiyaId: string, mijozId: string, tolov
     ? `✅ Nasiya to'liq to'landi!\n\n🏪 ${dokonNomi}\n👤 Mijoz: ${mijoz.ism}\n💳 To'langan: ${formatSum(tolovSummasi)}\n📊 Qoldiq: 0 so'm\n\nRahmat, nasiyangiz yopildi! ✅`
     : `💳 To'lov qabul qilindi\n\n🏪 ${dokonNomi}\n👤 Mijoz: ${mijoz.ism}\n💳 To'langan: ${formatSum(tolovSummasi)}\n📊 Qoldiq qarz: ${formatSum(qoldiq)}\n\nRahmat!`
 
-  const natija = await sendMessageToPhone(mijoz.telefon, xabar)
-
-  await prisma.bildirishnomLog.create({
-    data: { nasiyaId, mijozId, xabarTuri: 'tolov_qilindi', yuborildi: natija.ok, xato: natija.xato },
-  }).catch(() => {})
-
-  return natija
+  return xabarYuborVaSaqla({
+    nasiyaId,
+    mijozId,
+    xabarTuri: 'tolov_qilindi',
+    xabar,
+    telefon: mijoz.telefon,
+  })
 }
 
 export async function testXabarYuborish(telefon: string): Promise<{ ok: boolean; xato?: string }> {
   const dokonNomi = (await getSozlama('dokon_nomi')) || "Do'kon"
   const xabar = `✅ Test xabar\n\n🏪 ${dokonNomi}\n\nTelegram bildirishnomalar muvaffaqiyatli ishlayapti!`
   return sendMessageToPhone(telefon, xabar)
+}
+
+// ─── Qayta yuborish (resend) ─────────────────────────────────────────────────
+
+export async function xabarQaytaYuborish(logId: string): Promise<{ ok: boolean; xato?: string }> {
+  const log = await prisma.bildirishnomLog.findUnique({
+    where: { id: logId },
+    include: { mijoz: true },
+  })
+  if (!log) return { ok: false, xato: 'Xabar topilmadi' }
+  if (!log.xabarMatni) return { ok: false, xato: 'Xabar matni saqlanmagan' }
+
+  const telefon = log.telegramTarget || log.mijoz.telefon
+  if (!telefon) return { ok: false, xato: "Mijozda telefon raqam yo'q" }
+
+  const natija = await sendMessageToPhone(telefon, log.xabarMatni)
+
+  await prisma.bildirishnomLog.update({
+    where: { id: logId },
+    data: {
+      status: natija.ok ? 'sent' : 'failed',
+      yuborildi: natija.ok,
+      xato: natija.xato,
+      urinishSoni: { increment: 1 },
+      yuborilganSana: natija.ok ? new Date() : log.yuborilganSana,
+      telegramTarget: telefon,
+    },
+  }).catch(() => {})
+
+  return natija
+}
+
+// ─── Qo'lda yangi xabar yuborish (manual) ────────────────────────────────────
+
+export async function qolbolaXabarYuborish(mijozId: string, matn: string): Promise<{ ok: boolean; xato?: string }> {
+  const mijoz = await prisma.mijoz.findUnique({ where: { id: mijozId } })
+  if (!mijoz?.telefon) return { ok: false, xato: "Mijozda telefon raqam yo'q" }
+
+  return xabarYuborVaSaqla({
+    nasiyaId: null,
+    mijozId,
+    xabarTuri: 'qolbola',
+    xabar: matn,
+    telefon: mijoz.telefon,
+  })
 }
