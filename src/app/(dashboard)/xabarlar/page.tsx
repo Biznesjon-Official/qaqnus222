@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import {
   MessageSquare, CheckCircle, XCircle, Clock, RotateCcw, RefreshCw,
-  Phone, User, Eye, X, ChevronLeft, ChevronRight, Filter, Search,
+  Eye, X, ChevronLeft, ChevronRight, Filter, Search, Send, Trash2, Zap, ExternalLink,
 } from 'lucide-react'
 
 // ─── Turlar ──────────────────────────────────────────────────────────────────
@@ -110,7 +111,7 @@ function StatusBadge({ status, xato }: { status: string; xato: string | null }) 
 
 // ─── Xabarni ko'rish modali ──────────────────────────────────────────────────
 
-function XabarModal({ xabar, onClose }: { xabar: Xabar; onClose: () => void }) {
+function XabarModal({ xabar, onClose, onRetry }: { xabar: Xabar; onClose: () => void; onRetry: (id: string) => void }) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
       <div
@@ -120,7 +121,12 @@ function XabarModal({ xabar, onClose }: { xabar: Xabar; onClose: () => void }) {
         <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-start justify-between">
           <div>
             <h3 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">Xabar tafsilotlari</h3>
-            <p className="text-gray-500 dark:text-gray-500 text-sm mt-0.5">{xabar.mijoz.ism}</p>
+            <Link
+              href={`/mijozlar?q=${encodeURIComponent(xabar.mijoz.ism)}`}
+              className="text-blue-600 hover:text-blue-700 text-sm mt-0.5 inline-flex items-center gap-1"
+            >
+              {xabar.mijoz.ism} <ExternalLink size={12} />
+            </Link>
           </div>
           <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
             <X size={18} />
@@ -144,9 +150,16 @@ function XabarModal({ xabar, onClose }: { xabar: Xabar; onClose: () => void }) {
             </div>
             <div>
               <p className="text-gray-500 dark:text-gray-500 text-xs">Telegram raqam</p>
-              <p className="text-gray-900 dark:text-gray-100 text-sm mt-1 font-mono">
-                {xabar.telegramTarget || xabar.mijoz.telefon || '—'}
-              </p>
+              {(xabar.telegramTarget || xabar.mijoz.telefon) ? (
+                <a
+                  href={`tel:${(xabar.telegramTarget || xabar.mijoz.telefon || '').replace(/\s/g, '')}`}
+                  className="text-blue-600 hover:text-blue-700 text-sm mt-1 font-mono block"
+                >
+                  {xabar.telegramTarget || xabar.mijoz.telefon}
+                </a>
+              ) : (
+                <p className="text-gray-900 dark:text-gray-100 text-sm mt-1 font-mono">—</p>
+              )}
             </div>
             <div>
               <p className="text-gray-500 dark:text-gray-500 text-xs">Urinishlar</p>
@@ -179,6 +192,168 @@ function XabarModal({ xabar, onClose }: { xabar: Xabar; onClose: () => void }) {
               {xabar.xabarMatni || '— (matn saqlanmagan)'}
             </div>
           </div>
+
+          {/* Amal tugmalari */}
+          {xabar.status === 'failed' && (
+            <button
+              onClick={() => { onRetry(xabar.id); onClose() }}
+              className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
+            >
+              <RotateCcw size={16} /> Qayta yuborish
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Qo'lbola xabar yuborish modali ──────────────────────────────────────────
+
+interface MijozSimple {
+  id: string
+  ism: string
+  telefon: string | null
+}
+
+function ManualXabarModal({ onClose, onSent }: { onClose: () => void; onSent: () => void }) {
+  const [mijozlar, setMijozlar] = useState<MijozSimple[]>([])
+  const [qidiruv, setQidiruv] = useState('')
+  const [tanlangan, setTanlangan] = useState<MijozSimple | null>(null)
+  const [matn, setMatn] = useState('')
+  const [yuborilmoqda, setYuborilmoqda] = useState(false)
+
+  useEffect(() => {
+    if (qidiruv.length < 2) { setMijozlar([]); return }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/mijozlar?q=${encodeURIComponent(qidiruv)}&limit=10`)
+        const data = await res.json()
+        setMijozlar(data.mijozlar || data || [])
+      } catch {}
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [qidiruv])
+
+  async function yuborish() {
+    if (!tanlangan || !matn.trim()) return
+    setYuborilmoqda(true)
+    try {
+      const res = await fetch('/api/xabarlar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mijozId: tanlangan.id, matn: matn.trim() }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        toast.success('Xabar yuborildi!')
+        onSent()
+        onClose()
+      } else {
+        toast.error(data.xato || 'Yuborishda xatolik')
+      }
+    } catch {
+      toast.error('Tarmoq xatosi')
+    } finally {
+      setYuborilmoqda(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-lg"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+          <h3 className="text-gray-900 dark:text-gray-100 font-semibold text-lg">Yangi xabar yuborish</h3>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Mijoz tanlash */}
+          <div>
+            <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Mijoz *</label>
+            {tanlangan ? (
+              <div className="flex items-center justify-between px-3 py-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/30 rounded-xl">
+                <div>
+                  <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{tanlangan.ism}</p>
+                  {tanlangan.telefon && (
+                    <p className="text-gray-500 dark:text-gray-500 text-xs">{tanlangan.telefon}</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setTanlangan(null); setQidiruv('') }}
+                  className="p-1 text-gray-400 hover:text-red-600"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={qidiruv}
+                    onChange={e => setQidiruv(e.target.value)}
+                    placeholder="Mijoz ismini qidirish..."
+                    className="w-full pl-9 pr-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    autoFocus
+                  />
+                </div>
+                {mijozlar.length > 0 && (
+                  <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-neutral-700 rounded-xl">
+                    {mijozlar.map(m => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setTanlangan(m)}
+                        disabled={!m.telefon}
+                        className="w-full px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-neutral-800 border-b border-gray-100 dark:border-neutral-800 last:border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{m.ism}</p>
+                        <p className="text-gray-500 text-xs">{m.telefon || 'Telefon raqam yo\'q'}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Matn */}
+          <div>
+            <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Xabar matni *</label>
+            <textarea
+              value={matn}
+              onChange={e => setMatn(e.target.value)}
+              placeholder="Xabar matnini kiriting..."
+              rows={5}
+              className="w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+            />
+            <p className="text-gray-400 text-xs mt-1">{matn.length} ta belgi</p>
+          </div>
+
+          {/* Tugmalar */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium"
+            >
+              Bekor
+            </button>
+            <button
+              onClick={yuborish}
+              disabled={!tanlangan || !matn.trim() || yuborilmoqda}
+              className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Send size={16} />
+              {yuborilmoqda ? 'Yuborilmoqda...' : 'Yuborish'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -199,6 +374,9 @@ export default function XabarlarPage() {
   const [mijozFilter, setMijozFilter] = useState('')
   const [tanlanganXabar, setTanlanganXabar] = useState<Xabar | null>(null)
   const [qaytaYuborilmoqda, setQaytaYuborilmoqda] = useState<string | null>(null)
+  const [manualModal, setManualModal] = useState(false)
+  const [bulkRetryYuklanmoqda, setBulkRetryYuklanmoqda] = useState(false)
+  const [ochirilmoqda, setOchirilmoqda] = useState(false)
 
   const yuklash = useCallback(async (showLoading = true) => {
     if (showLoading) setYuklanmoqda(true)
@@ -248,6 +426,48 @@ export default function XabarlarPage() {
       toast.error('Tarmoq xatosi')
     } finally {
       setQaytaYuborilmoqda(null)
+    }
+  }
+
+  async function bulkRetry() {
+    if (stats.failed === 0) {
+      toast.info('Xato xabarlar yo\'q')
+      return
+    }
+    if (!confirm(`${stats.failed} ta xato xabarni qayta yuborasizmi?`)) return
+    setBulkRetryYuklanmoqda(true)
+    try {
+      const res = await fetch('/api/xabarlar/retry-all', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        toast.success(`${data.yuborilgan} ta yuborildi, ${data.xatolik} ta xato`)
+        yuklash(false)
+      } else {
+        toast.error(data.xato || 'Xatolik')
+      }
+    } catch {
+      toast.error('Tarmoq xatosi')
+    } finally {
+      setBulkRetryYuklanmoqda(false)
+    }
+  }
+
+  async function eskilarniOchirish() {
+    if (!confirm("30 kundan eski barcha xabarlarni o'chirishni tasdiqlaysizmi?")) return
+    setOchirilmoqda(true)
+    try {
+      const res = await fetch('/api/xabarlar?kunlar=30', { method: 'DELETE' })
+      const data = await res.json()
+      if (data.ok) {
+        toast.success(`${data.ochirildi} ta xabar o'chirildi`)
+        yuklash(false)
+      } else {
+        toast.error(data.xato || 'Xatolik')
+      }
+    } catch {
+      toast.error('Tarmoq xatosi')
+    } finally {
+      setOchirilmoqda(false)
     }
   }
 
@@ -359,11 +579,39 @@ export default function XabarlarPage() {
 
           <div className="flex-1" />
 
+          {stats.failed > 0 && (
+            <button
+              onClick={bulkRetry}
+              disabled={bulkRetryYuklanmoqda}
+              className="flex items-center gap-1 px-3 py-2 text-sm bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50 text-orange-700 dark:text-orange-400 rounded-xl font-medium transition disabled:opacity-50"
+            >
+              <Zap size={14} className={bulkRetryYuklanmoqda ? 'animate-pulse' : ''} />
+              {bulkRetryYuklanmoqda ? 'Yuborilmoqda...' : `Xatolarni qayta yuborish (${stats.failed})`}
+            </button>
+          )}
+
+          <button
+            onClick={() => setManualModal(true)}
+            className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition"
+          >
+            <Send size={14} /> Yangi xabar
+          </button>
+
+          <button
+            onClick={eskilarniOchirish}
+            disabled={ochirilmoqda}
+            className="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition disabled:opacity-50"
+            title="30 kundan eski xabarlarni o'chirish"
+          >
+            <Trash2 size={14} />
+          </button>
+
           <button
             onClick={() => yuklash()}
             className="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            title="Yangilash"
           >
-            <RefreshCw size={14} /> Yangilash
+            <RefreshCw size={14} />
           </button>
         </div>
       </div>
@@ -490,7 +738,19 @@ export default function XabarlarPage() {
 
       {/* Xabar modal */}
       {tanlanganXabar && (
-        <XabarModal xabar={tanlanganXabar} onClose={() => setTanlanganXabar(null)} />
+        <XabarModal
+          xabar={tanlanganXabar}
+          onClose={() => setTanlanganXabar(null)}
+          onRetry={qaytaYuborish}
+        />
+      )}
+
+      {/* Qo'lbola xabar yuborish modali */}
+      {manualModal && (
+        <ManualXabarModal
+          onClose={() => setManualModal(false)}
+          onSent={() => yuklash(false)}
+        />
       )}
     </div>
   )
