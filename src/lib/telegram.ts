@@ -336,13 +336,10 @@ export async function telegramConnect(apiId: number, apiHash: string, phone: str
     )
     await client.connect()
 
-    const result = await client.invoke(
-      new Api.auth.SendCode({
-        phoneNumber: phone,
-        apiId,
-        apiHash,
-        settings: new Api.CodeSettings({} as any),
-      })
+    // GramJS ning yuqori darajadagi metodi — apiId/apiHash ni to'g'ri uzatadi
+    const { phoneCodeHash } = await client.sendCode(
+      { apiId, apiHash },
+      phone
     )
 
     const tempSession = client.session.save() as unknown as string
@@ -352,9 +349,16 @@ export async function telegramConnect(apiId: number, apiHash: string, phone: str
       create: { kalit: 'telegram_temp_session', qiymat: tempSession },
     })
 
-    return { ok: true, phoneCodeHash: (result as any).phoneCodeHash }
+    return { ok: true, phoneCodeHash }
   } catch (e: any) {
-    return { ok: false, xato: e.message || String(e) }
+    const msg = e.message || String(e)
+    if (msg.includes('API_ID_INVALID')) {
+      return { ok: false, xato: "API ID yoki API Hash noto'g'ri. my.telegram.org dan qayta tekshiring." }
+    }
+    if (msg.includes('PHONE_NUMBER_INVALID')) {
+      return { ok: false, xato: "Telefon raqam noto'g'ri formatda" }
+    }
+    return { ok: false, xato: msg }
   } finally {
     if (client) await client.disconnect().catch(() => {})
   }
