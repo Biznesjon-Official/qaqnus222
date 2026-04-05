@@ -38,11 +38,6 @@ const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 soat
 let _lastSendTime = 0
 const MIN_SEND_INTERVAL = 3000 // 3 soniya
 
-// ImportContacts cheklovi
-let _importCount = 0
-let _importResetTime = 0
-const MAX_IMPORTS_PER_HOUR = 20
-
 async function getClient(): Promise<TelegramClient | null> {
   // Agar client tayyor bo'lsa — qaytarish
   if (_client && _clientReady) {
@@ -103,15 +98,6 @@ async function waitForRateLimit(): Promise<void> {
   _lastSendTime = Date.now()
 }
 
-function canImportContacts(): boolean {
-  const now = Date.now()
-  if (now > _importResetTime) {
-    _importCount = 0
-    _importResetTime = now + 60 * 60 * 1000 // 1 soat
-  }
-  return _importCount < MAX_IMPORTS_PER_HOUR
-}
-
 // ─── Telefon raqam → Telegram entity resolve ────────────────────────────────
 
 async function resolvePhone(client: TelegramClient, telefon: string): Promise<Api.TypeUser | null> {
@@ -129,14 +115,7 @@ async function resolvePhone(client: TelegramClient, telefon: string): Promise<Ap
     }
   }
 
-  // 2. ImportContacts — cheklangan
-  if (!canImportContacts()) {
-    console.warn(`[Telegram] ImportContacts limiti (${MAX_IMPORTS_PER_HOUR}/soat) tugadi`)
-    return null
-  }
-
-  _importCount++
-
+  // 2. ImportContacts orqali topish
   const result = await client.invoke(
     new Api.contacts.ImportContacts({
       contacts: [
