@@ -9,7 +9,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     const { id } = await params
     const natija = await xabarQaytaYuborish(id)
-    return NextResponse.json(natija, { status: natija.ok ? 200 : 400 })
+    return NextResponse.json(natija)
   } catch (e) {
     console.error('[Xabar resend]', e)
     return NextResponse.json({ ok: false, xato: 'Server xatosi' }, { status: 500 })
