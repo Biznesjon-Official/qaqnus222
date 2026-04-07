@@ -12,9 +12,9 @@ export async function POST(_req: NextRequest) {
     }
 
     const xatolar = await prisma.bildirishnomLog.findMany({
-      where: { status: 'failed', xabarMatni: { not: null } },
+      where: { status: { in: ['failed', 'queued'] }, xabarMatni: { not: null } },
       select: { id: true },
-      take: 100, // Bir vaqtda max 100 ta
+      take: 100,
     })
 
     let yuborilgan = 0

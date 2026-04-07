@@ -40,11 +40,12 @@ export async function GET(req: NextRequest) {
       _count: true,
     })
 
-    const stats = { sent: 0, failed: 0, pending: 0, jami: 0 }
+    const stats = { sent: 0, failed: 0, pending: 0, queued: 0, jami: 0 }
     for (const s of statistika) {
       if (s.status === 'sent') stats.sent = s._count
       else if (s.status === 'failed') stats.failed = s._count
       else if (s.status === 'pending') stats.pending = s._count
+      else if (s.status === 'queued') stats.queued = s._count
       stats.jami += s._count
     }
 

@@ -36,13 +36,90 @@ let _client: TelegramClient | null = null
 let _clientReady = false
 let _connectPromise: Promise<TelegramClient | null> | null = null
 
-// Entity cache — telefon raqamdan Telegram user ID ga
+// Entity cache — telefon raqamdan Telegram user ID ga (DB da saqlanadi)
 const _entityCache = new Map<string, { userId: bigint; accessHash: bigint; cachedAt: number }>()
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 soat
+let _entityCacheLoaded = false
+
+// Flood timer — PEER_FLOOD kelganda shu vaqtgacha kutish
+let _floodUntil = 0
 
 // Rate limit — xabarlar orasida minimal kutish
 let _lastSendTime = 0
 const MIN_SEND_INTERVAL = 3000 // 3 soniya
+
+// ─── Entity cache — DB da saqlash/yuklash ────────────────────────────────────
+
+async function loadEntityCache(): Promise<void> {
+  if (_entityCacheLoaded) return
+  _entityCacheLoaded = true
+  try {
+    const row = await prisma.sozlama.findUnique({ where: { kalit: 'telegram_entity_cache' } })
+    if (!row?.qiymat) return
+    const data = JSON.parse(row.qiymat) as Record<string, { userId: string; accessHash: string; cachedAt: number }>
+    const now = Date.now()
+    for (const [phone, val] of Object.entries(data)) {
+      if (now - val.cachedAt < CACHE_TTL) {
+        _entityCache.set(phone, {
+          userId: BigInt(val.userId),
+          accessHash: BigInt(val.accessHash),
+          cachedAt: val.cachedAt,
+        })
+      }
+    }
+    console.log(`[Telegram] Entity cache yuklandi: ${_entityCache.size} ta raqam`)
+  } catch (e) {
+    console.error('[Telegram] Entity cache yuklash xatosi:', e)
+  }
+}
+
+async function saveEntityCache(): Promise<void> {
+  try {
+    const data: Record<string, { userId: string; accessHash: string; cachedAt: number }> = {}
+    for (const [phone, val] of _entityCache.entries()) {
+      data[phone] = { userId: val.userId.toString(), accessHash: val.accessHash.toString(), cachedAt: val.cachedAt }
+    }
+    await prisma.sozlama.upsert({
+      where: { kalit: 'telegram_entity_cache' },
+      update: { qiymat: JSON.stringify(data) },
+      create: { kalit: 'telegram_entity_cache', qiymat: JSON.stringify(data) },
+    })
+  } catch {}
+}
+
+// ─── Flood timer — DB da saqlash/yuklash ─────────────────────────────────────
+
+async function loadFloodTimer(): Promise<void> {
+  try {
+    const row = await prisma.sozlama.findUnique({ where: { kalit: 'telegram_flood_until' } })
+    if (!row?.qiymat) return
+    const until = parseInt(row.qiymat)
+    if (until > Date.now()) {
+      _floodUntil = until
+      const secsLeft = Math.round((until - Date.now()) / 1000)
+      console.log(`[Telegram] Flood timer yuklandi: ${secsLeft}s qoldi`)
+    }
+  } catch {}
+}
+
+async function saveFloodTimer(untilMs: number): Promise<void> {
+  _floodUntil = untilMs
+  try {
+    await prisma.sozlama.upsert({
+      where: { kalit: 'telegram_flood_until' },
+      update: { qiymat: String(untilMs) },
+      create: { kalit: 'telegram_flood_until', qiymat: String(untilMs) },
+    })
+  } catch {}
+}
+
+function isFlooded(): boolean {
+  return _floodUntil > Date.now()
+}
+
+function floodSecsLeft(): number {
+  return Math.max(0, Math.round((_floodUntil - Date.now()) / 1000))
+}
 
 async function getClient(): Promise<TelegramClient | null> {
   // Agar client tayyor bo'lsa — qaytarish
@@ -80,6 +157,8 @@ async function getClient(): Promise<TelegramClient | null> {
       await client.connect()
       _client = client
       _clientReady = true
+      // Entity cache va flood timer DB dan yuklash
+      await Promise.all([loadEntityCache(), loadFloodTimer()])
       console.log('[Telegram] Client ulandi (singleton)')
       return client
     } catch (e) {
@@ -132,6 +211,7 @@ async function resolvePhone(client: TelegramClient, telefon: string): Promise<Ap
           accessHash: BigInt(user.accessHash),
           cachedAt: Date.now(),
         })
+        saveEntityCache().catch(() => {})
       }
       return resolved.users[0]
     }
@@ -168,6 +248,8 @@ async function resolvePhone(client: TelegramClient, telefon: string): Promise<Ap
       accessHash: BigInt(user.accessHash),
       cachedAt: Date.now(),
     })
+    // DB ga saqlash (async, kutmaymiz)
+    saveEntityCache().catch(() => {})
   }
 
   return result.users[0]
@@ -175,10 +257,17 @@ async function resolvePhone(client: TelegramClient, telefon: string): Promise<Ap
 
 // ─── Xabar yuborish (rate limited, cached, singleton) ────────────────────────
 
+// Qaytarish turlar: ok | queued (flood, keyinroq qayta urinish) | failed (doimiy xato)
 async function sendMessageToPhone(
   telefon: string,
   xabar: string
-): Promise<{ ok: boolean; xato?: string }> {
+): Promise<{ ok: boolean; queued?: boolean; xato?: string }> {
+  // Flood tekshiruvi
+  if (isFlooded()) {
+    const secs = floodSecsLeft()
+    return { ok: false, queued: true, xato: `Telegram cheklovi: ${secs}s qoldi` }
+  }
+
   try {
     const client = await getClient()
     if (!client) return { ok: false, xato: 'Telegram ulanmagan. Sozlamalardan telefon raqamni ulang.' }
@@ -197,13 +286,19 @@ async function sendMessageToPhone(
   } catch (e: any) {
     const msg = e.message || String(e)
 
-    // FloodWait — Telegram cheklovi
+    // FloodWait — Telegram vaqtinchalik cheklovi, qayta urinish kerak
     if (msg.includes('FLOOD_WAIT') || msg.includes('FloodWait')) {
-      const seconds = msg.match(/(\d+)/)?.[1] || '60'
+      const seconds = parseInt(msg.match(/(\d+)/)?.[1] || '3600')
       console.error(`[Telegram] FloodWait: ${seconds}s kutish kerak`)
-      // Keyingi xabar uchun vaqtni belgilash
-      _lastSendTime = Date.now() + parseInt(seconds) * 1000
-      return { ok: false, xato: `Telegram cheklovi: ${seconds} soniya kutish kerak` }
+      await saveFloodTimer(Date.now() + seconds * 1000)
+      return { ok: false, queued: true, xato: `Telegram cheklovi: ${seconds}s kutish kerak` }
+    }
+
+    // PEER_FLOOD — akkaunt spam filtri, bir necha soat o'tgach o'tadi
+    if (msg.includes('PEER_FLOOD')) {
+      console.error('[Telegram] PEER_FLOOD — akkaunt cheklandi, 3 soatdan keyin qayta uriniladi')
+      await saveFloodTimer(Date.now() + 3 * 60 * 60 * 1000) // 3 soat
+      return { ok: false, queued: true, xato: 'Telegram spam filtri: 3 soatdan keyin avtomatik qayta yuboriladi' }
     }
 
     if (msg.includes('PHONE_NOT_OCCUPIED')) {
@@ -220,6 +315,62 @@ async function sendMessageToPhone(
     console.error('[Telegram] Xabar yuborish xatosi:', msg)
     return { ok: false, xato: msg }
   }
+}
+
+// ─── Queued xabarlarni avtomatik qayta yuborish ──────────────────────────────
+
+export async function queuedXabarlarniYuborish(): Promise<void> {
+  // Flood bo'lsa — hali vaqt kelmagan
+  if (isFlooded()) {
+    console.log(`[Queue] Flood davom etyapti, ${floodSecsLeft()}s qoldi`)
+    return
+  }
+
+  const queuedLogs = await prisma.bildirishnomLog.findMany({
+    where: { status: 'queued' },
+    orderBy: { sana: 'asc' },
+    take: 20, // bir marta max 20 ta
+    include: { mijoz: { select: { telefon: true } } },
+  })
+
+  if (queuedLogs.length === 0) return
+  console.log(`[Queue] ${queuedLogs.length} ta queued xabar qayta yuborilmoqda...`)
+
+  let yuborilgan = 0
+  for (const log of queuedLogs) {
+    if (isFlooded()) {
+      console.log(`[Queue] Flood qayta keldi, ${floodSecsLeft()}s to'xtatildi`)
+      break
+    }
+
+    const telefon = log.telegramTarget || log.mijoz.telefon
+    if (!telefon || !log.xabarMatni) {
+      await prisma.bildirishnomLog.update({
+        where: { id: log.id },
+        data: { status: 'failed', xato: 'Telefon yoki matn yo\'q' },
+      }).catch(() => {})
+      continue
+    }
+
+    const natija = await sendMessageToPhone(telefon, log.xabarMatni)
+    await prisma.bildirishnomLog.update({
+      where: { id: log.id },
+      data: {
+        status: natija.ok ? 'sent' : natija.queued ? 'queued' : 'failed',
+        yuborildi: natija.ok,
+        xato: natija.xato,
+        urinishSoni: natija.ok || natija.queued ? log.urinishSoni : log.urinishSoni + 1,
+        yuborilganSana: natija.ok ? new Date() : log.yuborilganSana,
+      },
+    }).catch(() => {})
+
+    if (natija.ok) {
+      yuborilgan++
+      console.log(`[Queue] Yuborildi: ${telefon}`)
+    }
+  }
+
+  if (yuborilgan > 0) console.log(`[Queue] Yakunlandi: ${yuborilgan} ta yuborildi`)
 }
 
 // ─── Scheduler uchun — kunlik eslatma (shaxsiy raqamdan) ─────────────────────
@@ -567,14 +718,15 @@ async function xabarYuborVaSaqla(params: {
   const natija = await sendMessageToPhone(params.telefon, params.xabar)
 
   // 3. Log yangilash
+  // queued = flood bor, keyinroq qayta uriniladi (failed emas)
   if (log) {
     await prisma.bildirishnomLog.update({
       where: { id: log.id },
       data: {
-        status: natija.ok ? 'sent' : 'failed',
+        status: natija.ok ? 'sent' : natija.queued ? 'queued' : 'failed',
         yuborildi: natija.ok,
         xato: natija.xato,
-        urinishSoni: 1,
+        urinishSoni: natija.ok || natija.queued ? 0 : 1,
         yuborilganSana: natija.ok ? new Date() : null,
       },
     }).catch(() => {})
@@ -699,10 +851,10 @@ export async function xabarQaytaYuborish(logId: string): Promise<{ ok: boolean; 
   await prisma.bildirishnomLog.update({
     where: { id: logId },
     data: {
-      status: natija.ok ? 'sent' : 'failed',
+      status: natija.ok ? 'sent' : natija.queued ? 'queued' : 'failed',
       yuborildi: natija.ok,
       xato: natija.xato,
-      urinishSoni: { increment: 1 },
+      urinishSoni: natija.ok || natija.queued ? log.urinishSoni : { increment: 1 },
       yuborilganSana: natija.ok ? new Date() : log.yuborilganSana,
       telegramTarget: telefon,
     },

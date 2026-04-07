@@ -31,6 +31,7 @@ interface Stats {
   sent: number
   failed: number
   pending: number
+  queued: number
   jami: number
 }
 
@@ -97,7 +98,10 @@ function StatusBadge({ status, xato }: { status: string; xato: string | null }) 
   }
   if (status === 'queued') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
+        title={xato || 'Flood — avtomatik qayta yuboriladi'}
+      >
         <Clock size={12} /> Navbatda
       </span>
     )
@@ -364,7 +368,7 @@ function ManualXabarModal({ onClose, onSent }: { onClose: () => void; onSent: ()
 
 export default function XabarlarPage() {
   const [xabarlar, setXabarlar] = useState<Xabar[]>([])
-  const [stats, setStats] = useState<Stats>({ sent: 0, failed: 0, pending: 0, jami: 0 })
+  const [stats, setStats] = useState<Stats>({ sent: 0, failed: 0, pending: 0, queued: 0, jami: 0 })
   const [yuklanmoqda, setYuklanmoqda] = useState(true)
   const [page, setPage] = useState(1)
   const [sahifalar, setSahifalar] = useState(1)
@@ -430,11 +434,12 @@ export default function XabarlarPage() {
   }
 
   async function bulkRetry() {
-    if (stats.failed === 0) {
-      toast.info('Xato xabarlar yo\'q')
+    const jami = stats.failed + stats.queued
+    if (jami === 0) {
+      toast.info('Xato yoki navbatdagi xabarlar yo\'q')
       return
     }
-    if (!confirm(`${stats.failed} ta xato xabarni qayta yuborasizmi?`)) return
+    if (!confirm(`${jami} ta xabarni qayta yuborasizmi?`)) return
     setBulkRetryYuklanmoqda(true)
     try {
       const res = await fetch('/api/xabarlar/retry-all', { method: 'POST' })
@@ -528,15 +533,15 @@ export default function XabarlarPage() {
         </button>
 
         <button
-          onClick={() => { setStatusFilter('pending'); setPage(1) }}
-          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${statusFilter === 'pending' ? 'border-yellow-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}
+          onClick={() => { setStatusFilter('queued'); setPage(1) }}
+          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${statusFilter === 'queued' ? 'border-orange-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Kutmoqda</p>
-              <p className="text-2xl font-bold mt-1 text-yellow-600">{stats.pending}</p>
+              <p className="text-gray-500 dark:text-gray-500 text-sm">Navbatda</p>
+              <p className="text-2xl font-bold mt-1 text-orange-500">{stats.queued}</p>
             </div>
-            <div className="w-11 h-11 bg-yellow-500 rounded-xl flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 bg-orange-500 rounded-xl flex items-center justify-center shrink-0">
               <Clock size={20} className="text-white" />
             </div>
           </div>
@@ -579,14 +584,14 @@ export default function XabarlarPage() {
 
           <div className="flex-1" />
 
-          {stats.failed > 0 && (
+          {(stats.failed > 0 || stats.queued > 0) && (
             <button
               onClick={bulkRetry}
               disabled={bulkRetryYuklanmoqda}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50 text-orange-700 dark:text-orange-400 rounded-xl font-medium transition disabled:opacity-50"
             >
               <Zap size={14} className={bulkRetryYuklanmoqda ? 'animate-pulse' : ''} />
-              {bulkRetryYuklanmoqda ? 'Yuborilmoqda...' : `Xatolarni qayta yuborish (${stats.failed})`}
+              {bulkRetryYuklanmoqda ? 'Yuborilmoqda...' : `Qayta yuborish (${stats.failed + stats.queued})`}
             </button>
           )}
 
