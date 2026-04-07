@@ -121,14 +121,33 @@ async function resolvePhone(client: TelegramClient, telefon: string): Promise<Ap
     }
   }
 
-  // 2. ImportContacts orqali topish
+  // 2. ResolvePhone — kontakt SAQLAMAYDI, faqat user ID oladi
+  try {
+    const resolved = await client.invoke(new Api.contacts.ResolvePhone({ phone: cleanPhone }))
+    if (resolved.users && resolved.users.length > 0) {
+      const user = resolved.users[0] as any
+      if (user.id && user.accessHash) {
+        _entityCache.set(cleanPhone, {
+          userId: BigInt(user.id),
+          accessHash: BigInt(user.accessHash),
+          cachedAt: Date.now(),
+        })
+      }
+      return resolved.users[0]
+    }
+  } catch (e: any) {
+    if (e.message?.includes('PHONE_NOT_OCCUPIED')) return null
+    // ResolvePhone ishlamasa — ImportContacts + darhol o'chirish
+  }
+
+  // 3. Fallback: ImportContacts, lekin darhol kontaktni o'chirish
   const result = await client.invoke(
     new Api.contacts.ImportContacts({
       contacts: [
         new Api.InputPhoneContact({
           clientId: 0 as any,
           phone: cleanPhone,
-          firstName: 'Mijoz',
+          firstName: '_',
           lastName: '',
         }),
       ],
@@ -139,8 +158,11 @@ async function resolvePhone(client: TelegramClient, telefon: string): Promise<Ap
 
   const user = result.users[0] as any
 
-  // Cache ga saqlash
+  // Kontaktni darhol o'chirish — kontaktlar ro'yxatini iflostirmaslik uchun
   if (user.id && user.accessHash) {
+    const inputUser = new Api.InputUser({ userId: user.id as any, accessHash: user.accessHash as any })
+    await client.invoke(new Api.contacts.DeleteContacts({ id: [inputUser] })).catch(() => {})
+
     _entityCache.set(cleanPhone, {
       userId: BigInt(user.id),
       accessHash: BigInt(user.accessHash),
