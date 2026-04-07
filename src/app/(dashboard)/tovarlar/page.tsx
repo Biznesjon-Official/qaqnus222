@@ -605,10 +605,11 @@ export default function TovarlarPage() {
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Yangi qoldiq</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={yangiQoldiq}
-                  onChange={e => setYangiQoldiq(e.target.value)}
-                  min={0}
+                  onChange={e => setYangiQoldiq(e.target.value.replace(/[^0-9.]/g, ''))}
                   autoFocus
                   className={inputCls}
                 />
