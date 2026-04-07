@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ xato: "Noto'g'ri qoldiq" }, { status: 400 })
     }
 
-    const joy = data?.joy || 'OMBOR'
+    const joy = data?.joy || 'DOKON'
 
     // SQL aggregatsiya bilan hozirgi qoldiqni olish
     const stockMap = await getStockMap([tovarId])
