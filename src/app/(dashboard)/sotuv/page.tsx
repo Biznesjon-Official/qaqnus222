@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { formatSum, formatSanaVaVaqt, playBeep, uzSearch } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages, ScanLine } from 'lucide-react'
+import { Search, ShoppingCart, Trash2, CheckCircle, Printer, Download, RotateCcw, Clock, X, Loader2, AlertTriangle, Pencil, Pause, Play, Archive, Languages, ScanLine, Link2, Share2 } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
@@ -1068,27 +1068,62 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                 <div style={{ textAlign: 'center', fontSize: 11 }}>{t('Rahmat')}!</div>
               </div>
 
-              <div className="p-4 flex gap-2">
-                <button
-                  onClick={() => chekChopEtish(s)}
-                  className="flex-1 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400"
-                >
-                  <Printer size={14} />
-                  {t('Chop etish')}
-                </button>
-                <button
-                  onClick={() => chekPdfYuklash(s)}
-                  className="flex-1 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400"
-                >
-                  <Download size={14} />
-                  PDF
-                </button>
-                <button
-                  onClick={() => setChekModal(false)}
-                  className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm transition font-medium"
-                >
-                  {t('Yopish')}
-                </button>
+              <div className="p-4 space-y-2">
+                {/* Chek linki */}
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-neutral-800 rounded-xl">
+                  <Link2 size={14} className="text-gray-400 shrink-0" />
+                  <input
+                    readOnly
+                    value={`${window.location.origin}/chek/${encodeURIComponent(s.chekRaqami)}`}
+                    className="flex-1 bg-transparent text-xs text-gray-600 dark:text-gray-400 font-mono outline-none select-all"
+                    onClick={e => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/chek/${encodeURIComponent(s.chekRaqami)}`
+                      navigator.clipboard.writeText(url).then(() => toast.success('Link nusxalandi!'))
+                    }}
+                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg transition font-medium"
+                  >
+                    Nusxalash
+                  </button>
+                  {typeof navigator !== 'undefined' && navigator.share && (
+                    <button
+                      onClick={() => {
+                        navigator.share({
+                          title: `Chek ${s.chekRaqami}`,
+                          url: `${window.location.origin}/chek/${encodeURIComponent(s.chekRaqami)}`,
+                        }).catch(() => {})
+                      }}
+                      className="p-1 text-gray-400 hover:text-blue-600 transition"
+                    >
+                      <Share2 size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => chekChopEtish(s)}
+                    className="flex-1 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400"
+                  >
+                    <Printer size={14} />
+                    {t('Chop etish')}
+                  </button>
+                  <button
+                    onClick={() => chekPdfYuklash(s)}
+                    className="flex-1 py-2 border border-gray-200 dark:border-neutral-700 rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-neutral-800 transition flex items-center justify-center gap-1.5 text-gray-600 dark:text-gray-400"
+                  >
+                    <Download size={14} />
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => setChekModal(false)}
+                    className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm transition font-medium"
+                  >
+                    {t('Yopish')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
