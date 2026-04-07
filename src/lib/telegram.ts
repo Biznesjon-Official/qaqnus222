@@ -285,19 +285,14 @@ export async function nasiyaEslatmalarYuborish() {
     })
     if (allaqachon) continue
 
-    // Xabar yuborish
-    const natija = await sendMessageToPhone(nasiya.mijoz.telefon, xabarMatni)
-
-    // Log
-    await prisma.bildirishnomLog.create({
-      data: {
-        nasiyaId: nasiya.id,
-        mijozId: nasiya.mijozId,
-        xabarTuri,
-        yuborildi: natija.ok,
-        xato: natija.xato,
-      },
-    }).catch(() => {})
+    // Xabar yuborish (markazlashtirilgan log bilan)
+    const natija = await xabarYuborVaSaqla({
+      nasiyaId: nasiya.id,
+      mijozId: nasiya.mijozId,
+      xabarTuri,
+      xabar: xabarMatni,
+      telefon: nasiya.mijoz.telefon,
+    })
 
     if (natija.ok) {
       yuborilgan++

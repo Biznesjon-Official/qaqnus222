@@ -649,7 +649,13 @@ export default function XabarlarPage() {
                       <div className="min-w-0">
                         <p className="text-gray-900 dark:text-gray-100 text-sm font-medium truncate max-w-[140px]">{x.mijoz.ism}</p>
                         {x.telegramTarget && (
-                          <p className="text-gray-400 dark:text-gray-500 text-xs font-mono truncate max-w-[140px]">{x.telegramTarget}</p>
+                          <a
+                            href={`tel:${x.telegramTarget.replace(/\s/g, '')}`}
+                            onClick={e => e.stopPropagation()}
+                            className="text-blue-600 hover:text-blue-700 dark:text-blue-400 text-xs font-mono truncate max-w-[140px] block"
+                          >
+                            {x.telegramTarget}
+                          </a>
                         )}
                       </div>
                     </div>
