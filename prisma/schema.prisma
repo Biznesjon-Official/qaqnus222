@@ -444,13 +444,13 @@ model SherikQarz {
 }
 
 // ========================
-// SHERIKDAN OLISH (sotuv vaqtida stock yetishmaganda)
+// SHERIKDAN OLISH (tovar olib kelish yoki qarz qo'shish)
 // ========================
 model SherikdanOlish {
   id         String   @id @default(cuid())
   sotuvId    String?
   sherikId   String
-  tovarId    String
+  tovarId    String?
   miqdor     Decimal  @db.Decimal(12, 3)
   narx       Decimal  @db.Decimal(12, 2)
   jami       Decimal  @db.Decimal(12, 2)
@@ -459,7 +459,7 @@ model SherikdanOlish {
 
   sotuv   Sotuv?  @relation(fields: [sotuvId], references: [id])
   sherik  Sherik @relation(fields: [sherikId], references: [id])
-  tovar   Tovar  @relation(fields: [tovarId], references: [id])
+  tovar   Tovar?  @relation(fields: [tovarId], references: [id])
 
   tolovlar SherikdanOlishTolov[]
   @@map("sherikdan_olish")

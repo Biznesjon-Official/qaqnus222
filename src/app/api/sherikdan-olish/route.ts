@@ -15,7 +15,7 @@ export async function GET() {
         tolovlar: true,
       },
       orderBy: { yaratilgan: 'desc' },
-    })
+    }) as any[]
 
     // Sherik bo'yicha guruhlash
     const sherikMap: Record<string, {
@@ -39,7 +39,7 @@ export async function GET() {
       }
       sherikMap[sid].olishlar.push(item)
       sherikMap[sid].jamiQarz += Number(item.jami)
-      const itemTolangan = item.tolovlar.reduce((s, t) => s + Number(t.summa), 0)
+      const itemTolangan = item.tolovlar.reduce((s: number, t: any) => s + Number(t.summa), 0)
       sherikMap[sid].tolangan += itemTolangan
     }
 
@@ -59,8 +59,33 @@ export async function POST(req: NextRequest) {
     const session = await auth()
     if (!session) return NextResponse.json({ xato: "Ruxsat yo'q" }, { status: 401 })
 
-    const { sherikId, tovarId, miqdor, narx, izoh } = await req.json()
+    const data = await req.json()
+    const { sherikId, turi } = data
     if (!sherikId) return NextResponse.json({ xato: 'Sherik tanlanmagan' }, { status: 400 })
+
+    // Qarz qo'shish (tovarsiz)
+    if (turi === 'QARZ') {
+      const { summa, izoh } = data
+      if (!summa || parseFloat(summa) <= 0) return NextResponse.json({ xato: 'Summani kiriting' }, { status: 400 })
+      const s = parseFloat(summa)
+
+      const olish = await prisma.sherikdanOlish.create({
+        data: {
+          sherik: { connect: { id: sherikId } },
+          miqdor: 0,
+          narx: 0,
+          jami: s,
+          izoh: izoh || null,
+        },
+        include: {
+          sherik: { select: { ism: true } },
+        },
+      })
+      return NextResponse.json(olish, { status: 201 })
+    }
+
+    // Tovar olib kelish
+    const { tovarId, miqdor, narx, izoh } = data
     if (!tovarId) return NextResponse.json({ xato: 'Tovar tanlanmagan' }, { status: 400 })
     if (!miqdor || parseFloat(miqdor) <= 0) return NextResponse.json({ xato: 'Miqdor noto\'g\'ri' }, { status: 400 })
     if (!narx || parseFloat(narx) <= 0) return NextResponse.json({ xato: 'Narx noto\'g\'ri' }, { status: 400 })

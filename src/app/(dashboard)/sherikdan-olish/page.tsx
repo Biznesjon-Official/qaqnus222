@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package, Plus } from 'lucide-react'
+import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package, Plus, Receipt } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
@@ -11,14 +11,14 @@ interface SherikOlish {
   id: string
   sotuvId: string
   sherikId: string
-  tovarId: string
+  tovarId: string | null
   miqdor: number
   narx: number
   jami: number
   izoh: string | null
   yaratilgan: string
   sherik: { id: string; ism: string; telefon: string | null }
-  tovar: { id: string; nomi: string; birlik: string }
+  tovar: { id: string; nomi: string; birlik: string } | null
   sotuv: { id: string; chekRaqami: string; sana: string } | null
   tolovlar: { id: string; summa: number; turi: string; izoh: string | null; yaratilgan: string }[]
 }
@@ -60,6 +60,11 @@ export default function SherikdanOlishPage() {
   const [qoshishForm, setQoshishForm] = useState({ sherikId: '', tovarId: '', miqdor: '', narx: '', izoh: '' })
   const [qoshishYuklanmoqda, setQoshishYuklanmoqda] = useState(false)
   const [tovarlar, setTovarlar] = useState<{ id: string; nomi: string; birlik: string; kelishNarxi: number }[]>([])
+
+  // Qarz qo'shish modal
+  const [qarzModal, setQarzModal] = useState(false)
+  const [qarzForm, setQarzForm] = useState({ sherikId: '', summa: '', izoh: '' })
+  const [qarzYuklanmoqda, setQarzYuklanmoqda] = useState(false)
 
   async function yuklash() {
     setYuklanmoqda(true)
@@ -167,6 +172,27 @@ export default function SherikdanOlishPage() {
     }
   }
 
+  async function qarzQoshish() {
+    if (!qarzForm.sherikId) { toast.error('Sherik tanlang'); return }
+    if (!qarzForm.summa || parseFloat(qarzForm.summa) <= 0) { toast.error('Summani kiriting'); return }
+    setQarzYuklanmoqda(true)
+    const res = await fetch('/api/sherikdan-olish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ turi: 'QARZ', sherikId: qarzForm.sherikId, summa: qarzForm.summa, izoh: qarzForm.izoh || null }),
+    })
+    setQarzYuklanmoqda(false)
+    if (res.ok) {
+      toast.success('Qarz qo\'shildi')
+      setQarzModal(false)
+      setQarzForm({ sherikId: '', summa: '', izoh: '' })
+      yuklash()
+    } else {
+      const err = await res.json()
+      toast.error(err.xato || 'Xatolik')
+    }
+  }
+
   if (yuklanmoqda) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -182,12 +208,20 @@ export default function SherikdanOlishPage() {
           <Handshake size={20} className="text-gray-500 dark:text-gray-500" />
           <h1 className="text-gray-900 dark:text-gray-100 text-lg font-bold">Sherikdan olishlar</h1>
         </div>
-        <button
-          onClick={() => setQoshishModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition text-sm"
-        >
-          <Plus size={16} /> Qo&apos;shish
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setQarzModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-medium transition text-sm"
+          >
+            <Receipt size={16} /> Qarz qo&apos;shish
+          </button>
+          <button
+            onClick={() => setQoshishModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition text-sm"
+          >
+            <Plus size={16} /> Tovar olish
+          </button>
+        </div>
       </div>
 
       {data.length === 0 ? (
@@ -254,9 +288,11 @@ export default function SherikdanOlishPage() {
                     <tbody>
                       {guruh.olishlar.map(olish => (
                         <tr key={olish.id} className="border-b border-gray-50 dark:border-neutral-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-neutral-800/50">
-                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100">{olish.tovar.nomi}</td>
-                          <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{Number(olish.miqdor)}</td>
-                          <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{formatSum(olish.narx)}</td>
+                          <td className="px-4 py-2 text-gray-900 dark:text-gray-100">
+                            {olish.tovar ? olish.tovar.nomi : <span className="text-amber-600 font-medium">Qarz</span>}
+                          </td>
+                          <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{olish.tovar ? Number(olish.miqdor) : '—'}</td>
+                          <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300">{olish.tovar ? formatSum(olish.narx) : '—'}</td>
                           <td className="px-4 py-2 text-right text-gray-900 dark:text-gray-100 font-medium">{formatSum(olish.jami)}</td>
                           <td className="px-4 py-2 text-gray-500 dark:text-gray-500 text-xs">{olish.sotuv?.chekRaqami || <span className="text-amber-500">Qo&apos;lda</span>}</td>
                           <td className="px-4 py-2 text-gray-400 dark:text-gray-600 text-xs">{formatSanaVaVaqt(olish.yaratilgan)}</td>
@@ -391,6 +427,60 @@ export default function SherikdanOlishPage() {
                 >
                   {tahririYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                   Saqlash
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Qarz qo'shish modal */}
+      {qarzModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-sm">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold flex items-center gap-2">
+                <Receipt size={16} className="text-amber-600" />
+                Qarz qo&apos;shish
+              </h3>
+              <button onClick={() => setQarzModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Sherik *</label>
+                <Combobox
+                  options={sheriklar.map(s => ({ value: s.id, label: `${s.ism}${s.telefon ? ' — ' + s.telefon : ''}` }))}
+                  value={qarzForm.sherikId}
+                  onChange={v => setQarzForm(f => ({ ...f, sherikId: v }))}
+                  placeholder="Sherik tanlang"
+                  searchPlaceholder="Sherik qidirish..."
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Summa *</label>
+                <MoneyInput
+                  value={qarzForm.summa}
+                  onChange={v => setQarzForm(f => ({ ...f, summa: v }))}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Izoh</label>
+                <input value={qarzForm.izoh} onChange={e => setQarzForm(f => ({ ...f, izoh: e.target.value }))} placeholder="Masalan: naqd pul olindi" className={inputCls} />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setQarzModal(false)} className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium text-sm">
+                  Bekor
+                </button>
+                <button
+                  onClick={qarzQoshish}
+                  disabled={qarzYuklanmoqda || !qarzForm.sherikId || !qarzForm.summa}
+                  className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-1"
+                >
+                  {qarzYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Qo&apos;shish
                 </button>
               </div>
             </div>
