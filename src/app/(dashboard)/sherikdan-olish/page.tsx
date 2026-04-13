@@ -10,21 +10,31 @@ import MoneyInput from '@/components/ui/money-input'
 interface SherikOlish {
   id: string
   sotuvId: string
-  sherikId: string
+  sherikId: string | null
+  taminotchiId: string | null
   tovarId: string | null
   miqdor: number
   narx: number
   jami: number
   izoh: string | null
   yaratilgan: string
-  sherik: { id: string; ism: string; telefon: string | null }
+  sherik: { id: string; ism: string; telefon: string | null } | null
+  taminotchi: { id: string; nomi: string; telefon: string | null } | null
   tovar: { id: string; nomi: string; birlik: string } | null
   sotuv: { id: string; chekRaqami: string; sana: string } | null
   tolovlar: { id: string; summa: number; turi: string; izoh: string | null; yaratilgan: string }[]
 }
 
+interface Kontragent {
+  id: string
+  ism: string
+  telefon: string | null
+  turi: 'SHERIK' | 'TAMINOTCHI'
+}
+
 interface SherikGuruh {
-  sherik: { id: string; ism: string; telefon: string | null }
+  kontragent: Kontragent
+  sherik: Kontragent // backward-compat
   olishlar: SherikOlish[]
   jamiQarz: number
   tolangan: number
@@ -40,7 +50,8 @@ export default function SherikdanOlishPage() {
 
   // To'lov modal
   const [tolovModal, setTolovModal] = useState(false)
-  const [tolovSherikId, setTolovSherikId] = useState('')
+  const [tolovKontragentId, setTolovKontragentId] = useState('')
+  const [tolovKontragentTuri, setTolovKontragentTuri] = useState<'SHERIK' | 'TAMINOTCHI'>('SHERIK')
   const [tolovOlishId, setTolovOlishId] = useState('')
   const [tolovSumma, setTolovSumma] = useState('')
   const [tolovTuri, setTolovTuri] = useState('PUL')
@@ -61,25 +72,29 @@ export default function SherikdanOlishPage() {
   const [qoshishYuklanmoqda, setQoshishYuklanmoqda] = useState(false)
   const [tovarlar, setTovarlar] = useState<{ id: string; nomi: string; birlik: string; kelishNarxi: number }[]>([])
 
-  // Qarz qo'shish modal
+  // Qarz qo'shish modal (ta'minotchi)
   const [qarzModal, setQarzModal] = useState(false)
-  const [qarzForm, setQarzForm] = useState({ sherikId: '', summa: '', izoh: '' })
+  const [qarzForm, setQarzForm] = useState({ taminotchiId: '', summa: '', izoh: '' })
   const [qarzYuklanmoqda, setQarzYuklanmoqda] = useState(false)
+  const [taminotchilar, setTaminotchilar] = useState<{ id: string; nomi: string; telefon: string | null }[]>([])
 
   async function yuklash() {
     setYuklanmoqda(true)
     try {
-      const [res, shRes, tvRes] = await Promise.all([
+      const [res, shRes, tvRes, tmRes] = await Promise.all([
         fetch('/api/sherikdan-olish'),
         fetch('/api/sheriklar'),
         fetch('/api/tovarlar?limit=500'),
+        fetch('/api/taminotchilar'),
       ])
       const d = await res.json()
       const sh = await shRes.json()
       const tv = await tvRes.json()
+      const tm = await tmRes.json()
       setData(Array.isArray(d) ? d : [])
       setSheriklar(Array.isArray(sh) ? sh.map((s: any) => ({ id: s.id, ism: s.ism, telefon: s.telefon })) : [])
       setTovarlar(Array.isArray(tv.tovarlar) ? tv.tovarlar.map((t: any) => ({ id: t.id, nomi: t.nomi, birlik: t.birlik, kelishNarxi: Number(t.kelishNarxi) })) : [])
+      setTaminotchilar(Array.isArray(tm) ? tm.map((t: any) => ({ id: t.id, nomi: t.nomi, telefon: t.telefon })) : [])
     } catch { toast.error('Ma\'lumot yuklanmadi') }
     setYuklanmoqda(false)
   }
@@ -90,8 +105,9 @@ export default function SherikdanOlishPage() {
     setOchiqSheriklar(prev => ({ ...prev, [sherikId]: !prev[sherikId] }))
   }
 
-  function tolovOch(sherikId: string, olishId?: string) {
-    setTolovSherikId(sherikId)
+  function tolovOch(kontragentId: string, kontragentTuri: 'SHERIK' | 'TAMINOTCHI', olishId?: string) {
+    setTolovKontragentId(kontragentId)
+    setTolovKontragentTuri(kontragentTuri)
     setTolovOlishId(olishId || '')
     setTolovSumma('')
     setTolovTuri('PUL')
@@ -107,7 +123,8 @@ export default function SherikdanOlishPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sherikdanOlishId: tolovOlishId || null,
-        sherikId: tolovSherikId,
+        sherikId: tolovKontragentTuri === 'SHERIK' ? tolovKontragentId : null,
+        taminotchiId: tolovKontragentTuri === 'TAMINOTCHI' ? tolovKontragentId : null,
         summa: tolovSumma,
         turi: tolovTuri,
         izoh: tolovIzoh || null,
@@ -127,7 +144,7 @@ export default function SherikdanOlishPage() {
   function tahririOch(olish: SherikOlish) {
     setTahririId(olish.id)
     setTahririMiqdor(String(olish.miqdor))
-    setTahririSherikId(olish.sherikId)
+    setTahririSherikId(olish.sherikId || '')
     setTahririModal(true)
   }
 
@@ -173,19 +190,19 @@ export default function SherikdanOlishPage() {
   }
 
   async function qarzQoshish() {
-    if (!qarzForm.sherikId) { toast.error('Sherik tanlang'); return }
+    if (!qarzForm.taminotchiId) { toast.error("Ta'minotchi tanlang"); return }
     if (!qarzForm.summa || parseFloat(qarzForm.summa) <= 0) { toast.error('Summani kiriting'); return }
     setQarzYuklanmoqda(true)
     const res = await fetch('/api/sherikdan-olish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ turi: 'QARZ', sherikId: qarzForm.sherikId, summa: qarzForm.summa, izoh: qarzForm.izoh || null }),
+      body: JSON.stringify({ turi: 'QARZ', taminotchiId: qarzForm.taminotchiId, summa: qarzForm.summa, izoh: qarzForm.izoh || null }),
     })
     setQarzYuklanmoqda(false)
     if (res.ok) {
       toast.success('Qarz qo\'shildi')
       setQarzModal(false)
-      setQarzForm({ sherikId: '', summa: '', izoh: '' })
+      setQarzForm({ taminotchiId: '', summa: '', izoh: '' })
       yuklash()
     } else {
       const err = await res.json()
@@ -231,18 +248,26 @@ export default function SherikdanOlishPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {data.map(guruh => (
-            <div key={guruh.sherik.id} className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
-              {/* Sherik header */}
+          {data.map(guruh => {
+            const kontragent = guruh.kontragent || guruh.sherik
+            const guruhKey = `${kontragent.turi}:${kontragent.id}`
+            return (
+            <div key={guruhKey} className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
+              {/* Kontragent header */}
               <button
-                onClick={() => toggleSherik(guruh.sherik.id)}
+                onClick={() => toggleSherik(guruhKey)}
                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-neutral-800 transition"
               >
                 <div className="flex items-center gap-3">
-                  {ochiqSheriklar[guruh.sherik.id] ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
+                  {ochiqSheriklar[guruhKey] ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
                   <div className="text-left">
-                    <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{guruh.sherik.ism}</p>
-                    {guruh.sherik.telefon && <p className="text-gray-400 dark:text-gray-600 text-xs">{guruh.sherik.telefon}</p>}
+                    <div className="flex items-center gap-2">
+                      <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{kontragent.ism}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${kontragent.turi === 'TAMINOTCHI' ? 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400' : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400'}`}>
+                        {kontragent.turi === 'TAMINOTCHI' ? "Ta'minotchi" : 'Sherik'}
+                      </span>
+                    </div>
+                    {kontragent.telefon && <p className="text-gray-400 dark:text-gray-600 text-xs">{kontragent.telefon}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-4 text-xs">
@@ -262,11 +287,11 @@ export default function SherikdanOlishPage() {
               </button>
 
               {/* Tafsilotlar */}
-              {ochiqSheriklar[guruh.sherik.id] && (
+              {ochiqSheriklar[guruhKey] && (
                 <div className="border-t border-gray-100 dark:border-neutral-800">
                   <div className="px-4 py-2 flex justify-end">
                     <button
-                      onClick={() => tolovOch(guruh.sherik.id)}
+                      onClick={() => tolovOch(kontragent.id, kontragent.turi)}
                       className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg transition flex items-center gap-1"
                     >
                       <DollarSign size={12} />
@@ -312,7 +337,8 @@ export default function SherikdanOlishPage() {
                 </div>
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -449,13 +475,13 @@ export default function SherikdanOlishPage() {
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Sherik *</label>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Ta&apos;minotchi *</label>
                 <Combobox
-                  options={sheriklar.map(s => ({ value: s.id, label: `${s.ism}${s.telefon ? ' — ' + s.telefon : ''}` }))}
-                  value={qarzForm.sherikId}
-                  onChange={v => setQarzForm(f => ({ ...f, sherikId: v }))}
-                  placeholder="Sherik tanlang"
-                  searchPlaceholder="Sherik qidirish..."
+                  options={taminotchilar.map(t => ({ value: t.id, label: `${t.nomi}${t.telefon ? ' — ' + t.telefon : ''}` }))}
+                  value={qarzForm.taminotchiId}
+                  onChange={v => setQarzForm(f => ({ ...f, taminotchiId: v }))}
+                  placeholder="Ta'minotchi tanlang"
+                  searchPlaceholder="Ta'minotchi qidirish..."
                 />
               </div>
               <div>
@@ -476,7 +502,7 @@ export default function SherikdanOlishPage() {
                 </button>
                 <button
                   onClick={qarzQoshish}
-                  disabled={qarzYuklanmoqda || !qarzForm.sherikId || !qarzForm.summa}
+                  disabled={qarzYuklanmoqda || !qarzForm.taminotchiId || !qarzForm.summa}
                   className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-1"
                 >
                   {qarzYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}

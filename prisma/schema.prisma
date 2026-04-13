@@ -283,6 +283,8 @@ model Taminotchi {
 
   xaridlar      Xarid[]
   omborHarakati OmborHarakati[]
+  sherikdanOlishlar      SherikdanOlish[]
+  sherikdanOlishTolovlar SherikdanOlishTolov[]
 
   @@map("taminotchilar")
 }
@@ -447,19 +449,21 @@ model SherikQarz {
 // SHERIKDAN OLISH (tovar olib kelish yoki qarz qo'shish)
 // ========================
 model SherikdanOlish {
-  id         String   @id @default(cuid())
-  sotuvId    String?
-  sherikId   String
-  tovarId    String?
-  miqdor     Decimal  @db.Decimal(12, 3)
-  narx       Decimal  @db.Decimal(12, 2)
-  jami       Decimal  @db.Decimal(12, 2)
-  izoh       String?
-  yaratilgan DateTime @default(now())
+  id           String   @id @default(cuid())
+  sotuvId      String?
+  sherikId     String?
+  taminotchiId String?
+  tovarId      String?
+  miqdor       Decimal  @db.Decimal(12, 3)
+  narx         Decimal  @db.Decimal(12, 2)
+  jami         Decimal  @db.Decimal(12, 2)
+  izoh         String?
+  yaratilgan   DateTime @default(now())
 
-  sotuv   Sotuv?  @relation(fields: [sotuvId], references: [id])
-  sherik  Sherik @relation(fields: [sherikId], references: [id])
-  tovar   Tovar?  @relation(fields: [tovarId], references: [id])
+  sotuv       Sotuv?       @relation(fields: [sotuvId], references: [id])
+  sherik      Sherik?      @relation(fields: [sherikId], references: [id])
+  taminotchi  Taminotchi?  @relation(fields: [taminotchiId], references: [id])
+  tovar       Tovar?       @relation(fields: [tovarId], references: [id])
 
   tolovlar SherikdanOlishTolov[]
   @@map("sherikdan_olish")
@@ -468,14 +472,16 @@ model SherikdanOlish {
 model SherikdanOlishTolov {
   id                String   @id @default(cuid())
   sherikdanOlishId  String?
-  sherikId          String
+  sherikId          String?
+  taminotchiId      String?
   summa             Decimal  @db.Decimal(12, 2)
   turi              String   // "PUL" | "TOVAR"
   izoh              String?
   yaratilgan        DateTime @default(now())
 
   sherikdanOlish SherikdanOlish? @relation(fields: [sherikdanOlishId], references: [id])
-  sherik         Sherik           @relation(fields: [sherikId], references: [id])
+  sherik         Sherik?         @relation(fields: [sherikId], references: [id])
+  taminotchi     Taminotchi?     @relation(fields: [taminotchiId], references: [id])
   @@map("sherikdan_olish_tolov")
 }
 
