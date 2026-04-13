@@ -24,7 +24,11 @@ export async function GET(req: NextRequest) {
       const normalized = normalizeUzbek(qidiruv)
       const apostroflar = ["'", '`', 'ʻ', 'ʼ', '\u2018', '\u2019']
       // Lotin va kirill variantlarini qidirish — foydalanuvchi qaysi yozuvda yozgani muhim emas
-      const skriptlar = Array.from(new Set([normalized, toKirill(normalized), toLotin(normalized)]))
+      const kirill = toKirill(normalized)
+      // Uzbek kirill э vs Rus kirill е — ikkalasida ham tekshirish
+      const kirillRu = kirill.replace(/э/g, 'е').replace(/Э/g, 'Е')
+      const kirillUz = kirill.replace(/е/g, 'э').replace(/Е/g, 'Э')
+      const skriptlar = Array.from(new Set([normalized, kirill, kirillRu, kirillUz, toLotin(normalized)]))
       const variantlar = skriptlar.flatMap(s => apostroflar.map(a => s.replace(/'/g, a)))
       where.OR = [
         ...variantlar.map(v => ({ nomi: { contains: v, mode: 'insensitive' as const } })),
