@@ -32,8 +32,11 @@ export default function PhoneInput({
 }: PhoneInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Extract pure 9 digits from stored value
-  const digits = value.replace(/\D/g, '').replace(/^998/, '').slice(0, 9)
+  // Extract pure 9 digits from stored value.
+  // Faqat country code bilan saqlangan bo'lsa (12 xonali) — 998 prefixni olib tashlaymiz.
+  // Aks holda raqam qismi o'zi 998 bilan boshlansa ham (masalan 998... kiritilgan) — saqlanadi.
+  const rawDigits = value.replace(/\D/g, '')
+  const digits = (rawDigits.length === 12 && rawDigits.startsWith('998') ? rawDigits.slice(3) : rawDigits).slice(0, 9)
   const displayValue = digits.length > 0 ? `+998 ${formatDigits(digits)}` : ''
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
