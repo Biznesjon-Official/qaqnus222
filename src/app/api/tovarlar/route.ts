@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { normalizeUzbek } from '@/lib/utils'
+import { normalizeUzbek, toKirill, toLotin } from '@/lib/utils'
 import { getStockMap } from '@/lib/stock'
 
 export async function GET(req: NextRequest) {
@@ -23,7 +23,9 @@ export async function GET(req: NextRequest) {
     if (qidiruv) {
       const normalized = normalizeUzbek(qidiruv)
       const apostroflar = ["'", '`', 'ʻ', 'ʼ', '\u2018', '\u2019']
-      const variantlar = apostroflar.map(a => normalized.replace(/'/g, a))
+      // Lotin va kirill variantlarini qidirish — foydalanuvchi qaysi yozuvda yozgani muhim emas
+      const skriptlar = Array.from(new Set([normalized, toKirill(normalized), toLotin(normalized)]))
+      const variantlar = skriptlar.flatMap(s => apostroflar.map(a => s.replace(/'/g, a)))
       where.OR = [
         ...variantlar.map(v => ({ nomi: { contains: v, mode: 'insensitive' as const } })),
         { shtrixKod: { contains: normalized } },
