@@ -25,6 +25,37 @@ interface SaqlanganiSavat {
   id: string; savat: SavatItem[]; sana: string; jami: number
 }
 
+function MiqdorInput({ miqdor, onChange }: { miqdor: number; onChange: (v: number) => void }) {
+  const [matn, setMatn] = useState(String(miqdor))
+
+  useEffect(() => {
+    setMatn(String(miqdor))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [miqdor])
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={matn}
+      onChange={e => {
+        // Faqat raqam va nuqta
+        const v = e.target.value.replace(/[^0-9.]/g, '')
+        setMatn(v)
+        const num = parseFloat(v)
+        if (!isNaN(num) && num > 0) onChange(num)
+      }}
+      onFocus={e => e.target.select()}
+      onBlur={() => {
+        const num = parseFloat(matn)
+        if (isNaN(num) || num <= 0) setMatn(String(miqdor))
+      }}
+      onWheel={e => e.currentTarget.blur()}
+      className="w-14 h-7 text-center text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 shrink-0"
+    />
+  )
+}
+
 const TOLOV_USULLARI = [
   { value: 'NAQD', label: 'Naqd pul' },
   { value: 'KARTA', label: 'Bank kartasi' },
@@ -842,17 +873,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                       <Pencil size={9} className={`absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none ${isNarxOzgartirilgan ? 'text-blue-400' : 'text-gray-300 dark:text-gray-600'}`} />
                     </div>
                     <span className="text-gray-400 dark:text-gray-600 text-xs shrink-0">×</span>
-                    <input
-                      type="number"
-                      min={0.001}
-                      step="any"
-                      value={item.miqdor}
-                      onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) miqdorOzgartir(item.tovarId, v) }}
-                      onFocus={e => e.target.select()}
-                      onWheel={e => e.currentTarget.blur()}
-                      style={{ MozAppearance: 'textfield' } as React.CSSProperties}
-                      className="w-14 h-7 text-center text-sm font-medium text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none shrink-0"
-                    />
+                    <MiqdorInput miqdor={item.miqdor} onChange={v => miqdorOzgartir(item.tovarId, v)} />
                     <span className="text-gray-400 dark:text-gray-600 text-xs shrink-0">=</span>
                     <span className="text-green-600 text-sm font-bold shrink-0 min-w-[65px] text-right">{formatSum(item.jami)}</span>
                   </div>
