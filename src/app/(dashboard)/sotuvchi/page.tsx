@@ -149,19 +149,19 @@ export default function SotuvchiPage() {
     setSavat(prev => {
       const existing = prev.find(s => s.tovarId === numpadTovar.id)
       if (existing) {
-        return prev.map(s => s.tovarId === numpadTovar.id
-          ? { ...s, miqdor: s.miqdor + miqdor, jami: (s.miqdor + miqdor) * s.birlikNarxi }
-          : s
-        )
+        // Mavjud tovar — miqdorni ko'paytirib, tepaga ko'chir
+        const yangilangan = { ...existing, miqdor: existing.miqdor + miqdor, jami: (existing.miqdor + miqdor) * existing.birlikNarxi }
+        return [yangilangan, ...prev.filter(s => s.tovarId !== numpadTovar.id)]
       }
-      return [...prev, {
+      // Yangi tovar — tepaga qo'shish
+      return [{
         tovarId: numpadTovar.id,
         nomi: numpadTovar.nomi,
         birlikNarxi: Number(numpadTovar.sotishNarxi),
         miqdor,
         birlik: numpadTovar.birlik,
         jami: miqdor * Number(numpadTovar.sotishNarxi),
-      }]
+      }, ...prev]
     })
     setNumpadTovar(null)
     toast.success(`${numpadTovar.nomi} savatga qo'shildi`)

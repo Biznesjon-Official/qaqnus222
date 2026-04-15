@@ -194,16 +194,14 @@ export default function SotuvPage() {
     setSavat(prev => {
       const mavjud = prev.find(s => s.tovarId === tovar.id)
       if (mavjud) {
-        return prev.map(s => s.tovarId === tovar.id
-          ? { ...s, miqdor: s.miqdor + 1, jami: (s.miqdor + 1) * s.birlikNarxi }
-          : s
-        )
+        const yangilangan = { ...mavjud, miqdor: mavjud.miqdor + 1, jami: (mavjud.miqdor + 1) * mavjud.birlikNarxi }
+        return [yangilangan, ...prev.filter(s => s.tovarId !== tovar.id)]
       }
-      return [...prev, {
+      return [{
         tovarId: tovar.id, nomi: tovar.nomi, birlikNarxi: tovar.sotishNarxi,
         miqdor: 1, birlik: tovar.birlik, chegirma: 0,
         jami: tovar.sotishNarxi, mavjudQoldiq: tovar.qoldiq
-      }]
+      }, ...prev]
     })
   }
 
