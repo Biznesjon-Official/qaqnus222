@@ -751,7 +751,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
             <div id="skaner-reader" style={{ width: '100%' }} />
           </div>
         )}
-        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-y-auto max-h-[calc(100vh-280px)]">
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
             {korsatiladiganTovarlar.map(t => (
               <button
