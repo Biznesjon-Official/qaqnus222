@@ -131,6 +131,9 @@ export default function SotuvPage() {
   const [skanerOchiq, setSkanerOchiq] = useState(false)
   const skanerRef = useRef<any>(null)
   const oxirgiSkanRef = useRef<string>('')
+  // Har doim oxirgi tovarlar ro'yxatini olish uchun ref
+  const tovarlarRef = useRef<Tovar[]>([])
+  const savatQoshRef = useRef<(t: Tovar) => void>(() => {})
 
   const skanerniYopish = useCallback(() => {
     const s = skanerRef.current
@@ -142,6 +145,29 @@ export default function SotuvPage() {
     setSkanerOchiq(false)
   }, [])
 
+  // Shtrix-kod bo'yicha tovar topish — bir nechta strategiya bilan
+  function tovarniTopish(kod: string): Tovar | undefined {
+    const n = kod.trim()
+    if (!n) return undefined
+    const list = tovarlarRef.current
+    // 1) Aynan mos keladigan
+    let topilgan = list.find(t => t.shtrixKod === n)
+    if (topilgan) return topilgan
+    // 2) Trim qilingan
+    topilgan = list.find(t => (t.shtrixKod || '').trim() === n)
+    if (topilgan) return topilgan
+    // 3) Boshidagi 0 ni olib tashlab taqqoslash (EAN-13 vs UPC-A)
+    const nNoZero = n.replace(/^0+/, '')
+    topilgan = list.find(t => {
+      const kodi = (t.shtrixKod || '').trim()
+      return kodi.replace(/^0+/, '') === nNoZero
+    })
+    if (topilgan) return topilgan
+    // 4) Nol bilan to'ldirib taqqoslash (UPC-A → EAN-13)
+    topilgan = list.find(t => (t.shtrixKod || '').trim() === '0' + n)
+    return topilgan
+  }
+
   const skanerniOchish = useCallback(async () => {
     setSkanerOchiq(true)
     oxirgiSkanRef.current = ''
@@ -152,21 +178,23 @@ export default function SotuvPage() {
         skanerRef.current = scanner
         await scanner.start(
           { facingMode: 'environment' },
-          { fps: 10, qrbox: { width: 250, height: 120 } },
+          { fps: 15, qrbox: { width: 280, height: 160 } },
           (kod) => {
+            const n = kod.trim()
+            if (!n) return
             // Bir xil kodni ketma-ket scan qilmasligi uchun
-            if (oxirgiSkanRef.current === kod) return
-            oxirgiSkanRef.current = kod
-            setTimeout(() => { oxirgiSkanRef.current = '' }, 2000)
+            if (oxirgiSkanRef.current === n) return
+            oxirgiSkanRef.current = n
+            setTimeout(() => { oxirgiSkanRef.current = '' }, 1500)
 
             playBeep()
-            const topilgan = tovarlar.find(t => t.shtrixKod === kod)
+            const topilgan = tovarniTopish(n)
             if (topilgan) {
-              savatQosh(topilgan)
+              savatQoshRef.current(topilgan)
               toast.success(`${topilgan.nomi} qo'shildi`)
             } else {
-              setQidiruv(kod)
-              toast.error(`Tovar topilmadi: ${kod}`)
+              setQidiruv(n)
+              toast.error(`Tovar topilmadi: ${n}`)
             }
           },
           () => {}
@@ -176,7 +204,8 @@ export default function SotuvPage() {
         setSkanerOchiq(false)
       }
     }, 100)
-  }, [tovarlar, skanerniYopish])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Saqlangan savatlar
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
@@ -231,6 +260,10 @@ export default function SotuvPage() {
       }, ...prev]
     })
   }
+
+  // Skaner uchun har doim eng so'nggi tovarlar va savatQosh funksiyasi
+  useEffect(() => { tovarlarRef.current = tovarlar }, [tovarlar])
+  useEffect(() => { savatQoshRef.current = savatQosh })
 
   function miqdorOzgartir(tovarId: string, yangiMiqdor: number) {
     if (yangiMiqdor <= 0) {

@@ -65,10 +65,29 @@ export default function SotuvchiPage() {
   // QR skaner
   const [qrOchiq, setQrOchiq] = useState(false)
   const qrScannerRef = useRef<Html5Qrcode | null>(null)
+  const oxirgiQrRef = useRef<string>('')
+  const tovarlarRef = useRef<Tovar[]>([])
+  const ochNumpadRef = useRef<(t: Tovar) => void>(() => {})
 
   const qidiruvRef = useRef<HTMLInputElement>(null)
   const barcodeBuffer = useRef('')
   const barcodeTimer = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  // Shtrix-kod bo'yicha tovar topish — bir nechta strategiya bilan
+  function tovarniTopish(kod: string): Tovar | undefined {
+    const n = kod.trim()
+    if (!n) return undefined
+    const list = tovarlarRef.current
+    let topilgan = list.find(t => t.shtrixKod === n || t.id === n)
+    if (topilgan) return topilgan
+    topilgan = list.find(t => (t.shtrixKod || '').trim() === n)
+    if (topilgan) return topilgan
+    const nNoZero = n.replace(/^0+/, '')
+    topilgan = list.find(t => (t.shtrixKod || '').trim().replace(/^0+/, '') === nNoZero)
+    if (topilgan) return topilgan
+    topilgan = list.find(t => (t.shtrixKod || '').trim() === '0' + n)
+    return topilgan
+  }
 
   useEffect(() => {
     async function load() {
@@ -108,8 +127,8 @@ export default function SotuvchiPage() {
         clearTimeout(barcodeTimer.current)
         if (code.length >= 2) {
           playBeep()
-          const found = tovarlar.find(t => t.shtrixKod === code)
-          if (found) ochNumpad(found)
+          const found = tovarniTopish(code)
+          if (found) ochNumpadRef.current(found)
           else toast.error(`"${code}" kodli tovar topilmadi`)
         }
       } else if (e.key.length === 1) {
@@ -131,6 +150,10 @@ export default function SotuvchiPage() {
     setNumpadQiymat('')
     setQidiruv('')
   }
+
+  // Skaner har doim eng so'nggi tovarlar ro'yxati va ochNumpad ga ega bo'lsin
+  useEffect(() => { tovarlarRef.current = tovarlar }, [tovarlar])
+  useEffect(() => { ochNumpadRef.current = ochNumpad })
 
   function numpadPress(val: string) {
     setNumpadQiymat(prev => {
@@ -182,9 +205,6 @@ export default function SotuvchiPage() {
 
   const jamiSumma = savat.reduce((s, i) => s + i.jami, 0)
 
-  // QR skaner
-  const oxirgiQrRef = useRef<string>('')
-
   const qrToxtatish = useCallback(async () => {
     const s = qrScannerRef.current
     if (s) {
@@ -206,28 +226,31 @@ export default function SotuvchiPage() {
 
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 120 } },
+        { fps: 15, qrbox: { width: 280, height: 160 } },
         (kod) => {
-          if (oxirgiQrRef.current === kod) return
-          oxirgiQrRef.current = kod
-          setTimeout(() => { oxirgiQrRef.current = '' }, 2000)
+          const n = kod.trim()
+          if (!n) return
+          if (oxirgiQrRef.current === n) return
+          oxirgiQrRef.current = n
+          setTimeout(() => { oxirgiQrRef.current = '' }, 1500)
 
           playBeep()
-          const found = tovarlar.find(t => t.shtrixKod === kod || t.id === kod)
+          const found = tovarniTopish(n)
           if (found) {
-            ochNumpad(found)
+            ochNumpadRef.current(found)
             toast.success(`${found.nomi} topildi!`)
           } else {
-            toast.error(`"${kod}" kodli tovar topilmadi`)
+            toast.error(`"${n}" kodli tovar topilmadi`)
           }
         },
         () => {}
       )
-    } catch (err: any) {
+    } catch {
       toast.error('Kamerani ishga tushirib bo\'lmadi')
       setQrOchiq(false)
     }
-  }, [tovarlar, qrToxtatish])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Cleanup
   useEffect(() => {
