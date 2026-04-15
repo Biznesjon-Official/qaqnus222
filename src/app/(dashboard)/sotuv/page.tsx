@@ -211,15 +211,11 @@ export default function SotuvPage() {
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
   }, [])
 
-  const [renderLimit, setRenderLimit] = useState(50)
   const filteredTovarlar = tovarlar.filter(t =>
     uzSearch(t.nomi, qidiruv) ||
     (t.shtrixKod && t.shtrixKod.includes(qidiruv))
   )
-  const korsatiladiganTovarlar = filteredTovarlar.slice(0, renderLimit)
-
-  // Qidiruv o'zgarganda limitni qayta boshlash
-  useEffect(() => { setRenderLimit(50) }, [qidiruv])
+  const korsatiladiganTovarlar = filteredTovarlar
 
   function savatQosh(tovar: Tovar) {
     setSavat(prev => {
@@ -771,11 +767,6 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
               </button>
             ))}
           </div>
-          {filteredTovarlar.length > renderLimit && (
-            <button onClick={() => setRenderLimit(r => r + 50)} className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-neutral-800 transition">
-              Yana {Math.min(50, filteredTovarlar.length - renderLimit)} ta ko&apos;rsatish ({filteredTovarlar.length - renderLimit} ta qoldi)
-            </button>
-          )}
         </div>
       </div>
 
