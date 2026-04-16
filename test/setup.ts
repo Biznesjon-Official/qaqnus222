@@ -44,8 +44,7 @@ class MockIntersectionObserver {
   rootMargin = ''
   thresholds = []
 }
-// @ts-ignore jsdom polyfill
-window.IntersectionObserver = MockIntersectionObserver
+;(window as unknown as Record<string, unknown>).IntersectionObserver = MockIntersectionObserver
 
 // ResizeObserver (jsdom'da yo'q, Recharts uchun kerak)
 class MockResizeObserver {
@@ -53,5 +52,4 @@ class MockResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-// @ts-ignore jsdom polyfill
-window.ResizeObserver = MockResizeObserver
+;(window as unknown as Record<string, unknown>).ResizeObserver = MockResizeObserver

@@ -64,7 +64,7 @@ export function HeroMetrics(props: Props) {
             </p>
             <div className="mt-2">
               <Trend yangi={props.jamiSotuv} eski={props.oldingiDavr.jamiSotuv} testId="jamiSotuv-trend" />
-              <span className="text-xs text-gray-400 dark:text-gray-600 ml-2">o'tgan davrga nisbatan</span>
+              <span className="text-xs text-gray-400 dark:text-gray-600 ml-2">o&apos;tgan davrga nisbatan</span>
             </div>
           </div>
           <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shrink-0 ml-4">

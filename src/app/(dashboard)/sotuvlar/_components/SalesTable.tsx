@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { formatSum } from '@/lib/utils'
 import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import type { SotuvQatori } from '../_types'
@@ -10,6 +11,30 @@ const TOLOV_BADGE: Record<string, string> = {
   ARALASH: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-400',
   NASIYA: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
   SHERIK: 'bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-gray-300',
+}
+
+type SortField = 'sana' | 'yakuniySumma' | 'chekRaqami'
+
+interface SortBtnProps {
+  field: SortField
+  children: React.ReactNode
+  activeSort: SortField
+  activeOrder: 'asc' | 'desc'
+  onSort: (field: SortField) => void
+}
+
+function SortBtn({ field, children, activeSort, activeOrder, onSort }: SortBtnProps) {
+  const SortIcon = activeOrder === 'asc' ? ArrowUp : ArrowDown
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(field)}
+      className="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100"
+    >
+      {children}
+      {activeSort === field && <SortIcon size={12} />}
+    </button>
+  )
 }
 
 function formatSanaYaqin(iso: string) {
@@ -35,18 +60,6 @@ interface Props {
 
 export function SalesTable({ rows, jami, page, limit, sort, order, onRowClick, onSortChange, onPageChange }: Props) {
   const sahifalar = Math.max(1, Math.ceil(jami / limit))
-  const SortIcon = order === 'asc' ? ArrowUp : ArrowDown
-
-  const SortBtn = ({ field, children }: { field: 'sana' | 'yakuniySumma' | 'chekRaqami'; children: React.ReactNode }) => (
-    <button
-      type="button"
-      onClick={() => onSortChange(field)}
-      className="inline-flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100"
-    >
-      {children}
-      {sort === field && <SortIcon size={12} />}
-    </button>
-  )
 
   return (
     <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
@@ -57,12 +70,12 @@ export function SalesTable({ rows, jami, page, limit, sort, order, onRowClick, o
         <table className="w-full text-sm">
           <thead className="bg-gray-50 dark:bg-neutral-800/50 sticky top-0">
             <tr className="text-xs text-gray-500 dark:text-gray-500 uppercase tracking-wider">
-              <th className="text-left py-3 px-4"><SortBtn field="sana">Sana</SortBtn></th>
-              <th className="text-left py-3 px-4"><SortBtn field="chekRaqami">Chek #</SortBtn></th>
+              <th className="text-left py-3 px-4"><SortBtn field="sana" activeSort={sort} activeOrder={order} onSort={onSortChange}>Sana</SortBtn></th>
+              <th className="text-left py-3 px-4"><SortBtn field="chekRaqami" activeSort={sort} activeOrder={order} onSort={onSortChange}>Chek #</SortBtn></th>
               <th className="text-left py-3 px-4">Kassir</th>
               <th className="text-left py-3 px-4">Mijoz</th>
               <th className="text-left py-3 px-4">To&apos;lov</th>
-              <th className="text-right py-3 px-4"><SortBtn field="yakuniySumma">Summa</SortBtn></th>
+              <th className="text-right py-3 px-4"><SortBtn field="yakuniySumma" activeSort={sort} activeOrder={order} onSort={onSortChange}>Summa</SortBtn></th>
             </tr>
           </thead>
           <tbody>

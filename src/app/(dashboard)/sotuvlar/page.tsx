@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, Suspense } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { useSotuvlarFilters } from './_hooks/useSotuvlarFilters'
 import type { AnalitikaJavobi, SotuvQatori } from './_types'
@@ -14,6 +14,14 @@ import { SaleDetailPanel } from './_components/SaleDetailPanel'
 import { HeroMetricsSkeleton, ChartSkeleton, TableSkeleton } from './_components/SkeletonLoaders'
 
 export default function SotuvlarPage() {
+  return (
+    <Suspense fallback={<div className="space-y-6"><HeroMetricsSkeleton /><ChartSkeleton /><TableSkeleton rows={8} /></div>}>
+      <SotuvlarPageInner />
+    </Suspense>
+  )
+}
+
+function SotuvlarPageInner() {
   const { filtrlar, yangilash, tozalash } = useSotuvlarFilters()
   const [analitika, setAnalitika] = useState<AnalitikaJavobi | null>(null)
   const [sotuvlar, setSotuvlar] = useState<SotuvQatori[]>([])
@@ -36,26 +44,30 @@ export default function SotuvlarPage() {
   }, [filtrlar.dan, filtrlar.gacha, filtrlar.kassirId, filtrlar.mijozId, filtrlar.tolovUsuli])
 
   useEffect(() => {
-    setYuklanmoqda(true)
-    const qs = new URLSearchParams({
-      dan: filtrlar.dan,
-      gacha: filtrlar.gacha,
-      page: String(filtrlar.page),
-      limit: String(filtrlar.limit),
-      sort: filtrlar.sort,
-      order: filtrlar.order,
-      ...(filtrlar.kassirId ? { kassirId: filtrlar.kassirId } : {}),
-      ...(filtrlar.mijozId ? { mijozId: filtrlar.mijozId } : {}),
-      ...(filtrlar.tolovUsuli ? { tolovUsuli: filtrlar.tolovUsuli } : {}),
-      ...(filtrlar.q ? { q: filtrlar.q } : {}),
-    })
-    fetch(`/api/sotuvlar?${qs}`)
-      .then((r) => r.json())
-      .then((res) => {
+    async function yuklash() {
+      setYuklanmoqda(true)
+      try {
+        const qs = new URLSearchParams({
+          dan: filtrlar.dan,
+          gacha: filtrlar.gacha,
+          page: String(filtrlar.page),
+          limit: String(filtrlar.limit),
+          sort: filtrlar.sort,
+          order: filtrlar.order,
+          ...(filtrlar.kassirId ? { kassirId: filtrlar.kassirId } : {}),
+          ...(filtrlar.mijozId ? { mijozId: filtrlar.mijozId } : {}),
+          ...(filtrlar.tolovUsuli ? { tolovUsuli: filtrlar.tolovUsuli } : {}),
+          ...(filtrlar.q ? { q: filtrlar.q } : {}),
+        })
+        const r = await fetch(`/api/sotuvlar?${qs}`)
+        const res = await r.json()
         setSotuvlar(res.sotuvlar ?? [])
         setJami(res.jami ?? 0)
-      })
-      .finally(() => setYuklanmoqda(false))
+      } finally {
+        setYuklanmoqda(false)
+      }
+    }
+    void yuklash()
   }, [filtrlar])
 
   const activeChips = useMemo(() => {
