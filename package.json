@@ -13,7 +13,13 @@
     "bot": "ts-node -P tsconfig.scripts.json src/bot/index.ts",
     "scheduler": "ts-node -P tsconfig.scripts.json src/bot/scheduler.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run bot\" \"npm run scheduler\"",
-    "db:clean": "ts-node -P tsconfig.scripts.json prisma/clean.ts"
+    "db:clean": "ts-node -P tsconfig.scripts.json prisma/clean.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
@@ -70,15 +76,24 @@
     "@next/swc-win32-x64-msvc": "16.1.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/ui": "^2.1.9",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9",
+    "vitest-mock-extended": "^2.0.2"
   }
 }
