@@ -9,7 +9,7 @@ import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
 interface Tovar {
-  id: string; nomi: string; sotishNarxi: number; birlik: string; qoldiq: number; shtrixKod: string | null
+  id: string; nomi: string; sotishNarxi: number; kelishNarxi: number; birlik: string; qoldiq: number; shtrixKod: string | null
 }
 interface Mijoz { id: string; ism: string; telefon: string | null }
 interface SherikDokon { id: string; nomi: string; telefon: string | null }
@@ -796,6 +796,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                 <p className="text-red-600 text-sm font-bold mt-1">{formatSum(t.sotishNarxi)}</p>
                 <p className={`text-xs mt-0.5 ${t.qoldiq <= 0 ? 'text-red-500' : 'text-gray-400 dark:text-gray-600'}`}>
                   Qoldiq: {t.qoldiq} {t.birlik.toLowerCase()}
+                  <span className="text-gray-400 dark:text-gray-600"> · Kelgan: {formatSum(t.kelishNarxi)}</span>
                 </p>
               </button>
             ))}
