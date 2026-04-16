@@ -109,7 +109,6 @@ describe('GET /api/sotuvlar/analitika', () => {
     })
     asMock(prismaMock.qaytarish.aggregate).mockResolvedValue({ _sum: { jamiSumma: null } })
     asMock(prismaMock.sotuvTarkibi.groupBy).mockResolvedValue([])
-    asMock(prismaMock.qaytarish.findMany).mockResolvedValue([])
 
     const res = await GET(makeRequest({ dan: '2026-04-01', gacha: '2026-04-16' }))
     const body = await res.json()
@@ -121,5 +120,37 @@ describe('GET /api/sotuvlar/analitika', () => {
     const bekzod = body.kassirlar.find((k: any) => k.ism === 'Bekzod')
     expect(bekzod.sotuvSoni).toBe(1)
     expect(bekzod.jami).toBe(700)
+  })
+
+  it('jamiFoyda = (birlikNarxi - kelishNarxi) * miqdor bo\'yicha hisoblanadi', async () => {
+    asMock(prismaMock.qaytarish.aggregate).mockResolvedValue({ _sum: { jamiSumma: null } })
+    asMock(prismaMock.sotuvTarkibi.groupBy).mockResolvedValue([])
+    asMock(prismaMock.sotuv.findMany).mockImplementation(async (args: any) => {
+      if (args?.where?.sana?.gte && args.where.sana.gte.getMonth() === 3) {
+        return [
+          {
+            id: '1',
+            yakuniySumma: 1000,
+            sana: new Date('2026-04-10'),
+            kassirId: 'k1',
+            mijozId: null,
+            tolovUsuli: 'NAQD',
+            chegirma: 0,
+            kassir: { id: 'k1', ism: 'Aziz' },
+            tarkiblar: [
+              { miqdor: 2, birlikNarxi: 300, tovar: { nomi: 'A', birlik: 'DONA', kelishNarxi: 200 } },
+              { miqdor: 1, birlikNarxi: 400, tovar: { nomi: 'B', birlik: 'DONA', kelishNarxi: 250 } },
+            ],
+          } as any,
+        ] as any
+      }
+      return [] as any
+    })
+
+    const res = await GET(makeRequest({ dan: '2026-04-01', gacha: '2026-04-16' }))
+    const body = await res.json()
+
+    // Foyda: (300-200)*2 + (400-250)*1 = 200 + 150 = 350
+    expect(body.jamiFoyda).toBe(350)
   })
 })

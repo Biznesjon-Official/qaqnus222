@@ -4,6 +4,8 @@ import { auth } from '@/lib/auth'
 import { hisoblaOrtachaChek, oldingiDavrOlish, soatTaqsimoti } from '@/lib/analitika'
 import type { TolovUsuli } from '@prisma/client'
 
+const TOP_N = 20
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -24,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     const danSana = dan ? new Date(dan) : oyBoshi
     const gachaSana = gacha ? new Date(gacha) : bugun
-    if (gacha && gachaSana.getHours() === 0) gachaSana.setHours(23, 59, 59, 999)
+    if (gacha) gachaSana.setHours(23, 59, 59, 999)
 
     const { dan: oldDan, gacha: oldGacha } = oldingiDavrOlish(danSana, gachaSana)
 
@@ -56,7 +58,11 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.qaytarish.aggregate({
-        where: { yaratilgan: { gte: danSana, lte: gachaSana } },
+        where: {
+          yaratilgan: { gte: danSana, lte: gachaSana },
+          ...(kassirId ? { kassirId } : {}),
+          ...(mijozId ? { aslSotuv: { mijozId } } : {}),
+        },
         _sum: { jamiSumma: true },
       }),
       prisma.sotuvTarkibi.groupBy({
@@ -64,7 +70,7 @@ export async function GET(req: NextRequest) {
         _sum: { miqdor: true, jami: true },
         where: { sotuv: joriySotuvWhere },
         orderBy: { _sum: { jami: 'desc' } },
-        take: 20,
+        take: TOP_N,
       }),
     ])
 
@@ -186,7 +192,7 @@ export async function GET(req: NextRequest) {
     }
     const mijozlar = Array.from(mijozMap.values())
       .sort((a, b) => b.jami - a.jami)
-      .slice(0, 20)
+      .slice(0, TOP_N)
 
     // To'lov usullari
     const tolovMap = new Map<TolovUsuli, { sotuvSoni: number; jami: number }>()
