@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { formatSum } from '@/lib/utils'
 import { TrendingUp, TrendingDown, Receipt, ShoppingBag, Loader2 } from 'lucide-react'
 import {
@@ -18,7 +19,7 @@ interface HisobotData {
 }
 
 function StatCard({
-  icon: Icon, sarlavha, qiymat, rang, iconBg, qoshimcha
+  icon: Icon, sarlavha, qiymat, rang, iconBg, qoshimcha, href,
 }: {
   icon: React.ElementType
   sarlavha: string
@@ -26,21 +27,33 @@ function StatCard({
   rang: string
   iconBg: string
   qoshimcha?: string
+  href?: string
 }) {
-  return (
-    <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-gray-500 dark:text-gray-500 text-sm">{sarlavha}</p>
-          <p className={`text-2xl font-bold mt-1 ${rang}`}>{qiymat}</p>
-          {qoshimcha && <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{qoshimcha}</p>}
-        </div>
-        <div className={`w-11 h-11 ${iconBg} rounded-xl flex items-center justify-center shrink-0 ml-3`}>
-          <Icon size={20} className="text-white" />
-        </div>
+  const body = (
+    <div className="flex items-start justify-between">
+      <div className="min-w-0 flex-1">
+        <p className="text-gray-500 dark:text-gray-500 text-sm">{sarlavha}</p>
+        <p className={`text-2xl font-bold mt-1 ${rang}`}>{qiymat}</p>
+        {qoshimcha && <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{qoshimcha}</p>}
+      </div>
+      <div className={`w-11 h-11 ${iconBg} rounded-xl flex items-center justify-center shrink-0 ml-3`}>
+        <Icon size={20} className="text-white" />
       </div>
     </div>
   )
+
+  const className = `bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5 transition ${
+    href ? 'hover:shadow-md hover:ring-2 hover:ring-red-500/30 cursor-pointer' : 'hover:shadow-md'
+  }`
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {body}
+      </Link>
+    )
+  }
+  return <div className={className}>{body}</div>
 }
 
 export default function DashboardPage() {
@@ -84,6 +97,7 @@ export default function DashboardPage() {
           rang="text-gray-900 dark:text-gray-100"
           iconBg="bg-red-500"
           qoshimcha={`${data.sotuvSoni} ta sotuv`}
+          href="/sotuvlar"
         />
         <StatCard
           icon={TrendingUp}
