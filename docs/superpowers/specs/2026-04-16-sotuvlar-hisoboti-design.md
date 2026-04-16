@@ -440,24 +440,205 @@ Barcha filter URL'da saqlanadi:
 - Back/forward brauzer tugmalari ishlaydi
 - Bookmark qilinadi
 
+### 5.6 Testing infratuzilmasi (senior standart)
+
+Loyihada hozir test yo'q. Bu spec chegarasida **professional test infrastrukturasini o'rnatamiz** va shu yangi kod uchun to'liq testlarni yozamiz. Mavjud kodga retro-test yozmaymiz (scope'dan tashqari).
+
+#### 5.6.1 Test freymvorklari
+
+| Qatlam | Freymvork | Maqsad |
+|---|---|---|
+| **Unit** | Vitest 2.x | Toza funksiyalar (formatlagichlar, yordamchilar, analitika matematikasi) |
+| **Integration (API route)** | Vitest + `vitest-mock-extended` | API route handler'lari (Prisma mocked) |
+| **Component** | Vitest + `@testing-library/react` + `jsdom` | React komponentlar (HeroMetrics, SaleDetailPanel, SalesTable) |
+| **E2E** | Playwright 1.50+ | Kritik foydalanuvchi oqimlari |
+
+#### 5.6.2 O'rnatilishi kerak bo'lgan paketlar
+
+```json
+{
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "@vitest/ui": "^2.1.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/user-event": "^14.5.2",
+    "jsdom": "^25.0.0",
+    "vitest-mock-extended": "^2.0.2",
+    "@playwright/test": "^1.50.0"
+  }
+}
+```
+
+#### 5.6.3 Konfiguratsiya fayllari
+
+**`vitest.config.ts`** (root):
+- `environment: 'jsdom'` komponent testlar uchun
+- `setupFiles: ['./test/setup.ts']` — `@testing-library/jest-dom` matchers
+- `coverage: { reporter: ['text', 'html'], exclude: ['prisma/', '.next/', 'test/'] }`
+- Path alias: `@/*` → `src/*` (tsconfig'dagi kabi)
+
+**`playwright.config.ts`** (root):
+- `baseURL: 'http://localhost:3000'`
+- `webServer: { command: 'npm run dev', port: 3000 }` — avtomatik start
+- `projects: [chromium]` (MVP uchun yetarli, Firefox/Safari keyin)
+- `testDir: './e2e'`
+
+**`test/`** jildi tuzilmasi:
+```
+test/
+├── setup.ts                    # Global setup (jest-dom, mock fetch)
+├── mocks/
+│   ├── prisma.ts              # Prisma singleton mock
+│   └── session.ts             # NextAuth session mock
+├── unit/
+│   ├── analitika-math.test.ts # Foyda, o'rtacha chek hisoblashlar
+│   └── formatters.test.ts     # formatSum, sana formatlagichlar
+├── integration/
+│   ├── api-sotuvlar-analitika.test.ts
+│   ├── api-sotuvlar-filter.test.ts
+│   └── api-sotuvlar-export.test.ts
+└── components/
+    ├── HeroMetrics.test.tsx
+    ├── SalesTable.test.tsx
+    ├── SaleDetailPanel.test.tsx
+    └── BreakdownTabs.test.tsx
+
+e2e/
+├── sotuvlar.spec.ts           # Asosiy oqim: filter + detail
+└── export.spec.ts             # Excel eksport oqimi
+```
+
+#### 5.6.4 Prisma mock strategiyasi
+
+`vitest-mock-extended` bilan deep mock:
+
+```typescript
+// test/mocks/prisma.ts
+import { mockDeep, mockReset, DeepMockProxy } from 'vitest-mock-extended'
+import { PrismaClient } from '@prisma/client'
+
+vi.mock('@/lib/prisma', () => ({
+  prisma: mockDeep<PrismaClient>(),
+}))
+
+beforeEach(() => mockReset(prismaMock))
+```
+
+Real DB kerak emas → test'lar tez, izolyatsiyalangan, parallel ishlaydi.
+
+#### 5.6.5 Test qamrovi (coverage) maqsadlari
+
+| Kod | Maqsad |
+|---|---|
+| API route handler'lari (yangi) | ≥ 85% |
+| Analitika matematikasi | 100% (pure functions) |
+| UI komponentlar (yangi) | ≥ 70% |
+| E2E kritik oqimlar | 3 ta senariy minimum |
+
+Coverage raport: `npm run test:coverage` — HTML report `coverage/index.html`.
+
+#### 5.6.6 Yangi npm script'lar
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
+  }
+}
+```
+
+#### 5.6.7 GitHub Actions CI
+
+**`.github/workflows/ci.yml`** — har PR va push'da:
+
+1. **Job: lint-and-typecheck** (tez: ~30s)
+   - `npm ci`
+   - `npm run lint`
+   - `npx tsc --noEmit`
+
+2. **Job: test** (~1-2 daqiqa)
+   - `npm ci`
+   - `npm run test:run`
+   - Coverage upload (Codecov optional)
+
+3. **Job: e2e** (alohida, ~3-5 daqiqa)
+   - `npm ci`
+   - `npx playwright install --with-deps chromium`
+   - DB seed (Docker Postgres service)
+   - `npm run e2e`
+
+**Paralellashtirish:** lint + test bir vaqtda; e2e alohida job.
+**Cache:** `actions/setup-node@v4` bilan npm cache, Playwright browser cache.
+
+#### 5.6.8 Asosiy test senariylari
+
+**Unit (analitika-math.test.ts):**
+- `hisoblaFoyda([{kelish: 100, sotish: 150, miqdor: 2}])` → 100
+- `hisoblaOrtachaChek(jami: 1000, soni: 5)` → 200
+- `hisoblaOrtachaChek(jami: 0, soni: 0)` → 0 (bo'luv nolga)
+- `olFoizFarqi(yangi: 120, eski: 100)` → 20
+- `olFoizFarqi(yangi: 100, eski: 0)` → 100 yoki `null` (0-dan bo'luv qoidasi)
+
+**Integration (api-sotuvlar-analitika.test.ts):**
+- Auth yo'q → 401
+- To'g'ri davr → jami sotuv, soni, o'rtacha chek to'g'ri
+- `SHERIK` to'lov usuli `jamiSotuv`'ga kirmaydi
+- `BEKOR_QILINGAN` sotuvlar chiqariladi
+- `oldingiDavr` davr uzunligiga teng oldingi davrga mos keladi
+- `kassirlar` array to'g'ri aggregation qiladi
+- Bo'sh davr → hamma qiymat 0, array'lar bo'sh
+
+**Component (HeroMetrics.test.tsx):**
+- Jami sotuv to'g'ri render qilinadi (`formatSum` bilan)
+- Ijobiy taqqoslash yashil `▲` bilan ko'rinadi
+- Salbiy taqqoslash qizil `▼` bilan ko'rinadi
+- Loading holatida skeleton ko'rinadi
+
+**Component (SaleDetailPanel.test.tsx):**
+- Chek raqami, kassir, mijoz ma'lumoti render bo'ladi
+- `Esc` tugmasi panelni yopadi
+- `◀` / `▶` tugmalari onPrev/onNext callback'ni chaqiradi
+- Nasiya mavjud bo'lsa, nasiya bo'limi ko'rinadi
+- Qaytarish mavjud bo'lsa, qaytarishlar bo'limi ko'rinadi
+
+**E2E (sotuvlar.spec.ts):**
+- Login → Dashboard → "Sotuv" kartani bos → `/sotuvlar` ochiladi
+- Default davr "Shu oy" ekanligini tekshir
+- Sana filtrini "Oxirgi 7 kun"'ga o'zgartir → KPI'lar yangilanadi
+- Jadvaldagi birinchi qatorni bos → slide-out ochiladi
+- Slide-out ichida chek raqami ko'rinadi
+- `Esc` bosib yopish
+
+**E2E (export.spec.ts):**
+- Filtr qo'llash → Excel eksport tugmasini bos → `.xlsx` fayl download
+
 ---
 
 ## 6. Sifat darvozalari (CLAUDE.md talabiga muvofiq)
 
-**Har qadamda:**
+**Har qadamda (lokal):**
 - `npx tsc --noEmit` — TypeScript xato yo'q
 - `npm run lint` — ESLint xato yo'q
+- `npm run test:run` — unit + integration + component testlari yashil
 - Manual smoke test: sotuv yarating → sahifaga o'ting → ma'lumot ko'rinadi → filtr ishlaydi → detail ochiladi
 
 **Yakunlangan feature uchun:**
-- `npm run build` — build muvaffaqiyatli
+- `npm run build` — Next.js build muvaffaqiyatli
+- `npm run e2e` — Playwright E2E testlari yashil
+- Coverage: yangi kod uchun ≥ 70-85% (5.6.5 jadvali)
 - Prisma schema o'zgarmadi → migration kerak emas
 - Commit message Conventional Commits formatida
+- CI pipeline yashil (lint + test + e2e)
 
-**Testlar:**
-Loyihada hozirda test infratuzilmasi yo'q (Vitest/Jest/Playwright hech qaysi yo'q). Ushbu spec doirasida **test infra qo'shmaslik** — bu alohida loyiha. Shu feature uchun **manual test plan** yetarli (7-bo'limda).
-
-> **Qaror:** Test infra qo'shish CLAUDE.md'dagi "Test bor" talabidan farqli holat — loyiha darajasida yo'q. Agar test qo'shilishi kerak bo'lsa, alohida brainstorming sessiya kerak (Vitest tanlash, Prisma mock strategiyasi, CI integration). Hozirgi spec faqat manual test planga tayanadi.
+**Testlar to'liq scope'da:**
+5.6-bo'limda tasvirlangan test infratuzilmasi o'rnatiladi. Mavjud kodga retro-test yozilmaydi (alohida loyiha); faqat yangi kod testlar bilan qoplanadi. CLAUDE.md'dagi "Test bor" talabiga shu tariqa amal qilinadi — bundan keyingi feature'lar ham shu infra orqali testlanadi.
 
 ---
 
@@ -513,7 +694,8 @@ Loyihada hozirda test infratuzilmasi yo'q (Vitest/Jest/Playwright hech qaysi yo'
 
 Quyidagilar bu spec ichida **EMAS** (keyinroq alohida yo'naltiriladi):
 
-- ❌ Test infratuzilmasi (Vitest/Playwright) — alohida loyiha
+- ❌ **Mavjud kod uchun retro-test yozish** — test infra o'rnatiladi, lekin faqat yangi kod testlar bilan qoplanadi. Mavjud API route'lar, kassa sahifa, bot — alohida loyiha
+- ❌ **Real DB bilan integration testlar** — unit/integration testlar Prisma mock orqali ishlaydi. E2E testlar uchun Postgres service CI'da qisqa davom etadi
 - ❌ Real-time ma'lumot yangilanish (WebSocket/polling) — MVP uchun sahifa reload yetarli
 - ❌ Saqlangan view'lar (bookmarked presets) — URL-based share MVP uchun yetarli
 - ❌ Kassirlar/mijozlar maxsus detail sahifalari (`/kassirlar/[id]`) — shu sahifa chegarasida faqat filter qilish
@@ -523,6 +705,8 @@ Quyidagilar bu spec ichida **EMAS** (keyinroq alohida yo'naltiriladi):
 - ❌ Chop etish (print stylesheet) — user eksportni tanladi
 - ❌ Tovarlar detal sahifasiga link — tovar detal sahifasi hali yo'q
 - ❌ Sidebar menyusiga element qo'shish — dashboard kartadan kirish yetarli
+- ❌ Firefox / WebKit E2E testlari — MVP uchun Chromium yetarli
+- ❌ Husky pre-commit hook'lari — CI yetarli, keyinroq qo'shilishi mumkin
 
 ---
 
@@ -539,15 +723,44 @@ Quyidagilar bu spec ichida **EMAS** (keyinroq alohida yo'naltiriladi):
 
 Quyidagi bosqichlar writing-plans skill'i orqali batafsil rejaga aylantiriladi:
 
-1. **Backend:** `/api/sotuvlar/analitika` endpoint
-2. **Backend:** `/api/sotuvlar` filter'larini kengaytirish
-3. **Backend:** `/api/sotuvlar/export` (Excel) endpoint
-4. **Frontend:** `/sotuvlar/page.tsx` + komponentlar jildi (`src/app/(dashboard)/sotuvlar/_components/`)
-5. **Frontend:** `HeroMetrics`, `SalesTrendChart`, `BreakdownTabs` komponentlari
-6. **Frontend:** `SalesTable` + `SaleDetailPanel`
-7. **Integration:** Dashboard "Sotuv" kartani `<Link>` qilish
-8. **Manual test:** 7-bo'limdagi to'liq test plan
-9. **Commit:** Conventional Commits bilan feat/fix'lar
+### Faza 1: Test infratuzilmasi (birinchi, chunki keyingi bosqichlar shunga tayanadi)
+
+1. **Paketlar:** Vitest, Testing Library, jsdom, vitest-mock-extended, Playwright o'rnatish
+2. **Konfig:** `vitest.config.ts`, `playwright.config.ts`, `test/setup.ts`
+3. **Mock'lar:** `test/mocks/prisma.ts`, `test/mocks/session.ts`
+4. **npm script'lar:** `test`, `test:run`, `test:coverage`, `e2e`
+5. **CI:** `.github/workflows/ci.yml` (lint + test + e2e)
+6. **Smoke test:** `npm run test:run` yashil (1 ta oddiy sanity test bilan)
+
+### Faza 2: Backend
+
+7. **`/api/sotuvlar/analitika`** endpoint + unit/integration testlar
+8. **`/api/sotuvlar`** filter kengaytirish + integration testlar
+9. **`/api/sotuvlar/export`** (Excel) endpoint + integration test
+
+### Faza 3: Frontend — jamoaviy komponentlar
+
+10. **`DateRangePicker`** komponenti (presetlar + custom range) + test
+11. **`ActiveFilterChips`** komponenti + test
+12. **`HeroMetrics`** (hero + secondary + sparkline + comparison) + test
+13. **`SalesTrendChart`** (AreaChart + comparison line) + test
+14. **`BreakdownTabs`** + har bir tab tarkibi + test
+15. **`SalesTable`** (sticky header, keyboard nav, bulk select) + test
+16. **`SaleDetailPanel`** (slide-out + prev/next) + test
+
+### Faza 4: Sahifa birlashtirish
+
+17. **`src/app/(dashboard)/sotuvlar/page.tsx`** — barcha komponentlarni jamlash, URL state
+18. **Dashboard integratsiya:** "Sotuv" kartani `<Link href="/sotuvlar">` ga o'rash
+
+### Faza 5: E2E va finallash
+
+19. **E2E: `sotuvlar.spec.ts`** — asosiy oqim
+20. **E2E: `export.spec.ts`** — Excel eksport
+21. **Coverage tekshirish:** yangi kod ≥ 70-85%
+22. **`npm run build`** yashil
+23. **CI pipeline** yashil
+24. **Commit tartibga keltirish:** Conventional Commits bilan mantiqiy feat/fix/test/ci bo'limlar
 
 ---
 
@@ -566,3 +779,6 @@ Bu spec `/sotuvlar` sahifasini **professional senior-darajadagi** ERP analitika 
 - ✅ Excel eksport (3 sheet)
 - ✅ Skeleton loaders (2026 standart)
 - ✅ A11y (ARIA, focus management)
+- ✅ **Professional test infratuzilmasi** (Vitest + Playwright + CI)
+- ✅ **Yangi kod uchun to'liq test qamrovi** (≥ 70-85%)
+- ✅ **Avtomatlashtirilgan CI/CD** (GitHub Actions: lint + test + e2e har PR'da)
