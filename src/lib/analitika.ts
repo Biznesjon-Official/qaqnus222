@@ -11,7 +11,23 @@ export function hisoblaOrtachaChek(jami: number, soni: number): number {
   return jami / soni
 }
 
-/** Joriy davrga teng uzunlikdagi oldingi davr. */
+/**
+ * Joriy davrga teng uzunlikdagi oldingi davr.
+ *
+ * Kiritilgan `dan` va `gacha` sanalari LOCAL vaqt sifatida talqin qilinadi
+ * (yoki faqat kalendar sana ma'lumoti olinadi). Qaytariladigan sanalar esa
+ * UTC-yarim tuni / UTC-kun oxiri sifatida qurilgan. Demak, chiqish sanalarini
+ * `.toISOString().slice(0, 10)` orqali o'qish kerak; `.toLocaleDateString()`
+ * server timezone'iga qarab boshqa sana berishi mumkin.
+ *
+ * @example
+ * const { dan, gacha } = oldingiDavrOlish(
+ *   new Date('2026-04-01T00:00:00'),
+ *   new Date('2026-04-16T23:59:59')
+ * )
+ * dan.toISOString().slice(0, 10)   // "2026-03-16"
+ * gacha.toISOString().slice(0, 10) // "2026-03-31"
+ */
 export function oldingiDavrOlish(dan: Date, gacha: Date): { dan: Date; gacha: Date } {
   // Use local calendar dates (getFullYear/Month/Date) and build results as UTC
   // so toISOString().slice(0,10) reflects the same calendar date in any timezone.
@@ -39,7 +55,13 @@ export function oldingiDavrOlish(dan: Date, gacha: Date): { dan: Date; gacha: Da
   return { dan: oldingiDan, gacha: oldingiGacha }
 }
 
-/** Sotuvlarni 0-23 soatga guruhlash. */
+/**
+ * Sotuvlarni 0-23 soatga guruhlash (mahalliy vaqt zonasi bo'yicha).
+ *
+ * Do'kon ish soatlariga mos keladigan analitika uchun `getHours()` ishlatiladi,
+ * ya'ni mahalliy vaqt zonasi. UTC emas — chunki foydalanuvchi "14:00 da eng ko'p
+ * sotuv" deb ko'rganda, u mahalliy vaqtni anglaydi.
+ */
 export function soatTaqsimoti(
   sotuvlar: Array<{ sana: Date; yakuniySumma: number }>
 ): Array<{ soat: number; sotuvSoni: number; jami: number }> {

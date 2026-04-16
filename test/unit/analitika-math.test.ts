@@ -23,9 +23,11 @@ describe('hisoblaFoiz', () => {
     expect(hisoblaFoiz(100, 100)).toBe(0)
   })
 
-  it('ikki kasrli yumaloqlash', () => {
+  it('bir kasrga yumaloqlash', () => {
     expect(hisoblaFoiz(103, 100)).toBe(3)
     expect(hisoblaFoiz(103.5, 100)).toBe(3.5)
+    // 1.15 -> 1.2 (bir kasrga yumaloqlash), 1.15 EMAS
+    expect(hisoblaFoiz(101.15, 100)).toBe(1.2)
   })
 })
 
