@@ -15,6 +15,12 @@ export async function GET(req: NextRequest) {
     const dan = searchParams.get('dan')
     const gacha = searchParams.get('gacha')
     const chekRaqami = searchParams.get('chekRaqami')
+    const kassirId = searchParams.get('kassirId')
+    const mijozId = searchParams.get('mijozId')
+    const tolovUsuli = searchParams.get('tolovUsuli') as 'NAQD' | 'KARTA' | 'ARALASH' | 'NASIYA' | 'SHERIK' | null
+    const q = searchParams.get('q')
+    const sort = searchParams.get('sort')
+    const order = searchParams.get('order') === 'asc' ? 'asc' : 'desc'
 
     // Chek raqami bo'yicha qidirish (qaytarish uchun)
     if (chekRaqami) {
@@ -41,6 +47,21 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    if (kassirId) where.kassirId = kassirId
+    if (mijozId) where.mijozId = mijozId
+    if (tolovUsuli) where.tolovUsuli = tolovUsuli
+    if (q) {
+      where.OR = [
+        { chekRaqami: { contains: q, mode: 'insensitive' } },
+        { mijoz: { ism: { contains: q, mode: 'insensitive' } } },
+        { mijoz: { telefon: { contains: q } } },
+      ]
+    }
+
+    const allowedSort = ['sana', 'yakuniySumma', 'chekRaqami']
+    const sortField = allowedSort.includes(sort || '') ? sort! : 'sana'
+    const orderBy = { [sortField]: order } as Record<string, 'asc' | 'desc'>
+
     const [sotuvlar, jami] = await Promise.all([
       prisma.sotuv.findMany({
         where,
@@ -53,7 +74,7 @@ export async function GET(req: NextRequest) {
           },
           nasiya: true,
         },
-        orderBy: { sana: 'desc' },
+        orderBy,
         skip: (page - 1) * limit,
         take: limit,
       }),
