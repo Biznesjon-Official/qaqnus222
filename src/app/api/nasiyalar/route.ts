@@ -92,14 +92,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const nasiya = await prisma.nasiya.create({
-      data: {
-        mijozId: mijoz.id,
-        jamiQarz: qarz,
-        qoldiq: qarz,
-        muddat: muddat ? new Date(muddat) : null,
-        sana: sana ? new Date(sana) : new Date(),
-      },
+    const nasiyaSana = sana ? new Date(sana) : new Date()
+
+    const nasiya = await prisma.$transaction(async (tx) => {
+      const yangi = await tx.nasiya.create({
+        data: {
+          mijozId: mijoz.id,
+          jamiQarz: qarz,
+          qoldiq: qarz,
+          muddat: muddat ? new Date(muddat) : null,
+          sana: nasiyaSana,
+        },
+      })
+
+      // Boshlang'ich qarz tarixiga yozish
+      await tx.nasiyaQarzTarixi.create({
+        data: {
+          nasiyaId: yangi.id,
+          summa: qarz,
+          izoh: 'Boshlang\'ich nasiya',
+          sana: nasiyaSana,
+        },
+      })
+
+      return yangi
     })
 
     return NextResponse.json(nasiya, { status: 201 })
