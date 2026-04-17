@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
         mijoz: true,
         sotuv: { select: { chekRaqami: true, sana: true } },
         tolovlar: { orderBy: { sana: 'desc' } },
+        qarzTarixi: { orderBy: { sana: 'desc' } },
       },
       orderBy: { sana: 'desc' },
     })

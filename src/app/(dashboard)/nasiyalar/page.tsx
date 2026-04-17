@@ -17,6 +17,13 @@ interface NasiyaTolov {
   sana: string
 }
 
+interface NasiyaQarz {
+  id: string
+  summa: number
+  izoh: string | null
+  sana: string
+}
+
 interface Nasiya {
   id: string
   mijoz: { ism: string; telefon: string | null; manzil?: string | null }
@@ -24,6 +31,7 @@ interface Nasiya {
   jamiQarz: number; tolangan: number; qoldiq: number
   muddat: string | null; holati: string; sana: string
   tolovlar: NasiyaTolov[]
+  qarzTarixi: NasiyaQarz[]
 }
 
 const inputCls = 'w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition'
@@ -797,6 +805,34 @@ export default function NasiyalarPage() {
                 </button>
               </div>
             </form>
+
+            {/* Qarz tarixi — qarz qo'shilgan sanalar */}
+            {tolovModal.qarzTarixi && tolovModal.qarzTarixi.length > 0 && (
+              <div className="px-5 pb-3">
+                <div className="border-t border-gray-200 dark:border-neutral-800 pt-4">
+                  <h4 className="text-gray-700 dark:text-gray-300 text-sm font-semibold mb-3 flex items-center gap-2">
+                    <PlusCircle size={14} className="text-red-500" />
+                    Qarz tarixi ({tolovModal.qarzTarixi.length} ta)
+                  </h4>
+                  <div className="space-y-2 max-h-36 overflow-y-auto">
+                    {tolovModal.qarzTarixi.map(q => (
+                      <div key={q.id} className="flex items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-neutral-800 last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{formatSum(q.summa)}</p>
+                          <p className="text-gray-400 dark:text-gray-600 text-xs">
+                            {formatSana(q.sana)}
+                            {q.izoh && ` • ${q.izoh}`}
+                          </p>
+                        </div>
+                        <span className="text-red-600 text-xs font-medium shrink-0 bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-lg">
+                          +{formatSum(q.summa)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* To'lovlar tarixi */}
             {tolovModal.tolovlar.length > 0 && (

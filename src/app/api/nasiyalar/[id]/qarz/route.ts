@@ -23,13 +23,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const yangiJamiQarz = nasiya.jamiQarz.add(qoshilganSumma)
     const yangiQoldiq = nasiya.qoldiq.add(qoshilganSumma)
 
-    const yangilangan = await prisma.nasiya.update({
-      where: { id },
-      data: {
-        jamiQarz: yangiJamiQarz,
-        qoldiq: yangiQoldiq,
-        holati: 'OCHIQ',
-      },
+    // Tranzaksiya: nasiya yangilash + qarz tarixi yaratish
+    const yangilangan = await prisma.$transaction(async (tx) => {
+      const updated = await tx.nasiya.update({
+        where: { id },
+        data: {
+          jamiQarz: yangiJamiQarz,
+          qoldiq: yangiQoldiq,
+          holati: 'OCHIQ',
+        },
+      })
+
+      // Qarz tarixi — qachon, qancha qo'shilganini saqlash
+      await tx.nasiyaQarzTarixi.create({
+        data: {
+          nasiyaId: id,
+          summa: qoshilganSumma,
+          izoh: `Qarz qo'shildi`,
+        },
+      })
+
+      return updated
     })
 
     qarzQoshildiXabar(id, nasiya.mijozId, qoshilganSumma.toNumber(), yangiQoldiq.toNumber())
