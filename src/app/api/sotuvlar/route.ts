@@ -73,6 +73,12 @@ export async function GET(req: NextRequest) {
             include: { tovar: { select: { nomi: true, birlik: true } } },
           },
           nasiya: true,
+          qaytarishlar: {
+            include: {
+              tarkiblar: { include: { tovar: { select: { nomi: true, birlik: true } } } },
+            },
+            orderBy: { yaratilgan: 'desc' },
+          },
         },
         orderBy,
         skip: (page - 1) * limit,

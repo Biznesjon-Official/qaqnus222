@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { formatSum } from '@/lib/utils'
-import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Undo2 } from 'lucide-react'
 import type { SotuvQatori } from '../_types'
 
 const TOLOV_BADGE: Record<string, string> = {
@@ -93,7 +93,20 @@ export function SalesTable({ rows, jami, page, limit, sort, order, onRowClick, o
                   className="cursor-pointer hover:bg-red-50 dark:hover:bg-red-950/20 border-t border-gray-100 dark:border-neutral-800/50"
                 >
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">{formatSanaYaqin(r.sana)}</td>
-                  <td className="py-3 px-4 font-mono text-xs text-gray-900 dark:text-gray-100">{r.chekRaqami}</td>
+                  <td className="py-3 px-4 font-mono text-xs text-gray-900 dark:text-gray-100">
+                    <span className="inline-flex items-center gap-1.5">
+                      {r.chekRaqami}
+                      {r.qaytarishlar && r.qaytarishlar.length > 0 && (
+                        <span
+                          title={`${r.qaytarishlar.length} ta qaytarish — ${formatSum(r.qaytarishlar.reduce((s, q) => s + Number(q.jamiSumma), 0))}`}
+                          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 text-[10px] font-semibold"
+                        >
+                          <Undo2 size={10} />
+                          {r.qaytarishlar.length}
+                        </span>
+                      )}
+                    </span>
+                  </td>
                   <td className="py-3 px-4">{r.kassir.ism}</td>
                   <td className="py-3 px-4 text-gray-700 dark:text-gray-300">{r.mijoz?.ism ?? '—'}</td>
                   <td className="py-3 px-4">

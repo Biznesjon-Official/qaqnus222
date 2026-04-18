@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { X, ChevronLeft, ChevronRight, Printer, Link as LinkIcon } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Printer, Link as LinkIcon, Undo2 } from 'lucide-react'
 import { formatSum } from '@/lib/utils'
 import type { SotuvQatori } from '../_types'
 
@@ -102,6 +102,46 @@ export function SaleDetailPanel({ open, sotuv, onClose, onPrev, onNext }: Props)
                 <Row label="Muddat" value={new Date(sotuv.nasiya.muddat).toLocaleDateString('uz-UZ')} />
               )}
               <Row label="Holat" value={sotuv.nasiya.holati} />
+            </section>
+          )}
+
+          {sotuv.qaytarishlar && sotuv.qaytarishlar.length > 0 && (
+            <section className="p-3 bg-red-50 dark:bg-red-950/30 rounded-xl">
+              <h3 className="text-xs text-red-800 dark:text-red-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <Undo2 size={12} />
+                Qaytarishlar ({sotuv.qaytarishlar.length} ta)
+              </h3>
+              <div className="space-y-3">
+                {sotuv.qaytarishlar.map((q) => (
+                  <div key={q.id} className="pb-2 border-b border-red-100 dark:border-red-900/40 last:border-0 last:pb-0">
+                    <div className="flex justify-between items-center mb-1 text-sm">
+                      <span className="text-red-700 dark:text-red-400 font-semibold">
+                        −{formatSum(q.jamiSumma)}
+                      </span>
+                      <span className="text-xs text-red-600/70 dark:text-red-500/70">
+                        {new Date(q.yaratilgan).toLocaleString('uz-UZ')}
+                      </span>
+                    </div>
+                    {q.sabab && (
+                      <p className="text-xs text-red-700/80 dark:text-red-400/80 italic mb-1">
+                        Sabab: {q.sabab}
+                      </p>
+                    )}
+                    {q.tarkiblar.length > 0 && (
+                      <ul className="space-y-0.5 text-xs text-red-800 dark:text-red-300">
+                        {q.tarkiblar.map((t, i) => (
+                          <li key={i} className="flex justify-between gap-2">
+                            <span className="truncate">
+                              {t.tovar.nomi} × {t.miqdor} {t.tovar.birlik.toLowerCase()}
+                            </span>
+                            <span className="shrink-0">{formatSum(t.jami)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
             </section>
           )}
 

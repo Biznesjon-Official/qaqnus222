@@ -65,4 +65,11 @@ export interface SotuvQatori {
   mijoz: { ism: string; telefon: string | null } | null
   tarkiblar: Array<{ tovar: { nomi: string; birlik: string }; miqdor: number; birlikNarxi: number; jami: number }>
   nasiya: { qoldiq: number; muddat: string | null; holati: string } | null
+  qaytarishlar?: Array<{
+    id: string
+    jamiSumma: number
+    sabab: string | null
+    yaratilgan: string
+    tarkiblar: Array<{ tovar: { nomi: string; birlik: string }; miqdor: number; birlikNarxi: number; jami: number }>
+  }>
 }
