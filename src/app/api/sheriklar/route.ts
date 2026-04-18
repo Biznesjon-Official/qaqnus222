@@ -9,10 +9,11 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const q = searchParams.get('q') || ''
+    const faqatFaol = searchParams.get('faqatFaol') === 'true'
 
     const sheriklar = await prisma.sherik.findMany({
       where: {
-        faol: true,
+        ...(faqatFaol ? { faol: true } : {}),
         ...(q ? { ism: { contains: q, mode: 'insensitive' } } : {}),
       },
       include: {
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
           select: { id: true },
         },
       },
-      orderBy: { yaratilgan: 'desc' },
+      orderBy: [{ faol: 'desc' }, { yaratilgan: 'desc' }],
     })
 
     const natija = sheriklar.map(s => ({ ...s, ochiqQarzlar: s.qarzlar.length }))
