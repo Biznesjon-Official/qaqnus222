@@ -153,7 +153,13 @@ export default function TaminotchilarPage() {
                     {/* Telefon */}
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden sm:table-cell whitespace-nowrap">
                       {t.telefon ? (
-                        <span className="flex items-center gap-1"><Phone size={12} />{formatPhone(t.telefon)}</span>
+                        <a
+                          href={`tel:${t.telefon.replace(/\s/g, '')}`}
+                          onClick={e => e.stopPropagation()}
+                          className="flex items-center gap-1 text-blue-500 hover:text-blue-600"
+                        >
+                          <Phone size={12} />{formatPhone(t.telefon)}
+                        </a>
                       ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                     </td>
                     {/* Manzil */}
@@ -218,7 +224,11 @@ export default function TaminotchilarPage() {
                   )}
                   {/* Clickable phone link */}
                   {t.telefon && (
-                    <a href={`tel:+998${t.telefon}`} className="text-gray-500 dark:text-gray-500 text-sm flex items-center gap-1 hover:text-blue-600">
+                    <a
+                      href={`tel:${t.telefon.replace(/\s/g, '')}`}
+                      onClick={e => e.stopPropagation()}
+                      className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1"
+                    >
                       <Phone size={12} /> {formatPhone(t.telefon)}
                     </a>
                   )}
