@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     const xaridlar = await prisma.xarid.findMany({
       where,
       include: {
-        taminotchi: { select: { id: true, nomi: true, manzil: true } },
+        taminotchi: { select: { id: true, nomi: true, manzil: true, kontaktShaxs: true } },
         tarkiblar: true,
         tolovlar: { orderBy: { sana: 'desc' } },
         qarzTarixi: { orderBy: { sana: 'desc' } },
@@ -50,8 +50,42 @@ export async function POST(req: NextRequest) {
     const foydalanuvchiId = (session.user as any).id
     const data = await req.json()
 
-    const { taminotchiId, tarkiblar, tolangan, izoh } = data
+    const { taminotchiId, tarkiblar, tolangan, izoh, rejim, qarzSumma } = data
 
+    // Faqat qarz rejimi (tovarsiz)
+    if (rejim === 'qarz') {
+      const qarz = Number(qarzSumma) || 0
+      if (!(qarz > 0)) return NextResponse.json({ xato: 'Qarz summasi kiriting' }, { status: 400 })
+      if (!taminotchiId) return NextResponse.json({ xato: 'Ta\'minotchi tanlang' }, { status: 400 })
+
+      const xarid = await prisma.$transaction(async (tx) => {
+        const yangi = await tx.xarid.create({
+          data: {
+            taminotchiId,
+            jamiSumma: qarz,
+            tolangan: 0,
+            qoldiqQarz: qarz,
+            izoh: izoh || 'Qarz',
+            foydalanuvchiId,
+          },
+          include: {
+            taminotchi: { select: { nomi: true } },
+          },
+        })
+        // Qarz tarixida ham boshlang'ich record yoziladi
+        await tx.xaridQarzTarixi.create({
+          data: {
+            xaridId: yangi.id,
+            summa: qarz,
+            izoh: izoh || 'Boshlang\'ich qarz',
+          },
+        })
+        return yangi
+      })
+      return NextResponse.json(xarid, { status: 201 })
+    }
+
+    // Oddiy xarid (tovar bilan)
     if (!tarkiblar || tarkiblar.length === 0) {
       return NextResponse.json({ xato: 'Kamida bitta tovar kiriting' }, { status: 400 })
     }
@@ -88,7 +122,8 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(xarid, { status: 201 })
-  } catch {
+  } catch (e) {
+    console.error('[Xaridlar POST]', e)
     return NextResponse.json({ xato: 'Server xatosi' }, { status: 500 })
   }
 }

@@ -38,14 +38,14 @@ interface Xarid {
   tolangan: number
   qoldiqQarz: number
   izoh: string | null
-  taminotchi: { id: string; nomi: string; manzil?: string | null } | null
+  taminotchi: { id: string; nomi: string; manzil?: string | null; kontaktShaxs?: string | null } | null
   tarkiblar: XaridTarkibi[]
   tolovlar: XaridTolov[]
   qarzTarixi: XaridQarz[]
   foydalanuvchi: { ism: string }
 }
 
-interface Taminotchi { id: string; nomi: string; manzil?: string | null; telefon?: string | null }
+interface Taminotchi { id: string; nomi: string; manzil?: string | null; telefon?: string | null; kontaktShaxs?: string | null }
 
 const inputCls = 'w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition'
 
@@ -71,10 +71,12 @@ export default function XaridlarPage() {
     taminotchiId: '',
     tolangan: '',
     izoh: '',
+    qarzSumma: '', // faqat qarz rejimi uchun
   })
   const [tarkiblar, setTarkiblar] = useState([
     { tovarNomi: '', miqdor: '', birlikNarxi: '' }
   ])
+  const [modalRejim, setModalRejim] = useState<'tovar' | 'qarz'>('tovar')
   const [saqlanmoqda, setSaqlanmoqda] = useState(false)
 
   useEffect(() => {
@@ -120,32 +122,49 @@ export default function XaridlarPage() {
 
   async function xaridSaqlash(e: React.FormEvent) {
     e.preventDefault()
-    const validTarkiblar = tarkiblar.filter(t => t.tovarNomi.trim() && parseFloat(t.miqdor) > 0 && parseFloat(t.birlikNarxi) > 0)
-    if (validTarkiblar.length === 0) {
-      toast.error('Kamida bitta to\'liq tovar kiriting')
-      return
+
+    let body: Record<string, unknown>
+    if (modalRejim === 'qarz') {
+      const qarz = parseFloat(form.qarzSumma || '0')
+      if (!(qarz > 0)) { toast.error('Qarz summasi kiriting'); return }
+      if (!form.taminotchiId) { toast.error('Ta\'minotchi tanlang'); return }
+      body = {
+        taminotchiId: form.taminotchiId,
+        rejim: 'qarz',
+        qarzSumma: qarz,
+        izoh: form.izoh || null,
+      }
+    } else {
+      const validTarkiblar = tarkiblar.filter(t => t.tovarNomi.trim() && parseFloat(t.miqdor) > 0 && parseFloat(t.birlikNarxi) > 0)
+      if (validTarkiblar.length === 0) {
+        toast.error('Kamida bitta to\'liq tovar kiriting')
+        return
+      }
+      body = {
+        taminotchiId: form.taminotchiId || null,
+        tolangan: form.tolangan,
+        izoh: form.izoh,
+        tarkiblar: validTarkiblar.map(t => ({
+          tovarNomi: t.tovarNomi,
+          miqdor: parseFloat(t.miqdor),
+          birlikNarxi: parseFloat(t.birlikNarxi),
+        })),
+      }
     }
+
     setSaqlanmoqda(true)
     try {
       const res = await fetch('/api/xaridlar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          taminotchiId: form.taminotchiId || null,
-          tolangan: form.tolangan,
-          izoh: form.izoh,
-          tarkiblar: validTarkiblar.map(t => ({
-            tovarNomi: t.tovarNomi,
-            miqdor: parseFloat(t.miqdor),
-            birlikNarxi: parseFloat(t.birlikNarxi),
-          })),
-        }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) { toast.error(json.xato || 'Xatolik'); return }
-      toast.success('Xarid qayd etildi!')
+      toast.success(modalRejim === 'qarz' ? 'Qarz qayd etildi!' : 'Xarid qayd etildi!')
       setModal(false)
-      setForm({ taminotchiId: '', tolangan: '', izoh: '' })
+      setModalRejim('tovar')
+      setForm({ taminotchiId: '', tolangan: '', izoh: '', qarzSumma: '' })
       setTarkiblar([{ tovarNomi: '', miqdor: '', birlikNarxi: '' }])
       yuklash()
     } finally {
@@ -204,8 +223,8 @@ export default function XaridlarPage() {
     }
   }
 
-  // Ta'minotchi label: nomi + manzil (agar bor bo'lsa) — bir xil nomlilar farqlanadi
-  const taminotchiLabel = (t: Taminotchi) => t.manzil ? `${t.nomi} — ${t.manzil}` : t.nomi
+  // Ta'minotchi label: nomi + kontakt shaxs (bir xil nomlilarni farqlash uchun)
+  const taminotchiLabel = (t: Taminotchi) => t.kontaktShaxs ? `${t.nomi} — ${t.kontaktShaxs}` : t.nomi
   const taminotchiOptions = taminotchilar.map(t => ({ value: t.id, label: taminotchiLabel(t) }))
   const taminotchiFilterOptions = [
     { value: '', label: 'Barcha ta\'minotchilar' },
@@ -283,8 +302,8 @@ export default function XaridlarPage() {
                         {x.taminotchi ? (
                           <div>
                             <div className="font-medium">{x.taminotchi.nomi}</div>
-                            {x.taminotchi.manzil && (
-                              <div className="text-gray-400 dark:text-gray-600 text-xs">{x.taminotchi.manzil}</div>
+                            {x.taminotchi.kontaktShaxs && (
+                              <div className="text-gray-400 dark:text-gray-600 text-xs">{x.taminotchi.kontaktShaxs}</div>
                             )}
                           </div>
                         ) : (
@@ -516,28 +535,82 @@ export default function XaridlarPage() {
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between sticky top-0 bg-white dark:bg-neutral-900 z-10">
               <div className="flex items-center gap-2">
-                <ShoppingBag size={18} className="text-red-600" />
-                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Yangi xarid qayd etish</h3>
+                {modalRejim === 'qarz' ? <PlusCircle size={18} className="text-red-600" /> : <ShoppingBag size={18} className="text-red-600" />}
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">
+                  {modalRejim === 'qarz' ? 'Yangi qarz qayd etish' : 'Yangi xarid qayd etish'}
+                </h3>
               </div>
               <button onClick={() => setModal(false)} className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
                 <X size={18} />
               </button>
             </div>
 
+            {/* Rejim tanlash: tovar bilan xarid yoki faqat qarz */}
+            <div className="px-5 pt-4">
+              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-neutral-800 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setModalRejim('tovar')}
+                  className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition ${
+                    modalRejim === 'tovar'
+                      ? 'bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <ShoppingBag size={14} />
+                  Tovar bilan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalRejim('qarz')}
+                  className={`flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition ${
+                    modalRejim === 'qarz'
+                      ? 'bg-white dark:bg-neutral-900 text-red-600 dark:text-red-400 shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+                >
+                  <PlusCircle size={14} />
+                  Faqat qarz
+                </button>
+              </div>
+            </div>
+
             <form onSubmit={xaridSaqlash} className="p-5 space-y-4">
               {/* Ta'minotchi */}
               <div>
-                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Ta&apos;minotchi</label>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">
+                  Ta&apos;minotchi{modalRejim === 'qarz' && <span className="text-red-500"> *</span>}
+                </label>
                 <Combobox
                   options={taminotchiOptions}
                   value={form.taminotchiId}
                   onChange={v => setForm(f => ({ ...f, taminotchiId: v }))}
-                  placeholder="Ta'minotchi tanlang (ixtiyoriy)"
+                  placeholder={modalRejim === 'qarz' ? 'Ta\'minotchi tanlang (majburiy)' : 'Ta\'minotchi tanlang (ixtiyoriy)'}
                   searchPlaceholder="Ta'minotchi qidirish..."
                 />
               </div>
 
-              {/* Tovarlar */}
+              {/* Faqat qarz rejimi: summa input */}
+              {modalRejim === 'qarz' && (
+                <div>
+                  <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">
+                    Qarz summasi <span className="text-red-500">*</span>
+                  </label>
+                  <MoneyInput
+                    value={form.qarzSumma}
+                    onChange={v => setForm(f => ({ ...f, qarzSumma: v }))}
+                    required
+                    min={1}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
+                    Tovarsiz qarz yozish — masalan, pul qarzga olish yoki avvalgi hisobni ko&apos;chirish.
+                  </p>
+                </div>
+              )}
+
+              {/* Tovarlar (faqat 'tovar' rejimida) */}
+              {modalRejim === 'tovar' && (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-gray-700 dark:text-gray-300 text-sm font-medium">Tovarlar *</label>
@@ -593,8 +666,10 @@ export default function XaridlarPage() {
                   </p>
                 )}
               </div>
+              )}
 
-              {/* To'langan */}
+              {/* To'langan (faqat tovar rejimida) */}
+              {modalRejim === 'tovar' && (
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-gray-700 dark:text-gray-300 text-sm font-medium">To&apos;langan summa</label>
@@ -619,6 +694,7 @@ export default function XaridlarPage() {
                   </p>
                 )}
               </div>
+              )}
 
               {/* Izoh */}
               <div>
@@ -644,7 +720,7 @@ export default function XaridlarPage() {
                   disabled={saqlanmoqda}
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition"
                 >
-                  {saqlanmoqda ? 'Saqlanmoqda...' : 'Xaridni saqlash'}
+                  {saqlanmoqda ? 'Saqlanmoqda...' : modalRejim === 'qarz' ? 'Qarzni saqlash' : 'Xaridni saqlash'}
                 </button>
               </div>
             </form>
@@ -661,7 +737,7 @@ export default function XaridlarPage() {
                 <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz qo&apos;shish</h3>
                 <p className="text-gray-500 dark:text-gray-500 text-sm">
                   {qarzModal.taminotchi?.nomi}
-                  {qarzModal.taminotchi?.manzil && <span className="text-gray-400"> — {qarzModal.taminotchi.manzil}</span>}
+                  {qarzModal.taminotchi?.kontaktShaxs && <span className="text-gray-400"> — {qarzModal.taminotchi.kontaktShaxs}</span>}
                 </p>
                 <div className="flex gap-3 mt-1 text-xs flex-wrap">
                   <span className="text-gray-400">Jami: {formatSum(qarzModal.jamiSumma)}</span>
