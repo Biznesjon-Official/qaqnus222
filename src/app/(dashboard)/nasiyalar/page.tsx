@@ -331,18 +331,18 @@ export default function NasiyalarPage() {
       {view === 'table' && (
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-fixed">
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Mijoz</th>
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Chek</th>
-                  <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Holati</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">Jami qarz</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">To&apos;langan</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qoldiq</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Berilgan sana</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Qaytarish sanasi</th>
-                  <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
+                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3">Mijoz</th>
+                  <th style={{ width: '130px' }} className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Chek</th>
+                  <th style={{ width: '110px' }} className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Holati</th>
+                  <th style={{ width: '130px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">Jami qarz</th>
+                  <th style={{ width: '130px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">To&apos;langan</th>
+                  <th style={{ width: '130px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qoldiq</th>
+                  <th style={{ width: '110px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Berilgan</th>
+                  <th style={{ width: '110px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Qaytarish</th>
+                  <th style={{ width: '180px' }} className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,15 +358,17 @@ export default function NasiyalarPage() {
                       onClick={() => openTolovModal(n)}
                       className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${idx % 2 === 1 ? 'bg-gray-50/40 dark:bg-neutral-800/40' : ''} ${n.holati !== 'YOPILGAN' ? 'cursor-pointer' : ''}`}
                     >
-                      {/* Mijoz + Telefon */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="text-gray-900 dark:text-gray-100 font-medium text-sm">{n.mijoz.ism}</div>
-                        {n.mijoz.telefon && (
-                          <a href={`tel:${n.mijoz.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-600 text-xs flex items-center gap-1 mt-0.5"><Phone size={10} />{n.mijoz.telefon}</a>
-                        )}
-                        {n.mijoz.manzil && (
-                          <div className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{n.mijoz.manzil}</div>
-                        )}
+                      {/* Mijoz + Telefon — qolgan joyni o'zlashtiradi */}
+                      <td className="px-4 py-3">
+                        <div className="min-w-0">
+                          <div className="text-gray-900 dark:text-gray-100 font-medium text-sm truncate">{n.mijoz.ism}</div>
+                          {n.mijoz.telefon && (
+                            <a href={`tel:${n.mijoz.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="text-blue-500 hover:text-blue-600 text-xs inline-flex items-center gap-1 mt-0.5 truncate"><Phone size={10} />{n.mijoz.telefon}</a>
+                          )}
+                          {n.mijoz.manzil && (
+                            <div className="text-gray-400 dark:text-gray-500 text-xs mt-0.5 truncate">{n.mijoz.manzil}</div>
+                          )}
+                        </div>
                       </td>
                       {/* Chek */}
                       <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">{n.sotuv?.chekRaqami || <span className="text-gray-300 dark:text-gray-700">—</span>}</td>
