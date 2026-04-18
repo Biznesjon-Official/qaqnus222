@@ -1439,18 +1439,12 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                                 />
                               </div>
                               <div>
-                                <label className="text-xs text-gray-500 dark:text-gray-400 mb-0.5 block">Narx (so&apos;m)</label>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={sel.birlikNarxi}
-                                  onChange={e => setQaytarishTanlangan(prev => ({
-                                    ...prev,
-                                    [t.tovarId]: { ...sel, birlikNarxi: parseFloat(e.target.value) || 0 }
-                                  }))}
-                                  onWheel={e => e.currentTarget.blur()}
-                                  className={inputCls}
-                                />
+                                <label className="text-xs text-gray-500 dark:text-gray-400 mb-0.5 block">
+                                  Narx (sotuv narxi)
+                                </label>
+                                <div className="px-3 py-2 bg-gray-50 dark:bg-neutral-800/50 border border-gray-200 dark:border-neutral-700 rounded-xl text-gray-700 dark:text-gray-300 text-sm">
+                                  {formatSum(Number(t.birlikNarxi))}
+                                </div>
                               </div>
                             </div>
                           )}
