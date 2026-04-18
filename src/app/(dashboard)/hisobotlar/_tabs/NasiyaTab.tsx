@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { formatSum } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
 import {
@@ -12,6 +13,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useReportData } from '../_hooks/useReportData'
+import { NasiyaDrillDownModal } from '../_components/DrillDownModal'
 import type { ReportTur } from '@/lib/hisobotlar'
 
 interface AgingBucket {
@@ -36,6 +38,25 @@ interface NasiyaResponse {
   jamiQarz: number
 }
 
+interface NasiyaDrillDownItem {
+  id: string
+  mijoz: { id: string; ism: string; telefon: string | null; manzil: string | null }
+  sotuv: { chekRaqami: string; sana: string } | null
+  jamiQarz: number
+  tolangan: number
+  qoldiq: number
+  muddat: string | null
+  sana: string
+  kechikkanKun: number
+}
+
+interface DrillDownData {
+  bucket: string
+  jamiQoldiq: number
+  soni: number
+  nasiyalar: NasiyaDrillDownItem[]
+}
+
 interface Props {
   filtrlar: { tur: ReportTur; dan: string; gacha: string; [key: string]: unknown }
   isKassir: boolean
@@ -49,11 +70,48 @@ const BUCKET_RANG: Record<string, string> = {
   '90+ kun': '#7c3aed',
 }
 
+// Human-readable label → API bucket key
+const LABEL_TO_BUCKET: Record<string, string> = {
+  Kechikmagan: 'kechikmagan',
+  '0-30 kun': 'b_0_30',
+  '31-60 kun': 'b_31_60',
+  '61-90 kun': 'b_61_90',
+  '90+ kun': 'b_90_plus',
+}
+
 export function NasiyaTab({ filtrlar }: Props) {
   const { data, yuklanmoqda } = useReportData<NasiyaResponse>(
     '/api/hisobotlar/nasiya-aging',
     filtrlar,
   )
+
+  // Drill-down state
+  const [modalOchiq, setModalOchiq] = useState(false)
+  const [drillSarlavha, setDrillSarlavha] = useState('')
+  const [drillBucket, setDrillBucket] = useState('')
+  const [drillYuklanmoqda, setDrillYuklanmoqda] = useState(false)
+  const [drillData, setDrillData] = useState<DrillDownData | null>(null)
+
+  async function bucketOch(label: string) {
+    const bucketKey = LABEL_TO_BUCKET[label] ?? 'b_0_30'
+    setDrillSarlavha(`Nasiya tahlil — ${label}`)
+    setDrillBucket(bucketKey)
+    setModalOchiq(true)
+    setDrillData(null)
+    setDrillYuklanmoqda(true)
+    try {
+      const res = await fetch(
+        `/api/hisobotlar/nasiya/drill-down?bucket=${bucketKey}`,
+      )
+      if (!res.ok) throw new Error("Ma'lumot yuklanmadi")
+      const json = (await res.json()) as DrillDownData
+      setDrillData(json)
+    } catch {
+      setDrillData({ bucket: bucketKey, jamiQoldiq: 0, soni: 0, nasiyalar: [] })
+    } finally {
+      setDrillYuklanmoqda(false)
+    }
+  }
 
   if (yuklanmoqda) {
     return (
@@ -105,7 +163,7 @@ export function NasiyaTab({ filtrlar }: Props) {
             Nasiya yoshi (aging tahlil)
           </h2>
           <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">
-            Muddati o&apos;tgan kunlar bo&apos;yicha guruhlash
+            Muddati o&apos;tgan kunlar bo&apos;yicha guruhlash &bull; Kartani bosib tafsilot ko&apos;ring
           </p>
         </div>
         {data.agingBuckets.length === 0 ? (
@@ -147,12 +205,14 @@ export function NasiyaTab({ filtrlar }: Props) {
               </ResponsiveContainer>
             </div>
 
-            {/* Bucket cards */}
+            {/* Clickable bucket cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4">
               {data.agingBuckets.map((b, i) => (
-                <div
+                <button
                   key={i}
-                  className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-3 text-center"
+                  type="button"
+                  onClick={() => void bucketOch(b.label)}
+                  className="bg-gray-50 dark:bg-neutral-800 rounded-xl p-3 text-center cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-red-400"
                 >
                   <p
                     className="text-xs font-semibold"
@@ -164,7 +224,7 @@ export function NasiyaTab({ filtrlar }: Props) {
                     {b.count} ta
                   </p>
                   <p className="text-gray-500 dark:text-gray-500 text-xs">{formatSum(b.summa)}</p>
-                </div>
+                </button>
               ))}
             </div>
           </>
@@ -246,6 +306,33 @@ export function NasiyaTab({ filtrlar }: Props) {
           </div>
         )}
       </div>
+
+      {/* Drill-down modal */}
+      {modalOchiq && (
+        <NasiyaDrillDownModal
+          open={modalOchiq}
+          onClose={() => setModalOchiq(false)}
+          sarlavha={drillSarlavha}
+          bucket={drillBucket}
+          jamiQoldiq={drillData?.jamiQoldiq ?? 0}
+          soni={drillData?.soni ?? 0}
+          nasiyalar={
+            drillYuklanmoqda
+              ? []
+              : (drillData?.nasiyalar ?? [])
+          }
+        />
+      )}
+
+      {/* Loading overlay while drill-down fetching */}
+      {modalOchiq && drillYuklanmoqda && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+          <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-xl px-6 py-4 flex items-center gap-3 shadow-xl pointer-events-auto">
+            <Loader2 className="animate-spin w-5 h-5 text-red-500" />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Yuklanmoqda...</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -30,6 +30,9 @@ const NasiyaTab = lazy(() =>
 const KassirlarTab = lazy(() =>
   import('./_tabs/KassirlarTab').then((m) => ({ default: m.KassirlarTab })),
 )
+const XaridlarTab = lazy(() =>
+  import('./_tabs/XaridlarTab').then((m) => ({ default: m.XaridlarTab })),
+)
 
 const TAB_LIST: Array<{ key: string; label: string; adminOnly?: boolean }> = [
   { key: 'umumiy', label: 'Umumiy' },
@@ -39,6 +42,7 @@ const TAB_LIST: Array<{ key: string; label: string; adminOnly?: boolean }> = [
   { key: 'ombor', label: 'Ombor', adminOnly: true },
   { key: 'mijozlar', label: 'Mijozlar', adminOnly: true },
   { key: 'nasiya', label: 'Nasiya', adminOnly: true },
+  { key: 'xaridlar', label: 'Xaridlar', adminOnly: true },
   { key: 'kassirlar', label: 'Kassirlar', adminOnly: true },
 ]
 
@@ -50,6 +54,7 @@ const TAB_COMPONENTS = {
   ombor: OmborTab,
   mijozlar: MijozlarTab,
   nasiya: NasiyaTab,
+  xaridlar: XaridlarTab,
   kassirlar: KassirlarTab,
 } as const
 
