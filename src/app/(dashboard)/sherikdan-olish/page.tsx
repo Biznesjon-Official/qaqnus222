@@ -76,7 +76,7 @@ export default function SherikdanOlishPage() {
   const [qarzModal, setQarzModal] = useState(false)
   const [qarzForm, setQarzForm] = useState({ taminotchiId: '', summa: '', izoh: '' })
   const [qarzYuklanmoqda, setQarzYuklanmoqda] = useState(false)
-  const [taminotchilar, setTaminotchilar] = useState<{ id: string; nomi: string; telefon: string | null }[]>([])
+  const [taminotchilar, setTaminotchilar] = useState<{ id: string; nomi: string; telefon: string | null; manzil?: string | null }[]>([])
 
   async function yuklash() {
     setYuklanmoqda(true)
@@ -477,7 +477,12 @@ export default function SherikdanOlishPage() {
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Ta&apos;minotchi *</label>
                 <Combobox
-                  options={taminotchilar.map(t => ({ value: t.id, label: `${t.nomi}${t.telefon ? ' — ' + t.telefon : ''}` }))}
+                  options={taminotchilar.map(t => {
+                    const parts = [t.nomi]
+                    if (t.manzil) parts.push(t.manzil)
+                    else if (t.telefon) parts.push(t.telefon)
+                    return { value: t.id, label: parts.join(' — ') }
+                  })}
                   value={qarzForm.taminotchiId}
                   onChange={v => setQarzForm(f => ({ ...f, taminotchiId: v }))}
                   placeholder="Ta'minotchi tanlang"

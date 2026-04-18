@@ -323,8 +323,25 @@ model Xarid {
   foydalanuvchi   Foydalanuvchi @relation(fields: [foydalanuvchiId], references: [id])
   tarkiblar       XaridTarkibi[]
   tolovlar        XaridTolov[]
+  qarzTarixi      XaridQarzTarixi[]
 
   @@map("xaridlar")
+}
+
+// ========================
+// XARID QARZ TARIXI
+// ========================
+model XaridQarzTarixi {
+  id         String   @id @default(cuid())
+  xaridId    String
+  summa      Decimal  @db.Decimal(12, 2)
+  izoh       String?
+  sana       DateTime @default(now())
+
+  xarid      Xarid    @relation(fields: [xaridId], references: [id])
+
+  @@index([xaridId])
+  @@map("xarid_qarz_tarixi")
 }
 
 // ========================

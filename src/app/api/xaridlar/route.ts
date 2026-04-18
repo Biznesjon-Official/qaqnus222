@@ -27,9 +27,10 @@ export async function GET(req: NextRequest) {
     const xaridlar = await prisma.xarid.findMany({
       where,
       include: {
-        taminotchi: { select: { id: true, nomi: true } },
+        taminotchi: { select: { id: true, nomi: true, manzil: true } },
         tarkiblar: true,
         tolovlar: { orderBy: { sana: 'desc' } },
+        qarzTarixi: { orderBy: { sana: 'desc' } },
         foydalanuvchi: { select: { ism: true } },
       },
       orderBy: { sana: 'desc' },

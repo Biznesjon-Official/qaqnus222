@@ -14,7 +14,7 @@ interface QoldiqItem {
   birlik: string; sotishNarxi: number; kelishNarxi: number
   minimalQoldiq: number; qoldiq: number; omborQoldiq: number; dokonQoldiq: number; kamQolgan: boolean
 }
-interface Taminotchi { id: string; nomi: string }
+interface Taminotchi { id: string; nomi: string; manzil?: string | null }
 interface Kategoriya { id: string; nomi: string }
 interface OmborHarakat {
   id: string; turi: string; miqdor: number; narx: number
@@ -240,7 +240,10 @@ export default function OmborPage() {
 
   // Build combobox options from loaded data
   const tovarOptions = qoldiqlar.map(q => ({ value: q.id, label: q.nomi }))
-  const taminotchiOptions = taminotchilar.map(t => ({ value: t.id, label: t.nomi }))
+  const taminotchiOptions = taminotchilar.map(t => ({
+    value: t.id,
+    label: t.manzil ? `${t.nomi} — ${t.manzil}` : t.nomi,
+  }))
 
   return (
     <div className="space-y-4">

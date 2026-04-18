@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSana } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag, Banknote, Clock } from 'lucide-react'
+import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag, Banknote, Clock, PlusCircle } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 import ViewToggle from '@/components/ViewToggle'
@@ -24,6 +24,13 @@ interface XaridTolov {
   sana: string
 }
 
+interface XaridQarz {
+  id: string
+  summa: number
+  izoh: string | null
+  sana: string
+}
+
 interface Xarid {
   id: string
   sana: string
@@ -31,13 +38,14 @@ interface Xarid {
   tolangan: number
   qoldiqQarz: number
   izoh: string | null
-  taminotchi: { id: string; nomi: string } | null
+  taminotchi: { id: string; nomi: string; manzil?: string | null } | null
   tarkiblar: XaridTarkibi[]
   tolovlar: XaridTolov[]
+  qarzTarixi: XaridQarz[]
   foydalanuvchi: { ism: string }
 }
 
-interface Taminotchi { id: string; nomi: string }
+interface Taminotchi { id: string; nomi: string; manzil?: string | null; telefon?: string | null }
 
 const inputCls = 'w-full px-3 py-2 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition'
 
@@ -54,6 +62,9 @@ export default function XaridlarPage() {
   const [tolovModal, setTolovModal] = useState<Xarid | null>(null)
   const [tolovForm, setTolovForm] = useState({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
   const [tolovSaqlanmoqda, setTolovSaqlanmoqda] = useState(false)
+  const [qarzModal, setQarzModal] = useState<Xarid | null>(null)
+  const [qarzForm, setQarzForm] = useState({ summa: '', izoh: '' })
+  const [qarzSaqlanmoqda, setQarzSaqlanmoqda] = useState(false)
 
   // Form state
   const [form, setForm] = useState({
@@ -167,7 +178,35 @@ export default function XaridlarPage() {
     }
   }
 
-  const taminotchiOptions = taminotchilar.map(t => ({ value: t.id, label: t.nomi }))
+  async function qarzQoshish(e: React.FormEvent) {
+    e.preventDefault()
+    if (!qarzModal) return
+    const summa = parseFloat(qarzForm.summa)
+    if (!(summa > 0)) { toast.error('Summa kiriting'); return }
+    setQarzSaqlanmoqda(true)
+    try {
+      const res = await fetch(`/api/xaridlar/${qarzModal.id}/qarz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summa, izoh: qarzForm.izoh || undefined })
+      })
+      if (res.ok) {
+        toast.success('Qarz qo\'shildi!')
+        setQarzModal(null)
+        setQarzForm({ summa: '', izoh: '' })
+        yuklash()
+      } else {
+        const err = await res.json()
+        toast.error(err.xato || 'Xatolik')
+      }
+    } finally {
+      setQarzSaqlanmoqda(false)
+    }
+  }
+
+  // Ta'minotchi label: nomi + manzil (agar bor bo'lsa) — bir xil nomlilar farqlanadi
+  const taminotchiLabel = (t: Taminotchi) => t.manzil ? `${t.nomi} — ${t.manzil}` : t.nomi
+  const taminotchiOptions = taminotchilar.map(t => ({ value: t.id, label: taminotchiLabel(t) }))
   const taminotchiFilterOptions = [
     { value: '', label: 'Barcha ta\'minotchilar' },
     ...taminotchiOptions,
@@ -240,8 +279,17 @@ export default function XaridlarPage() {
                       className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${idx % 2 === 1 ? 'bg-gray-50/40 dark:bg-neutral-800/40' : ''}`}
                     >
                       <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm whitespace-nowrap">{formatSana(x.sana)}</td>
-                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 text-sm font-medium whitespace-nowrap">
-                        {x.taminotchi?.nomi || <span className="text-gray-400 dark:text-gray-600 italic">Noma&apos;lum</span>}
+                      <td className="px-4 py-3 text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
+                        {x.taminotchi ? (
+                          <div>
+                            <div className="font-medium">{x.taminotchi.nomi}</div>
+                            {x.taminotchi.manzil && (
+                              <div className="text-gray-400 dark:text-gray-600 text-xs">{x.taminotchi.manzil}</div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-600 italic">Noma&apos;lum</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className="text-xs bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-lg">
@@ -265,6 +313,13 @@ export default function XaridlarPage() {
                             </button>
                           )}
                           <button
+                            onClick={() => { setQarzModal(x); setQarzForm({ summa: '', izoh: '' }) }}
+                            className="p-1.5 text-red-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                            title="Qarz qo'shish"
+                          >
+                            <PlusCircle size={15} />
+                          </button>
+                          <button
                             onClick={() => setKengaytirilgan(kengaytirilgan === x.id ? null : x.id)}
                             className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition"
                           >
@@ -285,6 +340,18 @@ export default function XaridlarPage() {
                               </div>
                             ))}
                             {x.izoh && <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Izoh: {x.izoh}</p>}
+                            {x.qarzTarixi && x.qarzTarixi.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-gray-200 dark:border-neutral-700">
+                                <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1.5 flex items-center gap-1"><PlusCircle size={12} /> Qarz tarixi</p>
+                                {x.qarzTarixi.map(q => (
+                                  <div key={q.id} className="flex items-center justify-between text-sm gap-4">
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs">{formatSana(q.sana)}</span>
+                                    {q.izoh && <span className="text-gray-400 text-xs flex-1 truncate">{q.izoh}</span>}
+                                    <span className="text-red-600 font-semibold">+{formatSum(q.summa)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             {x.tolovlar && x.tolovlar.length > 0 && (
                               <div className="mt-3 pt-2 border-t border-gray-200 dark:border-neutral-700">
                                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1"><Clock size={12} /> To&apos;lovlar tarixi</p>
@@ -580,6 +647,98 @@ export default function XaridlarPage() {
                   {saqlanmoqda ? 'Saqlanmoqda...' : 'Xaridni saqlash'}
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Qarz qo'shish modal */}
+      {qarzModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz qo&apos;shish</h3>
+                <p className="text-gray-500 dark:text-gray-500 text-sm">
+                  {qarzModal.taminotchi?.nomi}
+                  {qarzModal.taminotchi?.manzil && <span className="text-gray-400"> — {qarzModal.taminotchi.manzil}</span>}
+                </p>
+                <div className="flex gap-3 mt-1 text-xs flex-wrap">
+                  <span className="text-gray-400">Jami: {formatSum(qarzModal.jamiSumma)}</span>
+                  <span className="text-green-600">To&apos;langan: {formatSum(qarzModal.tolangan)}</span>
+                  <span className="text-red-600 font-semibold">Qoldiq: {formatSum(qarzModal.qoldiqQarz)}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setQarzModal(null)}
+                className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={qarzQoshish} className="p-5 space-y-4">
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm font-medium mb-1 block">
+                  Qo&apos;shiladigan qarz summasi *
+                </label>
+                <MoneyInput
+                  value={qarzForm.summa}
+                  onChange={v => setQarzForm(f => ({ ...f, summa: v }))}
+                  required
+                  min={1}
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm font-medium mb-1 block">Izoh</label>
+                <input
+                  value={qarzForm.izoh}
+                  onChange={e => setQarzForm(f => ({ ...f, izoh: e.target.value }))}
+                  placeholder="Masalan: yangi tovar olindi..."
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setQarzModal(null)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium"
+                >
+                  Bekor
+                </button>
+                <button
+                  type="submit"
+                  disabled={qarzSaqlanmoqda}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition disabled:opacity-50"
+                >
+                  {qarzSaqlanmoqda ? 'Saqlanmoqda...' : 'Qarzni qo\'shish'}
+                </button>
+              </div>
+
+              {qarzModal.qarzTarixi && qarzModal.qarzTarixi.length > 0 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-neutral-800">
+                  <h4 className="text-gray-700 dark:text-gray-300 text-sm font-semibold mb-3 flex items-center gap-2">
+                    <PlusCircle size={14} className="text-red-500" />
+                    Qarz tarixi ({qarzModal.qarzTarixi.length} ta)
+                  </h4>
+                  <div className="space-y-2 max-h-36 overflow-y-auto">
+                    {qarzModal.qarzTarixi.map(q => (
+                      <div key={q.id} className="flex items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-neutral-800 last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{formatSum(q.summa)}</p>
+                          <p className="text-gray-400 dark:text-gray-600 text-xs">
+                            {formatSana(q.sana)}
+                            {q.izoh && ` • ${q.izoh}`}
+                          </p>
+                        </div>
+                        <span className="text-red-600 text-xs font-medium shrink-0 bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-lg">
+                          +{formatSum(q.summa)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         </div>
