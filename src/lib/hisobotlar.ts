@@ -8,7 +8,7 @@ export function getReportDateRange(
   tur: ReportTur,
   dan?: string,
   gacha?: string,
-): { dan: Date; gacha: Date; oldingi: { dan: Date; gacha: Date } } {
+): { dan: Date; gacha: Date } {
   const bugun = new Date()
   bugun.setHours(0, 0, 0, 0)
 
@@ -44,15 +44,9 @@ export function getReportDateRange(
     gachaSana.setDate(gachaSana.getDate() + 1)
   }
 
-  // Oldingi davr: joriy davr uzunligiga teng
-  const davr = gachaSana.getTime() - danSana.getTime()
-  const oldingiGacha = new Date(danSana)
-  const oldingiDan = new Date(danSana.getTime() - davr)
-
   return {
     dan: danSana,
     gacha: gachaSana,
-    oldingi: { dan: oldingiDan, gacha: oldingiGacha },
   }
 }
 
@@ -68,13 +62,6 @@ export function baseSotuvFilter(
     tolovUsuli: { not: 'SHERIK' as const },
     ...(kassirId ? { kassirId } : {}),
   }
-}
-
-/** Foizli o'zgarish: (yangi - eski) / eski * 100. Eski = 0 bo'lsa null. */
-export function foizOzgarish(yangi: number, eski: number): number | null {
-  if (eski === 0) return null
-  const foiz = ((yangi - eski) / eski) * 100
-  return Math.round(foiz * 10) / 10
 }
 
 /** Aging bucket: muddat bugundan necha kun oldin. */

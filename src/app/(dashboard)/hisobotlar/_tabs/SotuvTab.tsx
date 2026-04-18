@@ -49,7 +49,6 @@ interface KategoriyaItem {
   marginPercent: number
   productCount: number
   topProducts: TopProduct[]
-  changePercent: number | null
 }
 
 interface KategoriyaData {
@@ -334,9 +333,6 @@ export function SotuvTab({ filtrlar, isKassir }: Props) {
                       <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
                         Margin
                       </th>
-                      <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
-                        O&apos;zgarish
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 dark:divide-neutral-800">
@@ -371,22 +367,6 @@ export function SotuvTab({ filtrlar, isKassir }: Props) {
                           >
                             {k.marginPercent.toFixed(1)}%
                           </span>
-                        </td>
-                        <td className="py-2.5 text-right">
-                          {k.changePercent === null ? (
-                            <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
-                          ) : (
-                            <span
-                              className={`text-xs font-semibold ${
-                                k.changePercent >= 0
-                                  ? 'text-green-600 dark:text-green-400'
-                                  : 'text-red-600 dark:text-red-400'
-                              }`}
-                            >
-                              {k.changePercent >= 0 ? '+' : ''}
-                              {k.changePercent.toFixed(1)}%
-                            </span>
-                          )}
                         </td>
                       </tr>
                     ))}

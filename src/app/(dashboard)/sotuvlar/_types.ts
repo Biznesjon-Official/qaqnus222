@@ -24,13 +24,7 @@ export interface AnalitikaJavobi {
   ortachaChek: number
   jamiFoyda: number
   jamiChegirma: number
-  oldingiDavr: {
-    jamiSotuv: number
-    sotuvSoni: number
-    ortachaChek: number
-    jamiFoyda: number
-  }
-  kunlikGrafik: Array<{ sana: string; sotuv: number; sotuvSoni: number; oldingiSotuv: number }>
+  kunlikGrafik: Array<{ sana: string; sotuv: number; sotuvSoni: number }>
   kassirlar: Array<{
     kassirId: string
     ism: string

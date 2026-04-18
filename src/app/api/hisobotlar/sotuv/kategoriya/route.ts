@@ -4,7 +4,6 @@ import { auth } from '@/lib/auth'
 import {
   getReportDateRange,
   baseSotuvFilter,
-  foizOzgarish,
   type ReportTur,
 } from '@/lib/hisobotlar'
 
@@ -18,7 +17,7 @@ export async function GET(req: NextRequest) {
     const dan = searchParams.get('dan') || undefined
     const gacha = searchParams.get('gacha') || undefined
 
-    const { dan: d, gacha: g, oldingi } = getReportDateRange(tur, dan, gacha)
+    const { dan: d, gacha: g } = getReportDateRange(tur, dan, gacha)
 
     async function computeKategoriya(from: Date, to: Date) {
       const tarkiblar = await prisma.sotuvTarkibi.findMany({
@@ -65,11 +64,9 @@ export async function GET(req: NextRequest) {
     }
 
     const joriyMap = await computeKategoriya(d, g)
-    const oldMap = await computeKategoriya(oldingi.dan, oldingi.gacha)
 
     const kategoriyalar = Array.from(joriyMap.values())
       .map((k) => {
-        const oldRev = oldMap.get(k.kategoriyaId)?.revenue ?? 0
         const topProducts = Array.from(k.tovarlar.values())
           .sort((a, b) => b.revenue - a.revenue)
           .slice(0, 3)
@@ -83,7 +80,6 @@ export async function GET(req: NextRequest) {
             k.revenue > 0 ? Math.round((k.foyda / k.revenue) * 1000) / 10 : 0,
           productCount: k.tovarlar.size,
           topProducts,
-          changePercent: foizOzgarish(k.revenue, oldRev),
         }
       })
       .sort((a, b) => b.revenue - a.revenue)

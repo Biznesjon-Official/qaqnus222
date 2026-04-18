@@ -4,7 +4,6 @@ import { auth } from '@/lib/auth'
 import {
   getReportDateRange,
   baseSotuvFilter,
-  foizOzgarish,
   type ReportTur,
 } from '@/lib/hisobotlar'
 
@@ -22,7 +21,7 @@ export async function GET(req: NextRequest) {
     const dan = searchParams.get('dan') || undefined
     const gacha = searchParams.get('gacha') || undefined
 
-    const { dan: danSana, gacha: gachaSana, oldingi } = getReportDateRange(tur, dan, gacha)
+    const { dan: danSana, gacha: gachaSana } = getReportDateRange(tur, dan, gacha)
 
     // Helper: compute P&L for a given date range
     async function computePL(from: Date, to: Date) {
@@ -88,7 +87,6 @@ export async function GET(req: NextRequest) {
     }
 
     const joriyData = await computePL(danSana, gachaSana)
-    const oldingiData = await computePL(oldingi.dan, oldingi.gacha)
 
     // Trend (kunlar bo'yicha)
     const trend: Array<{ sana: string; revenue: number; cogs: number; netProfit: number }> = []
@@ -138,12 +136,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       joriy: strip(joriyData),
-      oldingi: strip(oldingiData),
-      foiz: {
-        revenue: foizOzgarish(joriyData.revenue, oldingiData.revenue),
-        grossProfit: foizOzgarish(joriyData.grossProfit, oldingiData.grossProfit),
-        netProfit: foizOzgarish(joriyData.netProfit, oldingiData.netProfit),
-      },
       trend,
     })
   } catch (e) {

@@ -1,12 +1,12 @@
 'use client'
 
 import {
-  Area, Line, ComposedChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Area, AreaChart, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { formatSum } from '@/lib/utils'
 
 interface Props {
-  data: Array<{ sana: string; sotuv: number; sotuvSoni: number; oldingiSotuv: number }>
+  data: Array<{ sana: string; sotuv: number; sotuvSoni: number }>
 }
 
 export function SalesTrendChart({ data }: Props) {
@@ -17,17 +17,13 @@ export function SalesTrendChart({ data }: Props) {
         <div className="flex gap-4 text-xs">
           <span className="flex items-center gap-1">
             <span className="w-3 h-0.5 bg-red-500" />
-            <span className="text-gray-600 dark:text-gray-400">Shu davr</span>
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-0.5 bg-gray-400 dark:bg-gray-600" />
-            <span className="text-gray-600 dark:text-gray-400">Oldingi davr</span>
+            <span className="text-gray-600 dark:text-gray-400">Sotuv</span>
           </span>
         </div>
       </div>
       <div className="h-48 sm:h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
+          <AreaChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 10 }}>
             <defs>
               <linearGradient id="sotuvGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#DC2626" stopOpacity={0.2} />
@@ -53,10 +49,8 @@ export function SalesTrendChart({ data }: Props) {
                 borderRadius: '12px',
                 color: '#f9fafb',
               }}
-              formatter={(v: string | number | undefined, name: string | undefined) => {
-                const nameMap: Record<string, string> = { sotuv: 'Shu davr', oldingiSotuv: 'Oldingi davr' }
-                const key = name ?? ''
-                return [formatSum(Number(v ?? 0)), nameMap[key] ?? key] as [string, string]
+              formatter={(v: string | number | undefined) => {
+                return [formatSum(Number(v ?? 0)), 'Sotuv'] as [string, string]
               }}
             />
             <Area
@@ -66,15 +60,7 @@ export function SalesTrendChart({ data }: Props) {
               strokeWidth={2}
               fill="url(#sotuvGrad)"
             />
-            <Line
-              type="monotone"
-              dataKey="oldingiSotuv"
-              stroke="#9ca3af"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-              dot={false}
-            />
-          </ComposedChart>
+          </AreaChart>
         </ResponsiveContainer>
       </div>
     </div>

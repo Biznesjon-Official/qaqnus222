@@ -150,7 +150,6 @@ function SotuvlarPageInner() {
           sotuvSoni={analitika.sotuvSoni}
           ortachaChek={analitika.ortachaChek}
           jamiFoyda={analitika.jamiFoyda}
-          oldingiDavr={analitika.oldingiDavr}
           kunlikGrafik={analitika.kunlikGrafik}
         />
       ) : (

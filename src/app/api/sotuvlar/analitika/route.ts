@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { hisoblaOrtachaChek, oldingiDavrOlish, soatTaqsimoti } from '@/lib/analitika'
+import { hisoblaOrtachaChek, soatTaqsimoti } from '@/lib/analitika'
 import type { TolovUsuli } from '@prisma/client'
 
 const TOP_N = 20
@@ -28,8 +28,6 @@ export async function GET(req: NextRequest) {
     const gachaSana = gacha ? new Date(gacha) : bugun
     if (gacha) gachaSana.setHours(23, 59, 59, 999)
 
-    const { dan: oldDan, gacha: oldGacha } = oldingiDavrOlish(danSana, gachaSana)
-
     const joriySotuvWhere = {
       holati: 'YAKUNLANGAN' as const,
       sana: { gte: danSana, lte: gachaSana },
@@ -37,24 +35,14 @@ export async function GET(req: NextRequest) {
       ...(kassirId ? { kassirId } : {}),
       ...(mijozId ? { mijozId } : {}),
     }
-    const oldingiSotuvWhere = {
-      ...joriySotuvWhere,
-      sana: { gte: oldDan, lte: oldGacha },
-    }
 
-    const [joriySotuvlar, oldingiSotuvlar, qaytarishSum, topTarkiblar] = await Promise.all([
+    const [joriySotuvlar, qaytarishSum, topTarkiblar] = await Promise.all([
       prisma.sotuv.findMany({
         where: joriySotuvWhere,
         include: {
           tarkiblar: { include: { tovar: { select: { nomi: true, birlik: true, kelishNarxi: true } } } },
           kassir: { select: { id: true, ism: true } },
           mijoz: { select: { id: true, ism: true, telefon: true } },
-        },
-      }),
-      prisma.sotuv.findMany({
-        where: oldingiSotuvWhere,
-        include: {
-          tarkiblar: { include: { tovar: { select: { kelishNarxi: true } } } },
         },
       }),
       prisma.qaytarish.aggregate({
@@ -98,16 +86,12 @@ export async function GET(req: NextRequest) {
     const sotuvSoni = joriySotuvlar.length
     const ortachaChek = hisoblaOrtachaChek(jamiSotuv, sotuvSoni)
 
-    const oldingiJami = oldingiSotuvlar.reduce((s, v) => s + Number(v.yakuniySumma), 0)
-    const oldingiFoyda = hisoblaFoyda(oldingiSotuvlar)
-    const oldingiSoni = oldingiSotuvlar.length
-
     // Kunlik grafik
-    const kunlikMap = new Map<string, { sotuv: number; sotuvSoni: number; oldingiSotuv: number }>()
+    const kunlikMap = new Map<string, { sotuv: number; sotuvSoni: number }>()
     const kunFormatlash = (d: Date) => d.toISOString().slice(0, 10)
 
     for (let d = new Date(danSana); d <= gachaSana; d.setDate(d.getDate() + 1)) {
-      kunlikMap.set(kunFormatlash(d), { sotuv: 0, sotuvSoni: 0, oldingiSotuv: 0 })
+      kunlikMap.set(kunFormatlash(d), { sotuv: 0, sotuvSoni: 0 })
     }
     for (const s of joriySotuvlar) {
       const k = kunFormatlash(s.sana)
@@ -116,14 +100,6 @@ export async function GET(req: NextRequest) {
         bor.sotuv += Number(s.yakuniySumma)
         bor.sotuvSoni += 1
       }
-    }
-    for (const s of oldingiSotuvlar) {
-      const offset = Math.floor((s.sana.getTime() - oldDan.getTime()) / (1000 * 60 * 60 * 24))
-      const joriyKun = new Date(danSana)
-      joriyKun.setDate(joriyKun.getDate() + offset)
-      const k = kunFormatlash(joriyKun)
-      const bor = kunlikMap.get(k)
-      if (bor) bor.oldingiSotuv += Number(s.yakuniySumma)
     }
     const kunlikGrafik = Array.from(kunlikMap.entries()).map(([sana, d]) => ({ sana, ...d }))
 
@@ -240,12 +216,6 @@ export async function GET(req: NextRequest) {
       ortachaChek,
       jamiFoyda,
       jamiChegirma,
-      oldingiDavr: {
-        jamiSotuv: oldingiJami,
-        sotuvSoni: oldingiSoni,
-        ortachaChek: hisoblaOrtachaChek(oldingiJami, oldingiSoni),
-        jamiFoyda: oldingiFoyda,
-      },
       kunlikGrafik,
       kassirlar,
       mijozlar,
