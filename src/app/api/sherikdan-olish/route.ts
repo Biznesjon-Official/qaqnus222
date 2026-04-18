@@ -72,23 +72,23 @@ export async function POST(req: NextRequest) {
     const data = await req.json()
     const { turi } = data
 
-    // Qarz qo'shish (ta'minotchidan, tovarsiz)
+    // Qarz qo'shish (sherikdan, tovarsiz)
     if (turi === 'QARZ') {
-      const { taminotchiId, summa, izoh } = data
-      if (!taminotchiId) return NextResponse.json({ xato: "Ta'minotchi tanlanmagan" }, { status: 400 })
+      const { sherikId, summa, izoh } = data
+      if (!sherikId) return NextResponse.json({ xato: 'Sherik tanlanmagan' }, { status: 400 })
       if (!summa || parseFloat(summa) <= 0) return NextResponse.json({ xato: 'Summani kiriting' }, { status: 400 })
       const s = parseFloat(summa)
 
       const olish = await prisma.sherikdanOlish.create({
         data: {
-          taminotchi: { connect: { id: taminotchiId } },
+          sherik: { connect: { id: sherikId } },
           miqdor: 0,
           narx: 0,
           jami: s,
-          izoh: izoh || null,
+          izoh: izoh || 'Qarz',
         },
         include: {
-          taminotchi: { select: { nomi: true } },
+          sherik: { select: { ism: true } },
         },
       })
       return NextResponse.json(olish, { status: 201 })

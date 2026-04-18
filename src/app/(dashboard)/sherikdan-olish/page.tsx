@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { formatSum, formatSanaVaVaqt } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package, Plus, Receipt } from 'lucide-react'
+import { Handshake, ChevronDown, ChevronRight, Edit2, X, Loader2, Check, DollarSign, Package, Plus, Receipt, Trash2, PlusCircle } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 
@@ -72,29 +72,32 @@ export default function SherikdanOlishPage() {
   const [qoshishYuklanmoqda, setQoshishYuklanmoqda] = useState(false)
   const [tovarlar, setTovarlar] = useState<{ id: string; nomi: string; birlik: string; kelishNarxi: number }[]>([])
 
-  // Qarz qo'shish modal (ta'minotchi)
+  // Qarz qo'shish modal (sherikdan)
   const [qarzModal, setQarzModal] = useState(false)
-  const [qarzForm, setQarzForm] = useState({ taminotchiId: '', summa: '', izoh: '' })
+  const [qarzForm, setQarzForm] = useState({ sherikId: '', summa: '', izoh: '' })
   const [qarzYuklanmoqda, setQarzYuklanmoqda] = useState(false)
-  const [taminotchilar, setTaminotchilar] = useState<{ id: string; nomi: string; telefon: string | null; manzil?: string | null }[]>([])
+
+  // Yangi sherik qo'shish modal (boshqa modallar ichidan)
+  const [yangiSherikModal, setYangiSherikModal] = useState(false)
+  const [yangiSherikForm, setYangiSherikForm] = useState({ ism: '', telefon: '', manzil: '', tavsif: '' })
+  const [yangiSherikYuklanmoqda, setYangiSherikYuklanmoqda] = useState(false)
+  // Qaysi modaldan chaqirilgani: yangi sherik saqlanganda shu formaga tanlanadi
+  const [sherikTanlashTarget, setSherikTanlashTarget] = useState<'qoshish' | 'qarz' | null>(null)
 
   async function yuklash() {
     setYuklanmoqda(true)
     try {
-      const [res, shRes, tvRes, tmRes] = await Promise.all([
+      const [res, shRes, tvRes] = await Promise.all([
         fetch('/api/sherikdan-olish'),
         fetch('/api/sheriklar'),
         fetch('/api/tovarlar?limit=500'),
-        fetch('/api/taminotchilar'),
       ])
       const d = await res.json()
       const sh = await shRes.json()
       const tv = await tvRes.json()
-      const tm = await tmRes.json()
       setData(Array.isArray(d) ? d : [])
-      setSheriklar(Array.isArray(sh) ? sh.map((s: any) => ({ id: s.id, ism: s.ism, telefon: s.telefon })) : [])
-      setTovarlar(Array.isArray(tv.tovarlar) ? tv.tovarlar.map((t: any) => ({ id: t.id, nomi: t.nomi, birlik: t.birlik, kelishNarxi: Number(t.kelishNarxi) })) : [])
-      setTaminotchilar(Array.isArray(tm) ? tm.map((t: any) => ({ id: t.id, nomi: t.nomi, telefon: t.telefon })) : [])
+      setSheriklar(Array.isArray(sh) ? sh.map((s: { id: string; ism: string; telefon: string | null }) => ({ id: s.id, ism: s.ism, telefon: s.telefon })) : [])
+      setTovarlar(Array.isArray(tv.tovarlar) ? tv.tovarlar.map((t: { id: string; nomi: string; birlik: string; kelishNarxi: number | string }) => ({ id: t.id, nomi: t.nomi, birlik: t.birlik, kelishNarxi: Number(t.kelishNarxi) })) : [])
     } catch { toast.error('Ma\'lumot yuklanmadi') }
     setYuklanmoqda(false)
   }
@@ -189,20 +192,71 @@ export default function SherikdanOlishPage() {
     }
   }
 
+  async function olishOchirish(olish: SherikOlish) {
+    const kim = olish.sherik?.ism || olish.taminotchi?.nomi || 'Noma\'lum'
+    const tovarMi = olish.tovar?.nomi ? ` (${olish.tovar.nomi})` : ''
+    if (!confirm(`"${kim}"${tovarMi} yozuvini o'chirmoqchimisiz?\n\nBarcha to'lovlar bilan birga tozalanadi. Bu amalni qaytarib bo'lmaydi.`)) return
+    try {
+      const res = await fetch(`/api/sherikdan-olish/${olish.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.xato || 'O\'chirib bo\'lmadi')
+        return
+      }
+      toast.success('O\'chirildi')
+      yuklash()
+    } catch { toast.error('Tarmoq xatosi') }
+  }
+
+  async function yangiSherikSaqlash() {
+    if (!yangiSherikForm.ism.trim()) { toast.error('Sherik ismini kiriting'); return }
+    setYangiSherikYuklanmoqda(true)
+    try {
+      const res = await fetch('/api/sheriklar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ism: yangiSherikForm.ism.trim(),
+          telefon: yangiSherikForm.telefon.trim() || null,
+          manzil: yangiSherikForm.manzil.trim() || null,
+          tavsif: yangiSherikForm.tavsif.trim() || null,
+        }),
+      })
+      if (!res.ok) { toast.error('Sherik qo\'shilmadi'); return }
+      const yangi = await res.json()
+      // Ro'yxatni yangilash
+      const shRes = await fetch('/api/sheriklar')
+      const sh = await shRes.json()
+      setSheriklar(Array.isArray(sh) ? sh.map((s: { id: string; ism: string; telefon: string | null }) => ({ id: s.id, ism: s.ism, telefon: s.telefon })) : [])
+      // Qaysi form'ga qaytish
+      if (sherikTanlashTarget === 'qarz') {
+        setQarzForm(f => ({ ...f, sherikId: yangi.id }))
+      } else if (sherikTanlashTarget === 'qoshish') {
+        setQoshishForm(f => ({ ...f, sherikId: yangi.id }))
+      }
+      setYangiSherikForm({ ism: '', telefon: '', manzil: '', tavsif: '' })
+      setYangiSherikModal(false)
+      setSherikTanlashTarget(null)
+      toast.success('Sherik qo\'shildi va tanlandi!')
+    } finally {
+      setYangiSherikYuklanmoqda(false)
+    }
+  }
+
   async function qarzQoshish() {
-    if (!qarzForm.taminotchiId) { toast.error("Ta'minotchi tanlang"); return }
+    if (!qarzForm.sherikId) { toast.error('Sherik tanlang'); return }
     if (!qarzForm.summa || parseFloat(qarzForm.summa) <= 0) { toast.error('Summani kiriting'); return }
     setQarzYuklanmoqda(true)
     const res = await fetch('/api/sherikdan-olish', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ turi: 'QARZ', taminotchiId: qarzForm.taminotchiId, summa: qarzForm.summa, izoh: qarzForm.izoh || null }),
+      body: JSON.stringify({ turi: 'QARZ', sherikId: qarzForm.sherikId, summa: qarzForm.summa, izoh: qarzForm.izoh || null }),
     })
     setQarzYuklanmoqda(false)
     if (res.ok) {
       toast.success('Qarz qo\'shildi')
       setQarzModal(false)
-      setQarzForm({ taminotchiId: '', summa: '', izoh: '' })
+      setQarzForm({ sherikId: '', summa: '', izoh: '' })
       yuklash()
     } else {
       const err = await res.json()
@@ -322,13 +376,22 @@ export default function SherikdanOlishPage() {
                           <td className="px-4 py-2 text-gray-500 dark:text-gray-500 text-xs">{olish.sotuv?.chekRaqami || <span className="text-amber-500">Qo&apos;lda</span>}</td>
                           <td className="px-4 py-2 text-gray-400 dark:text-gray-600 text-xs">{formatSanaVaVaqt(olish.yaratilgan)}</td>
                           <td className="px-4 py-2">
-                            <button
-                              onClick={() => tahririOch(olish)}
-                              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition"
-                              title="Tahrirlash"
-                            >
-                              <Edit2 size={13} />
-                            </button>
+                            <div className="flex gap-1 justify-end">
+                              <button
+                                onClick={() => tahririOch(olish)}
+                                className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950 rounded transition"
+                                title="Tahrirlash"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                onClick={() => olishOchirish(olish)}
+                                className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition"
+                                title="O'chirish"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -475,19 +538,27 @@ export default function SherikdanOlishPage() {
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Ta&apos;minotchi *</label>
-                <Combobox
-                  options={taminotchilar.map(t => {
-                    const parts = [t.nomi]
-                    if (t.manzil) parts.push(t.manzil)
-                    else if (t.telefon) parts.push(t.telefon)
-                    return { value: t.id, label: parts.join(' — ') }
-                  })}
-                  value={qarzForm.taminotchiId}
-                  onChange={v => setQarzForm(f => ({ ...f, taminotchiId: v }))}
-                  placeholder="Ta'minotchi tanlang"
-                  searchPlaceholder="Ta'minotchi qidirish..."
-                />
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Sherik *</label>
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Combobox
+                      options={sheriklar.map(s => ({ value: s.id, label: s.telefon ? `${s.ism} — ${s.telefon}` : s.ism }))}
+                      value={qarzForm.sherikId}
+                      onChange={v => setQarzForm(f => ({ ...f, sherikId: v }))}
+                      placeholder="Sherik tanlang"
+                      searchPlaceholder="Sherik qidirish..."
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setYangiSherikForm({ ism: '', telefon: '', manzil: '', tavsif: '' }); setSherikTanlashTarget('qarz'); setYangiSherikModal(true) }}
+                    className="shrink-0 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-medium flex items-center gap-1 transition"
+                    title="Yangi sherik qo'shish"
+                  >
+                    <Plus size={16} />
+                    <span className="hidden sm:inline">Yangi</span>
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Summa *</label>
@@ -507,7 +578,7 @@ export default function SherikdanOlishPage() {
                 </button>
                 <button
                   onClick={qarzQoshish}
-                  disabled={qarzYuklanmoqda || !qarzForm.taminotchiId || !qarzForm.summa}
+                  disabled={qarzYuklanmoqda || !qarzForm.sherikId || !qarzForm.summa}
                   className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-1"
                 >
                   {qarzYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
@@ -535,13 +606,26 @@ export default function SherikdanOlishPage() {
             <div className="p-5 space-y-3">
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Sherik *</label>
-                <Combobox
-                  options={sheriklar.map(s => ({ value: s.id, label: `${s.ism}${s.telefon ? ' — ' + s.telefon : ''}` }))}
-                  value={qoshishForm.sherikId}
-                  onChange={v => setQoshishForm(f => ({ ...f, sherikId: v }))}
-                  placeholder="Sherik tanlang"
-                  searchPlaceholder="Sherik qidirish..."
-                />
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Combobox
+                      options={sheriklar.map(s => ({ value: s.id, label: `${s.ism}${s.telefon ? ' — ' + s.telefon : ''}` }))}
+                      value={qoshishForm.sherikId}
+                      onChange={v => setQoshishForm(f => ({ ...f, sherikId: v }))}
+                      placeholder="Sherik tanlang"
+                      searchPlaceholder="Sherik qidirish..."
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setYangiSherikForm({ ism: '', telefon: '', manzil: '', tavsif: '' }); setSherikTanlashTarget('qoshish'); setYangiSherikModal(true) }}
+                    className="shrink-0 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-medium flex items-center gap-1 transition"
+                    title="Yangi sherik qo'shish"
+                  >
+                    <Plus size={16} />
+                    <span className="hidden sm:inline">Yangi</span>
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tovar *</label>
@@ -586,6 +670,79 @@ export default function SherikdanOlishPage() {
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-1"
                 >
                   {qoshishYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Qo&apos;shish
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Yangi sherik qo'shish modal (boshqa modallar ichidan chaqiriladi) */}
+      {yangiSherikModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:border dark:border-neutral-800 w-full max-w-sm">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold flex items-center gap-2">
+                <Handshake size={16} className="text-amber-600" />
+                Yangi sherik qo&apos;shish
+              </h3>
+              <button onClick={() => setYangiSherikModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Ism *</label>
+                <input
+                  type="text"
+                  value={yangiSherikForm.ism}
+                  onChange={e => setYangiSherikForm(f => ({ ...f, ism: e.target.value }))}
+                  placeholder="Masalan: Bobur aka"
+                  autoFocus
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Telefon</label>
+                <input
+                  type="text"
+                  value={yangiSherikForm.telefon}
+                  onChange={e => setYangiSherikForm(f => ({ ...f, telefon: e.target.value }))}
+                  placeholder="+998 90 123 45 67"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Manzil</label>
+                <input
+                  type="text"
+                  value={yangiSherikForm.manzil}
+                  onChange={e => setYangiSherikForm(f => ({ ...f, manzil: e.target.value }))}
+                  placeholder="Masalan: Samarqand"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Tavsif</label>
+                <input
+                  type="text"
+                  value={yangiSherikForm.tavsif}
+                  onChange={e => setYangiSherikForm(f => ({ ...f, tavsif: e.target.value }))}
+                  placeholder="Qisqacha izoh..."
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setYangiSherikModal(false)} className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium text-sm">
+                  Bekor
+                </button>
+                <button
+                  onClick={yangiSherikSaqlash}
+                  disabled={yangiSherikYuklanmoqda || !yangiSherikForm.ism.trim()}
+                  className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl font-medium transition text-sm flex items-center justify-center gap-1"
+                >
+                  {yangiSherikYuklanmoqda ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                   Qo&apos;shish
                 </button>
               </div>
