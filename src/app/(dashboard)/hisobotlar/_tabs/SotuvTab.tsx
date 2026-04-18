@@ -33,6 +33,28 @@ interface SotuvResponse {
   sotuvSoni: number
 }
 
+interface TopProduct {
+  nomi: string
+  revenue: number
+}
+
+interface KategoriyaItem {
+  kategoriyaId: string
+  nomi: string
+  revenue: number
+  qty: number
+  foyda: number
+  marginPercent: number
+  productCount: number
+  topProducts: TopProduct[]
+  changePercent: number | null
+}
+
+interface KategoriyaData {
+  kategoriyalar: KategoriyaItem[]
+  jamiRevenue: number
+}
+
 interface Props {
   filtrlar: { tur: ReportTur; dan: string; gacha: string; [key: string]: unknown }
   isKassir: boolean
@@ -40,6 +62,10 @@ interface Props {
 
 export function SotuvTab({ filtrlar, isKassir }: Props) {
   const { data, yuklanmoqda } = useReportData<SotuvResponse>('/api/hisobotlar/soatlar', filtrlar)
+  const kategoriya = useReportData<KategoriyaData>(
+    '/api/hisobotlar/sotuv/kategoriya',
+    filtrlar,
+  )
 
   if (yuklanmoqda) {
     return (
@@ -203,6 +229,149 @@ export function SotuvTab({ filtrlar, isKassir }: Props) {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Kategoriya bo'yicha sotuv — foyda/margin KASSIR ko'ra olmaydi */}
+      {!isKassir && (
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-5">
+          <div className="mb-4">
+            <h2 className="text-gray-900 dark:text-gray-100 font-semibold">
+              Kategoriya bo&apos;yicha sotuv
+            </h2>
+            <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">
+              Revenue, foyda va margin kategoriya kesimida
+            </p>
+          </div>
+
+          {kategoriya.yuklanmoqda ? (
+            <div className="flex items-center justify-center h-24 gap-2 text-gray-400 dark:text-gray-600">
+              <Loader2 className="animate-spin w-4 h-4 text-red-500" />
+              <span className="text-sm">Yuklanmoqda...</span>
+            </div>
+          ) : !kategoriya.data || kategoriya.data.kategoriyalar.length === 0 ? (
+            <p className="text-gray-400 dark:text-gray-600 text-center py-8">
+              Ma&apos;lumot yo&apos;q
+            </p>
+          ) : (
+            <>
+              {/* Horizontal bar chart */}
+              <div className="h-48 mb-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={kategoriya.data.kategoriyalar.slice(0, 8)}
+                    margin={{ top: 5, right: 40, bottom: 5, left: 10 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" horizontal={false} />
+                    <XAxis
+                      type="number"
+                      stroke="#6b7280"
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(v: number) => (v / 1000000).toFixed(1) + 'M'}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="nomi"
+                      stroke="#6b7280"
+                      tick={{ fontSize: 11 }}
+                      width={90}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#1f2937',
+                        border: '1px solid #374151',
+                        borderRadius: '12px',
+                        color: '#f9fafb',
+                      }}
+                      formatter={(v: number | undefined) => [formatSum(v ?? 0), 'Revenue']}
+                    />
+                    <Bar dataKey="revenue" fill="#7c3aed" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Jadval */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 dark:border-neutral-800">
+                      <th className="text-left pb-3 text-gray-500 dark:text-gray-500 font-medium">
+                        Kategoriya
+                      </th>
+                      <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
+                        Revenue
+                      </th>
+                      <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
+                        Qty
+                      </th>
+                      <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
+                        Foyda
+                      </th>
+                      <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
+                        Margin
+                      </th>
+                      <th className="text-right pb-3 text-gray-500 dark:text-gray-500 font-medium">
+                        O&apos;zgarish
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 dark:divide-neutral-800">
+                    {kategoriya.data.kategoriyalar.map((k) => (
+                      <tr key={k.kategoriyaId}>
+                        <td className="py-2.5 text-gray-700 dark:text-gray-300 max-w-[140px] truncate">
+                          <div>{k.nomi}</div>
+                          {k.topProducts.length > 0 && (
+                            <div className="text-xs text-gray-400 dark:text-gray-600 truncate">
+                              {k.topProducts[0].nomi}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-right font-medium text-gray-900 dark:text-gray-100">
+                          {formatSum(k.revenue)}
+                        </td>
+                        <td className="py-2.5 text-right text-gray-600 dark:text-gray-400">
+                          {k.qty}
+                        </td>
+                        <td className="py-2.5 text-right text-gray-700 dark:text-gray-300">
+                          {formatSum(k.foyda)}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <span
+                            className={`text-xs font-semibold ${
+                              k.marginPercent >= 20
+                                ? 'text-green-600 dark:text-green-400'
+                                : k.marginPercent >= 10
+                                  ? 'text-amber-600 dark:text-amber-400'
+                                  : 'text-red-600 dark:text-red-400'
+                            }`}
+                          >
+                            {k.marginPercent.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="py-2.5 text-right">
+                          {k.changePercent === null ? (
+                            <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
+                          ) : (
+                            <span
+                              className={`text-xs font-semibold ${
+                                k.changePercent >= 0
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-red-600 dark:text-red-400'
+                              }`}
+                            >
+                              {k.changePercent >= 0 ? '+' : ''}
+                              {k.changePercent.toFixed(1)}%
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
