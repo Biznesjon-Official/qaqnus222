@@ -33,6 +33,9 @@ export async function GET(req: NextRequest) {
     } else if (tur === 'oylik') {
       danSana = new Date(bugun)
       danSana.setDate(1)
+    } else if (tur === 'yillik') {
+      danSana = new Date(bugun)
+      danSana.setMonth(0, 1) // 1-yanvar
     }
 
     const sotuvFilter = {
@@ -111,11 +114,35 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    // Haftalik grafik uchun ma'lumotlar
-    const grafikData = []
-    if (tur === 'kunlik' || tur === 'haftalik') {
-      for (let i = 6; i >= 0; i--) {
-        const kun = new Date()
+    // Sotuv dinamikasi grafigi — davr bo'yicha avtomatik
+    // Yillikda oy bo'yicha, qolganlarda kun bo'yicha guruhlash
+    const grafikData: Array<{ sana: string; sotuv: number; sotuvSoni: number }> = []
+    if (tur === 'yillik') {
+      // 12 oy
+      for (let m = 0; m < 12; m++) {
+        const oyBosh = new Date(danSana)
+        oyBosh.setMonth(m, 1)
+        oyBosh.setHours(0, 0, 0, 0)
+        const oyOxir = new Date(oyBosh)
+        oyOxir.setMonth(m + 1, 1)
+        if (oyBosh > gachaSana) break
+        const oySotuv = sotuvlar.filter((s) => {
+          const sana = new Date(s.sana)
+          return sana >= oyBosh && sana < oyOxir
+        })
+        grafikData.push({
+          sana: oyBosh.toLocaleDateString('uz-UZ', { month: 'short' }),
+          sotuv: oySotuv.reduce((s, v) => s + Number(v.yakuniySumma), 0),
+          sotuvSoni: oySotuv.length,
+        })
+      }
+    } else {
+      // Kunlik (kunlik/haftalik/oylik/maxsus)
+      const kunlar = Math.max(1, Math.ceil((gachaSana.getTime() - danSana.getTime()) / (1000 * 60 * 60 * 24)))
+      const maxKunlar = 62 // ko'pi bilan 62 kun ko'rsatiladi (oylik uchun)
+      const showKunlar = Math.min(kunlar, maxKunlar)
+      for (let i = showKunlar - 1; i >= 0; i--) {
+        const kun = new Date(gachaSana)
         kun.setDate(kun.getDate() - i)
         kun.setHours(0, 0, 0, 0)
         const ertasiKun = new Date(kun)
@@ -123,7 +150,7 @@ export async function GET(req: NextRequest) {
 
         const kunSotuv = sotuvlar.filter((s) => {
           const sana = new Date(s.sana)
-          return sana >= kun && sana < ertasiKun && s.tolovUsuli !== 'SHERIK'
+          return sana >= kun && sana < ertasiKun
         })
 
         grafikData.push({
