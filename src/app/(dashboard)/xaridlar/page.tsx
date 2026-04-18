@@ -243,6 +243,24 @@ export default function XaridlarPage() {
     }
   }
 
+  async function xaridOchirish(x: Xarid) {
+    const sana = formatSana(x.sana)
+    const tam = x.taminotchi?.nomi || 'Noma\'lum'
+    if (!confirm(`"${tam}" — ${sana} xaridini o'chirmoqchimisiz?\n\nBarcha tarkib, to'lov va qarz tarixi tozalanadi. Bu amalni qaytarib bo'lmaydi.`)) return
+    try {
+      const res = await fetch(`/api/xaridlar/${x.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.xato || 'O\'chirib bo\'lmadi')
+        return
+      }
+      toast.success('Xarid o\'chirildi')
+      yuklash()
+    } catch {
+      toast.error('Tarmoq xatosi')
+    }
+  }
+
   async function qarzQoshish(e: React.FormEvent) {
     e.preventDefault()
     if (!qarzModal) return
@@ -392,6 +410,13 @@ export default function XaridlarPage() {
                             <PlusCircle size={15} />
                           </button>
                           <button
+                            onClick={() => xaridOchirish(x)}
+                            className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                            title="O'chirish"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                          <button
                             onClick={() => setKengaytirilgan(kengaytirilgan === x.id ? null : x.id)}
                             className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition"
                           >
@@ -500,15 +525,31 @@ export default function XaridlarPage() {
                 )}
               </div>
               {x.izoh && <p className="text-gray-400 dark:text-gray-600 text-xs mt-2 italic">{x.izoh}</p>}
-              {x.qoldiqQarz > 0 && (
+              <div className="mt-3 flex gap-2">
+                {x.qoldiqQarz > 0 && (
+                  <button
+                    onClick={() => openTolovModal(x)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-xl text-xs font-medium hover:bg-green-100 dark:hover:bg-green-950/50 transition"
+                  >
+                    <Banknote size={14} />
+                    Qarz to&apos;lash
+                  </button>
+                )}
                 <button
-                  onClick={() => openTolovModal(x)}
-                  className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-green-50 dark:bg-green-950/30 text-green-600 rounded-xl text-xs font-medium hover:bg-green-100 dark:hover:bg-green-950/50 transition"
+                  onClick={() => { setQarzModal(x); setQarzForm({ summa: '', izoh: '' }) }}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-950/30 text-red-600 rounded-xl text-xs font-medium hover:bg-red-100 dark:hover:bg-red-950/50 transition"
+                  title="Qarz qo'shish"
                 >
-                  <Banknote size={14} />
-                  Qarz to&apos;lash
+                  <PlusCircle size={14} />
                 </button>
-              )}
+                <button
+                  onClick={() => xaridOchirish(x)}
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-50 dark:bg-neutral-800 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl text-xs font-medium transition"
+                  title="O'chirish"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
