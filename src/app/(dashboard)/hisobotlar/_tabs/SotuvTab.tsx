@@ -1,7 +1,7 @@
 'use client'
 
 import { formatSum } from '@/lib/utils'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RotateCcw } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -12,6 +12,8 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { useReportData } from '../_hooks/useReportData'
+import { KPICard } from '../_components/KPICard'
+import { ReportSection } from '../_components/ReportSection'
 import type { ReportTur } from '@/lib/hisobotlar'
 
 interface SoatData {
@@ -55,6 +57,23 @@ interface KategoriyaData {
   jamiRevenue: number
 }
 
+interface ReturnsData {
+  umumiy: {
+    jamiQaytarish: number
+    soni: number
+    returnRate: number
+    avgReturnValue: number
+  }
+  bySabab: Array<{ sabab: string; count: number; summa: number }>
+  topReturnedProducts: Array<{
+    tovarId: string
+    nomi: string
+    qtyReturned: number
+    summa: number
+  }>
+  trend: Array<{ sana: string; count: number; summa: number }>
+}
+
 interface Props {
   filtrlar: { tur: ReportTur; dan: string; gacha: string; [key: string]: unknown }
   isKassir: boolean
@@ -64,6 +83,10 @@ export function SotuvTab({ filtrlar, isKassir }: Props) {
   const { data, yuklanmoqda } = useReportData<SotuvResponse>('/api/hisobotlar/soatlar', filtrlar)
   const kategoriya = useReportData<KategoriyaData>(
     '/api/hisobotlar/sotuv/kategoriya',
+    filtrlar,
+  )
+  const { data: returns } = useReportData<ReturnsData>(
+    '/api/hisobotlar/sotuv/returns',
     filtrlar,
   )
 
@@ -373,6 +396,100 @@ export function SotuvTab({ filtrlar, isKassir }: Props) {
             </>
           )}
         </div>
+      )}
+
+      {/* Qaytarishlar tahlili — KASSIR ko'ra olmaydi */}
+      {!isKassir && returns && returns.umumiy.soni > 0 && (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard
+              icon={RotateCcw}
+              sarlavha="Jami qaytarish"
+              qiymat={formatSum(returns.umumiy.jamiQaytarish)}
+              iconBg="bg-red-500"
+            />
+            <KPICard
+              icon={RotateCcw}
+              sarlavha="Qaytarish soni"
+              qiymat={`${returns.umumiy.soni} ta`}
+              iconBg="bg-orange-500"
+            />
+            <KPICard
+              icon={RotateCcw}
+              sarlavha="Return rate"
+              qiymat={`${returns.umumiy.returnRate}%`}
+              iconBg="bg-amber-500"
+            />
+            <KPICard
+              icon={RotateCcw}
+              sarlavha="O'rtacha"
+              qiymat={formatSum(returns.umumiy.avgReturnValue)}
+              iconBg="bg-purple-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ReportSection sarlavha="Qaytarish sababi bo'yicha">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-gray-500 border-b border-gray-200 dark:border-neutral-800">
+                    <tr>
+                      <th className="text-left py-2 px-2">Sabab</th>
+                      <th className="text-right py-2 px-2">Soni</th>
+                      <th className="text-right py-2 px-2">Summa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {returns.bySabab.map((s, i) => (
+                      <tr
+                        key={i}
+                        className="border-b border-gray-100 dark:border-neutral-800/50"
+                      >
+                        <td className="py-2 px-2 text-gray-700 dark:text-gray-300">
+                          {s.sabab}
+                        </td>
+                        <td className="text-right py-2 px-2">{s.count}</td>
+                        <td className="text-right py-2 px-2 text-red-600">
+                          {formatSum(s.summa)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ReportSection>
+
+            <ReportSection sarlavha="Eng ko'p qaytarilgan tovarlar">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-gray-500 border-b border-gray-200 dark:border-neutral-800">
+                    <tr>
+                      <th className="text-left py-2 px-2">Tovar</th>
+                      <th className="text-right py-2 px-2">Miqdor</th>
+                      <th className="text-right py-2 px-2">Summa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {returns.topReturnedProducts.map((t) => (
+                      <tr
+                        key={t.tovarId}
+                        className="border-b border-gray-100 dark:border-neutral-800/50"
+                      >
+                        <td className="py-2 px-2 text-gray-700 dark:text-gray-300">
+                          {t.nomi}
+                        </td>
+                        <td className="text-right py-2 px-2">{t.qtyReturned}</td>
+                        <td className="text-right py-2 px-2 text-red-600">
+                          {formatSum(t.summa)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </ReportSection>
+          </div>
+        </>
       )}
     </div>
   )

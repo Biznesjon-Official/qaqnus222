@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { Suspense, lazy } from 'react'
+import { Download } from 'lucide-react'
 import { useReportFilters } from './_hooks/useReportFilters'
 import { ReportFilter } from './_components/ReportFilter'
 import { SkeletonKPI, SkeletonChart } from './_components/Skeletons'
@@ -66,8 +67,30 @@ function HisobotlarInner({ isKassir }: { isKassir: boolean }) {
   const ActiveTab =
     TAB_COMPONENTS[filtrlar.tab as keyof typeof TAB_COMPONENTS] ?? UmumiyTab
 
+  function downloadExcel() {
+    const qs = new URLSearchParams({
+      tur: filtrlar.tur,
+      ...(filtrlar.dan ? { dan: filtrlar.dan } : {}),
+      ...(filtrlar.gacha ? { gacha: filtrlar.gacha } : {}),
+    })
+    window.location.href = `/api/hisobotlar/export?${qs.toString()}`
+  }
+
   return (
     <>
+      {/* Header + Excel button */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Hisobotlar</h1>
+        {!isKassir && (
+          <button
+            onClick={downloadExcel}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700"
+          >
+            <Download size={14} /> Excel
+          </button>
+        )}
+      </div>
+
       {/* Filter */}
       <ReportFilter
         tur={filtrlar.tur}
