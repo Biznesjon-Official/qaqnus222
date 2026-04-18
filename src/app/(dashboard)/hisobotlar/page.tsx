@@ -9,6 +9,9 @@ import { SkeletonKPI, SkeletonChart } from './_components/Skeletons'
 const UmumiyTab = lazy(() =>
   import('./_tabs/UmumiyTab').then((m) => ({ default: m.UmumiyTab })),
 )
+const MoliyaTab = lazy(() =>
+  import('./_tabs/MoliyaTab').then((m) => ({ default: m.MoliyaTab })),
+)
 const SotuvTab = lazy(() =>
   import('./_tabs/SotuvTab').then((m) => ({ default: m.SotuvTab })),
 )
@@ -30,6 +33,7 @@ const KassirlarTab = lazy(() =>
 
 const TAB_LIST: Array<{ key: string; label: string; adminOnly?: boolean }> = [
   { key: 'umumiy', label: 'Umumiy' },
+  { key: 'moliya', label: 'Moliya', adminOnly: true },
   { key: 'sotuv', label: 'Sotuv' },
   { key: 'tovarlar', label: 'Tovarlar', adminOnly: true },
   { key: 'ombor', label: 'Ombor', adminOnly: true },
@@ -40,6 +44,7 @@ const TAB_LIST: Array<{ key: string; label: string; adminOnly?: boolean }> = [
 
 const TAB_COMPONENTS = {
   umumiy: UmumiyTab,
+  moliya: MoliyaTab,
   sotuv: SotuvTab,
   tovarlar: TovarlarTab,
   ombor: OmborTab,
