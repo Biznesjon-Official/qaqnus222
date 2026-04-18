@@ -88,10 +88,10 @@ export default function MijozlarPage() {
       {view === 'table' && (
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full table-auto">
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Ism</th>
+                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 w-full">Ism</th>
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">Kod</th>
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden sm:table-cell whitespace-nowrap">Telefon</th>
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Manzil</th>
@@ -107,13 +107,13 @@ export default function MijozlarPage() {
                   <tr><td colSpan={7} className="text-center text-gray-400 dark:text-gray-600 py-12">Mijozlar topilmadi</td></tr>
                 ) : mijozlar.map((m, idx) => (
                   <tr key={m.id} className={`border-b border-gray-100 dark:border-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-800 transition ${idx % 2 === 1 ? 'bg-gray-50/40 dark:bg-neutral-800/40' : ''}`}>
-                    {/* Ism with avatar */}
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                    {/* Ism with avatar — qolgan joyni o'zlashtiradi, wrap mumkin */}
+                    <td className="px-4 py-3 w-full">
+                      <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 bg-red-100 rounded-lg flex items-center justify-center text-red-600 font-bold text-sm shrink-0">
                           {m.ism[0]?.toUpperCase()}
                         </div>
-                        <span className="text-gray-900 dark:text-gray-100 font-medium text-sm">{m.ism}</span>
+                        <span className="text-gray-900 dark:text-gray-100 font-medium text-sm truncate">{m.ism}</span>
                       </div>
                     </td>
                     {/* Maxsus kod */}
