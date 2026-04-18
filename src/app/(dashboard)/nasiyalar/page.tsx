@@ -335,7 +335,6 @@ export default function NasiyalarPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3">Mijoz</th>
-                  <th style={{ width: '130px' }} className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Chek</th>
                   <th style={{ width: '110px' }} className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Holati</th>
                   <th style={{ width: '130px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">Jami qarz</th>
                   <th style={{ width: '130px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">To&apos;langan</th>
@@ -347,9 +346,9 @@ export default function NasiyalarPage() {
               </thead>
               <tbody>
                 {yuklanmoqda ? (
-                  <tr><td colSpan={10} className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</td></tr>
+                  <tr><td colSpan={8} className="text-center text-gray-400 dark:text-gray-600 py-12">Yuklanmoqda...</td></tr>
                 ) : nasiyalar.length === 0 ? (
-                  <tr><td colSpan={10} className="text-center text-gray-400 dark:text-gray-600 py-12">Nasiyalar topilmadi</td></tr>
+                  <tr><td colSpan={8} className="text-center text-gray-400 dark:text-gray-600 py-12">Nasiyalar topilmadi</td></tr>
                 ) : filteredNasiyalar.map((n, idx) => {
                   const hCfg = holatiConfig[n.holati as keyof typeof holatiConfig]
                   return (
@@ -370,8 +369,6 @@ export default function NasiyalarPage() {
                           )}
                         </div>
                       </td>
-                      {/* Chek */}
-                      <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">{n.sotuv?.chekRaqami || <span className="text-gray-300 dark:text-gray-700">—</span>}</td>
                       {/* Holati */}
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <span className={`text-xs px-2 py-0.5 rounded-lg font-medium ${hCfg?.cls || ''}`}>
@@ -463,7 +460,7 @@ export default function NasiyalarPage() {
                       <p className="text-gray-400 dark:text-gray-500 text-xs mt-0.5">{n.mijoz.manzil}</p>
                     )}
                     <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">
-                      {n.sotuv ? `Chek: ${n.sotuv.chekRaqami} • ` : ''}{formatSana(n.sana)}
+                      {formatSana(n.sana)}
                       {n.muddat && ` • Muddat: ${formatSana(n.muddat)}`}
                     </p>
                   </div>
