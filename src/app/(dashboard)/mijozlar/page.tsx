@@ -92,12 +92,12 @@ export default function MijozlarPage() {
               <thead>
                 <tr className="bg-gray-50 dark:bg-neutral-800 border-b border-gray-200 dark:border-neutral-800">
                   <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 w-full">Ism</th>
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap">Kod</th>
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden sm:table-cell whitespace-nowrap">Telefon</th>
-                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Manzil</th>
-                  <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Jami sotuv</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qarz</th>
-                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
+                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden lg:table-cell whitespace-nowrap w-px">Kod</th>
+                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden sm:table-cell whitespace-nowrap w-px">Telefon</th>
+                  <th className="text-left text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap w-px">Manzil</th>
+                  <th className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap w-px">Jami sotuv</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap w-px">Qarz</th>
+                  <th className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap w-px">Amal</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,7 +117,7 @@ export default function MijozlarPage() {
                       </div>
                     </td>
                     {/* Maxsus kod */}
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden lg:table-cell whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden lg:table-cell whitespace-nowrap w-px">
                       {m.maxsus_kod ? (
                         <span className="flex items-center gap-1 font-mono text-xs bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-lg">
                           <Hash size={10} />{m.maxsus_kod}
@@ -125,29 +125,29 @@ export default function MijozlarPage() {
                       ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                     </td>
                     {/* Telefon */}
-                    <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden sm:table-cell whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-500 text-sm hidden sm:table-cell whitespace-nowrap w-px">
                       {m.telefon ? (
                         <a href={`tel:${m.telefon.replace(/\s/g, '')}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 text-blue-500 hover:text-blue-600"><Phone size={12} />{formatPhone(m.telefon)}</a>
                       ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                     </td>
                     {/* Manzil */}
-                    <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-400 dark:text-gray-600 text-sm hidden md:table-cell whitespace-nowrap w-px">
                       {m.manzil ? (
                         <span className="flex items-center gap-1"><MapPin size={12} />{m.manzil}</span>
                       ) : <span className="text-gray-300 dark:text-gray-700">—</span>}
                     </td>
                     {/* Jami sotuv */}
-                    <td className="px-4 py-3 text-center text-gray-900 dark:text-gray-100 font-medium text-sm whitespace-nowrap">
+                    <td className="px-4 py-3 text-center text-gray-900 dark:text-gray-100 font-medium text-sm whitespace-nowrap w-px">
                       {m._count.sotuvlar} ta
                     </td>
                     {/* Qarz */}
-                    <td className="px-4 py-3 text-right font-semibold text-sm whitespace-nowrap">
+                    <td className="px-4 py-3 text-right font-semibold text-sm whitespace-nowrap w-px">
                       <span className={m.jami_qarz > 0 ? 'text-red-600' : 'text-green-600'}>
                         {m.jami_qarz > 0 ? formatSum(m.jami_qarz) : "Yo'q"}
                       </span>
                     </td>
                     {/* Amal */}
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                    <td className="px-4 py-3 text-right whitespace-nowrap w-px">
                       <button
                         onClick={() => ochirish(m)}
                         className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
