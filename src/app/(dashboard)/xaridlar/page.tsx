@@ -65,6 +65,9 @@ export default function XaridlarPage() {
   const [qarzModal, setQarzModal] = useState<Xarid | null>(null)
   const [qarzForm, setQarzForm] = useState({ summa: '', izoh: '' })
   const [qarzSaqlanmoqda, setQarzSaqlanmoqda] = useState(false)
+  const [taminotchiModal, setTaminotchiModal] = useState(false)
+  const [taminotchiForm, setTaminotchiForm] = useState({ nomi: '', kontaktShaxs: '', telefon: '', manzil: '' })
+  const [taminotchiSaqlanmoqda, setTaminotchiSaqlanmoqda] = useState(false)
 
   // Form state
   const [form, setForm] = useState({
@@ -194,6 +197,35 @@ export default function XaridlarPage() {
       } else toast.error('Xatolik yuz berdi')
     } finally {
       setTolovSaqlanmoqda(false)
+    }
+  }
+
+  async function yangiTaminotchiSaqlash(e: React.FormEvent) {
+    e.preventDefault()
+    if (!taminotchiForm.nomi.trim()) { toast.error('Ta\'minotchi nomini kiriting'); return }
+    setTaminotchiSaqlanmoqda(true)
+    try {
+      const res = await fetch('/api/taminotchilar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nomi: taminotchiForm.nomi.trim(),
+          kontaktShaxs: taminotchiForm.kontaktShaxs.trim() || null,
+          telefon: taminotchiForm.telefon.trim() || null,
+          manzil: taminotchiForm.manzil.trim() || null,
+        }),
+      })
+      if (!res.ok) { toast.error('Ta\'minotchi qo\'shilmadi'); return }
+      const yangi = await res.json()
+      const yangilanganRoyxat = await fetch('/api/taminotchilar').then(r => r.json())
+      setTaminotchilar(yangilanganRoyxat || [])
+      // Yangi ta'minotchini avtomatik tanlash
+      setForm(f => ({ ...f, taminotchiId: yangi.id }))
+      setTaminotchiForm({ nomi: '', kontaktShaxs: '', telefon: '', manzil: '' })
+      setTaminotchiModal(false)
+      toast.success('Ta\'minotchi qo\'shildi va tanlandi!')
+    } finally {
+      setTaminotchiSaqlanmoqda(false)
     }
   }
 
@@ -581,13 +613,26 @@ export default function XaridlarPage() {
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">
                   Ta&apos;minotchi{modalRejim === 'qarz' && <span className="text-red-500"> *</span>}
                 </label>
-                <Combobox
-                  options={taminotchiOptions}
-                  value={form.taminotchiId}
-                  onChange={v => setForm(f => ({ ...f, taminotchiId: v }))}
-                  placeholder={modalRejim === 'qarz' ? 'Ta\'minotchi tanlang (majburiy)' : 'Ta\'minotchi tanlang (ixtiyoriy)'}
-                  searchPlaceholder="Ta'minotchi qidirish..."
-                />
+                <div className="flex gap-2">
+                  <div className="flex-1 min-w-0">
+                    <Combobox
+                      options={taminotchiOptions}
+                      value={form.taminotchiId}
+                      onChange={v => setForm(f => ({ ...f, taminotchiId: v }))}
+                      placeholder={modalRejim === 'qarz' ? 'Ta\'minotchi tanlang (majburiy)' : 'Ta\'minotchi tanlang (ixtiyoriy)'}
+                      searchPlaceholder="Ta'minotchi qidirish..."
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setTaminotchiForm({ nomi: '', kontaktShaxs: '', telefon: '', manzil: '' }); setTaminotchiModal(true) }}
+                    className="shrink-0 px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium flex items-center gap-1 transition"
+                    title="Yangi ta'minotchi qo'shish"
+                  >
+                    <Plus size={16} />
+                    <span className="hidden sm:inline">Yangi</span>
+                  </button>
+                </div>
               </div>
 
               {/* Faqat qarz rejimi: summa input */}
@@ -721,6 +766,80 @@ export default function XaridlarPage() {
                   className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition"
                 >
                   {saqlanmoqda ? 'Saqlanmoqda...' : modalRejim === 'qarz' ? 'Qarzni saqlash' : 'Xaridni saqlash'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Yangi ta'minotchi qo'shish modal (xaridlar modali ichidan) */}
+      {taminotchiModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-[60] p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+            <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
+              <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Yangi ta&apos;minotchi qo&apos;shish</h3>
+              <button onClick={() => setTaminotchiModal(false)} className="p-1.5 text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded-lg transition">
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={yangiTaminotchiSaqlash} className="p-5 space-y-4">
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm font-medium mb-1 block">Nomi <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={taminotchiForm.nomi}
+                  onChange={e => setTaminotchiForm(f => ({ ...f, nomi: e.target.value }))}
+                  placeholder="Masalan: Ravshan"
+                  autoFocus
+                  required
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm font-medium mb-1 block">Kontakt shaxs</label>
+                <input
+                  type="text"
+                  value={taminotchiForm.kontaktShaxs}
+                  onChange={e => setTaminotchiForm(f => ({ ...f, kontaktShaxs: e.target.value }))}
+                  placeholder="Masalan: Bobur aka"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm font-medium mb-1 block">Telefon</label>
+                <input
+                  type="text"
+                  value={taminotchiForm.telefon}
+                  onChange={e => setTaminotchiForm(f => ({ ...f, telefon: e.target.value }))}
+                  placeholder="+998 90 123 45 67"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm font-medium mb-1 block">Manzil (shahar)</label>
+                <input
+                  type="text"
+                  value={taminotchiForm.manzil}
+                  onChange={e => setTaminotchiForm(f => ({ ...f, manzil: e.target.value }))}
+                  placeholder="Masalan: Samarqand"
+                  className={inputCls}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setTaminotchiModal(false)}
+                  className="flex-1 py-2.5 border border-gray-300 dark:border-neutral-700 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800 transition font-medium"
+                >
+                  Bekor
+                </button>
+                <button
+                  type="submit"
+                  disabled={taminotchiSaqlanmoqda}
+                  className="flex-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-medium transition disabled:opacity-50"
+                >
+                  {taminotchiSaqlanmoqda ? 'Saqlanmoqda...' : 'Qo\'shish'}
                 </button>
               </div>
             </form>
