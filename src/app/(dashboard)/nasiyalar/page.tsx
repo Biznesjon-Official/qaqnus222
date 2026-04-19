@@ -255,54 +255,54 @@ export default function NasiyalarPage() {
       {/* Stats Cards = Filter */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <button onClick={() => setFilter('')}
-          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === '' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
+          className={`text-left rounded-2xl p-3 sm:p-5 transition-shadow border-2 ${filter === '' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Qolgan qarz</p>
-              <p className="text-2xl font-bold mt-1 text-gray-900 dark:text-gray-100">{formatSum(stats.jamiQoldiq)}</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">{stats.mijozlarSoni} ta mijoz</p>
+              <p className="text-gray-500 dark:text-gray-500 text-xs sm:text-sm">Qolgan qarz</p>
+              <p className="text-base sm:text-2xl font-bold mt-1 text-gray-900 dark:text-gray-100">{formatSum(stats.jamiQoldiq)}</p>
+              <p className="text-gray-400 dark:text-gray-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">{stats.mijozlarSoni} ta mijoz</p>
             </div>
-            <div className="w-11 h-11 bg-red-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
-              <Banknote size={20} className="text-white" />
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-red-500 rounded-xl flex items-center justify-center shrink-0 ml-2 sm:ml-3">
+              <Banknote size={16} className="text-white sm:w-5 sm:h-5" />
             </div>
           </div>
         </button>
         <button onClick={() => setFilter('OCHIQ')}
-          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === 'OCHIQ' ? 'border-amber-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
+          className={`text-left rounded-2xl p-3 sm:p-5 transition-shadow border-2 ${filter === 'OCHIQ' ? 'border-amber-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Ochiq</p>
-              <p className="text-2xl font-bold mt-1 text-amber-600">{stats.ochiq} ta</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Qarz: {formatSum(stats.jamiQoldiq)}</p>
+              <p className="text-gray-500 dark:text-gray-500 text-xs sm:text-sm">Ochiq</p>
+              <p className="text-base sm:text-2xl font-bold mt-1 text-amber-600">{stats.ochiq} ta</p>
+              <p className="text-gray-400 dark:text-gray-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Qarz: {formatSum(stats.jamiQoldiq)}</p>
             </div>
-            <div className="w-11 h-11 bg-amber-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
-              <Clock size={20} className="text-white" />
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-amber-500 rounded-xl flex items-center justify-center shrink-0 ml-2 sm:ml-3">
+              <Clock size={16} className="text-white sm:w-5 sm:h-5" />
             </div>
           </div>
         </button>
         <button onClick={() => setFilter('MUDDATI_OTGAN')}
-          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === 'MUDDATI_OTGAN' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
+          className={`text-left rounded-2xl p-3 sm:p-5 transition-shadow border-2 ${filter === 'MUDDATI_OTGAN' ? 'border-red-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Muddati o&apos;tgan</p>
-              <p className="text-2xl font-bold mt-1 text-red-600">{stats.muddatiOtgan} ta</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Diqqat talab etadi</p>
+              <p className="text-gray-500 dark:text-gray-500 text-xs sm:text-sm">Muddati o&apos;tgan</p>
+              <p className="text-base sm:text-2xl font-bold mt-1 text-red-600">{stats.muddatiOtgan} ta</p>
+              <p className="text-gray-400 dark:text-gray-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">Diqqat talab etadi</p>
             </div>
-            <div className="w-11 h-11 bg-red-600 rounded-xl flex items-center justify-center shrink-0 ml-3">
-              <AlertTriangle size={20} className="text-white" />
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-red-600 rounded-xl flex items-center justify-center shrink-0 ml-2 sm:ml-3">
+              <AlertTriangle size={16} className="text-white sm:w-5 sm:h-5" />
             </div>
           </div>
         </button>
         <button onClick={() => setFilter('YOPILGAN')}
-          className={`text-left rounded-2xl p-5 transition-shadow border-2 ${filter === 'YOPILGAN' ? 'border-green-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
+          className={`text-left rounded-2xl p-3 sm:p-5 transition-shadow border-2 ${filter === 'YOPILGAN' ? 'border-green-500 shadow-md' : 'border-gray-200 dark:border-neutral-800 hover:shadow-md'} bg-white dark:bg-neutral-900`}>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-gray-500 dark:text-gray-500 text-sm">Yopilgan</p>
-              <p className="text-2xl font-bold mt-1 text-green-600">{stats.yopilgan} ta</p>
-              <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">To&apos;langan: {formatSum(stats.yopilganTolangan)}</p>
+              <p className="text-gray-500 dark:text-gray-500 text-xs sm:text-sm">Yopilgan</p>
+              <p className="text-base sm:text-2xl font-bold mt-1 text-green-600">{stats.yopilgan} ta</p>
+              <p className="text-gray-400 dark:text-gray-600 text-[10px] sm:text-xs mt-0.5 sm:mt-1">To&apos;langan: {formatSum(stats.yopilganTolangan)}</p>
             </div>
-            <div className="w-11 h-11 bg-green-500 rounded-xl flex items-center justify-center shrink-0 ml-3">
-              <CheckCircle size={20} className="text-white" />
+            <div className="w-8 h-8 sm:w-11 sm:h-11 bg-green-500 rounded-xl flex items-center justify-center shrink-0 ml-2 sm:ml-3">
+              <CheckCircle size={16} className="text-white sm:w-5 sm:h-5" />
             </div>
           </div>
         </button>
@@ -321,9 +321,10 @@ export default function NasiyalarPage() {
         <ViewToggle view={view} onChange={changeView} />
         <button
           onClick={() => setQoshishModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition">
+          className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition">
           <Plus size={16} />
-          Nasiya qo&apos;shish
+          <span className="hidden sm:inline">Nasiya qo&apos;shish</span>
+          <span className="sm:hidden">Qo&apos;shish</span>
         </button>
       </div>
 
@@ -341,7 +342,7 @@ export default function NasiyalarPage() {
                   <th style={{ width: '130px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Qoldiq</th>
                   <th style={{ width: '110px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Berilgan</th>
                   <th style={{ width: '110px' }} className="text-right text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 hidden md:table-cell whitespace-nowrap">Qaytarish</th>
-                  <th style={{ width: '180px' }} className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
+                  <th style={{ width: '120px' }} className="text-center text-gray-500 dark:text-gray-500 text-xs font-medium px-4 py-3 whitespace-nowrap">Amal</th>
                 </tr>
               </thead>
               <tbody>
@@ -395,9 +396,10 @@ export default function NasiyalarPage() {
                           {n.holati !== 'YOPILGAN' && (
                             <button
                               onClick={() => openTolovModal(n)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition">
+                              className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50 text-green-700 dark:text-green-400 rounded-lg text-xs font-medium transition"
+                              title="To'lov">
                               <Banknote size={12} />
-                              To&apos;lov
+                              <span className="hidden lg:inline">To&apos;lov</span>
                             </button>
                           )}
                           <button
@@ -414,7 +416,8 @@ export default function NasiyalarPage() {
                           </button>
                           <button
                             onClick={() => nasiyaOchirish(n.id, n.mijoz.ism)}
-                            className="inline-flex items-center p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition">
+                            className="inline-flex items-center p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition"
+                            title="O'chirish">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -516,7 +519,7 @@ export default function NasiyalarPage() {
       {/* Tahrirlash modal */}
       {tahrirlashModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
               <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Nasiyani tahrirlash</h3>
               <button
@@ -595,7 +598,7 @@ export default function NasiyalarPage() {
       {/* Qarz qo'shish modal */}
       {qarzQoshishModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-sm">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-sm max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz qo&apos;shish</h3>
@@ -637,7 +640,7 @@ export default function NasiyalarPage() {
       {/* Nasiya qo'shish modal */}
       {qoshishModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between">
               <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Nasiya qo&apos;shish</h3>
               <button
@@ -720,7 +723,7 @@ export default function NasiyalarPage() {
       {/* To'lov modal */}
       {tolovModal && (
         <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
+          <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md max-h-[90vh] overflow-y-auto">
             {/* Modal header with progress info */}
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
