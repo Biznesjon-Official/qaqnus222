@@ -4,19 +4,28 @@ import { useRef } from 'react'
 import { cn } from '@/lib/utils'
 
 interface MoneyInputProps {
-  value: string | number   // raw number as string
-  onChange: (value: string) => void  // returns raw number string e.g. "1500000"
+  value: string | number   // raw number as string (e.g. "1500000" yoki USD uchun "150.50")
+  onChange: (value: string) => void
   placeholder?: string
   min?: number
   max?: number
   required?: boolean
   disabled?: boolean
   className?: string
-  suffix?: string  // e.g. "so'm"
+  suffix?: string  // override; default UZS uchun "so'm", USD uchun yo'q ($ prefix bor)
+  valyuta?: 'UZS' | 'USD'  // valyuta — UI moslashadi (USD'da $ prefix, decimal qabul)
 }
 
-// Format a numeric string with comma separators (e.g. "1500000" -> "1,500,000")
-function formatWithCommas(val: string): string {
+// Format raqam stringi: USD'da decimal saqlanadi, UZS'da faqat butun
+function formatWithCommas(val: string, isUsd: boolean): string {
+  if (!val) return ''
+  if (isUsd) {
+    const cleaned = val.replace(/[^\d.]/g, '')
+    if (!cleaned) return ''
+    const [intPart, decPart] = cleaned.split('.')
+    const formattedInt = Number(intPart || 0).toLocaleString('en-US')
+    return decPart !== undefined ? `${formattedInt}.${decPart}` : formattedInt
+  }
   const num = val.replace(/\D/g, '')
   if (!num) return ''
   return Number(num).toLocaleString('en-US')
@@ -30,18 +39,39 @@ export default function MoneyInput({
   required = false,
   disabled = false,
   className,
-  suffix = "so'm"
+  suffix,
+  valyuta,
 }: MoneyInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const displayValue = value ? formatWithCommas(String(value)) : ''
-  // Keep raw number string for potential form validation usage
-  const _rawNumber = String(value).replace(/\D/g, '')
-  void _rawNumber // suppress unused variable warning
+  const isUsd = valyuta === 'USD'
+
+  // Suffix mantig'i:
+  // - explicit suffix bor — uni ishlatamiz
+  // - valyuta='USD' — suffix yo'q ($ prefix bor)
+  // - default — "so'm"
+  const computedSuffix = suffix !== undefined ? suffix : (isUsd ? '' : "so'm")
+
+  const displayValue = value ? formatWithCommas(String(value), isUsd) : ''
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const raw = e.target.value.replace(/\D/g, '')
-    // Enforce max constraint if provided
+    const inputValue = e.target.value
+    let raw: string
+    if (isUsd) {
+      // USD: decimal qabul, lekin bitta nuqta va max 2 ta decimal
+      raw = inputValue.replace(/[^\d.]/g, '')
+      const dotIdx = raw.indexOf('.')
+      if (dotIdx !== -1) {
+        // Birinchidan keyingi nuqtalarni olib tashlaymiz
+        raw = raw.slice(0, dotIdx + 1) + raw.slice(dotIdx + 1).replace(/\./g, '')
+        const [intPart, decPart] = raw.split('.')
+        if (decPart && decPart.length > 2) {
+          raw = `${intPart}.${decPart.slice(0, 2)}`
+        }
+      }
+    } else {
+      raw = inputValue.replace(/\D/g, '')
+    }
     if (max !== undefined && raw && Number(raw) > max) {
       onChange(String(max))
       return
@@ -56,10 +86,13 @@ export default function MoneyInput({
       disabled && 'opacity-50',
       className
     )}>
+      {isUsd && (
+        <span className="text-gray-400 dark:text-gray-600 text-sm shrink-0 whitespace-nowrap">$</span>
+      )}
       <input
         ref={inputRef}
         type="text"
-        inputMode="numeric"
+        inputMode={isUsd ? 'decimal' : 'numeric'}
         value={displayValue}
         onChange={handleChange}
         placeholder={placeholder}
@@ -69,8 +102,8 @@ export default function MoneyInput({
         max={max}
         className="flex-1 bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-600 outline-none min-w-0"
       />
-      {suffix && displayValue && (
-        <span className="text-gray-400 dark:text-gray-600 text-sm shrink-0 whitespace-nowrap">{suffix}</span>
+      {computedSuffix && displayValue && (
+        <span className="text-gray-400 dark:text-gray-600 text-sm shrink-0 whitespace-nowrap">{computedSuffix}</span>
       )}
     </div>
   )
