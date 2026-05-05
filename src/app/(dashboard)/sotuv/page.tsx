@@ -297,8 +297,67 @@ export default function SotuvPage() {
     // Saqlangan savatlarni yuklash
     const drafts = localStorage.getItem('saqlangan-savatlar')
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
+    // Aktiv savat (refresh/navigatsiya'dan keyin tiklash)
+    const aktiv = localStorage.getItem('aktiv-savat')
+    if (aktiv) {
+      try {
+        const parsed = JSON.parse(aktiv)
+        if (Array.isArray(parsed) && parsed.length > 0) setSavat(parsed)
+      } catch {}
+    }
+    // Aktiv to'lov ma'lumotlarini tiklash
+    const aktivPay = localStorage.getItem('aktiv-tolov')
+    if (aktivPay) {
+      try {
+        const p = JSON.parse(aktivPay)
+        if (p.tolovUsuli) setTolovUsuli(p.tolovUsuli)
+        if (p.mijozId) setMijozId(p.mijozId)
+        if (p.sherikDokonId) setSherikDokonId(p.sherikDokonId)
+        if (p.naqdTolangan) setNaqdTolangan(p.naqdTolangan)
+        if (p.qolBilanSumma) setQolBilanSumma(p.qolBilanSumma)
+        if (p.nasiyaMuddat) setNasiyaMuddat(p.nasiyaMuddat)
+      } catch {}
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Aktiv savatni har o'zgarishda localStorage'ga yozish
+  useEffect(() => {
+    if (savat.length > 0) {
+      localStorage.setItem('aktiv-savat', JSON.stringify(savat))
+    } else {
+      localStorage.removeItem('aktiv-savat')
+    }
+  }, [savat])
+
+  // Aktiv to'lov ma'lumotlarini saqlash
+  useEffect(() => {
+    if (savat.length > 0) {
+      localStorage.setItem('aktiv-tolov', JSON.stringify({
+        tolovUsuli, mijozId, sherikDokonId, naqdTolangan, qolBilanSumma, nasiyaMuddat,
+      }))
+    } else {
+      localStorage.removeItem('aktiv-tolov')
+    }
+  }, [savat.length, tolovUsuli, mijozId, sherikDokonId, naqdTolangan, qolBilanSumma, nasiyaMuddat])
+
+  // Tovarlar yuklangach savatdagi mavjud qoldiqni yangilash (stale data oldini olish)
+  useEffect(() => {
+    if (tovarlar.length === 0 || savat.length === 0) return
+    setSavat(prev => {
+      let changed = false
+      const updated = prev.map(item => {
+        const tovar = tovarlar.find(t => t.id === item.tovarId)
+        if (tovar && tovar.qoldiq !== item.mavjudQoldiq) {
+          changed = true
+          return { ...item, mavjudQoldiq: tovar.qoldiq }
+        }
+        return item
+      })
+      return changed ? updated : prev
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tovarlar])
 
   const filteredTovarlar = tovarlar.filter(t =>
     uzSearch(t.nomi, qidiruv) ||
