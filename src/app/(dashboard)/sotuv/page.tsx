@@ -802,7 +802,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-full">
+    <div className="flex flex-col lg:flex-row gap-4 lg:h-full">
       {/* Mobile tab switcher */}
       <div className="flex lg:hidden border-b border-gray-200 dark:border-neutral-800 mb-0">
         <button
