@@ -91,6 +91,8 @@ function kirill(text: string): string {
 
 export default function SotuvPage() {
   const [tovarlar, setTovarlar] = useState<Tovar[]>([])
+  const [tovarlarYuklanmoqda, setTovarlarYuklanmoqda] = useState(true)
+  const [tovarlarXato, setTovarlarXato] = useState<string | null>(null)
   const [mijozlar, setMijozlar] = useState<Mijoz[]>([])
   const [sherikDokonlar, setSherikDokonlar] = useState<SherikDokon[]>([])
   const [savat, setSavat] = useState<SavatItem[]>([])
@@ -168,6 +170,33 @@ export default function SotuvPage() {
     return topilgan
   }
 
+  // Local cache'da topilmasa API'dan to'g'ridan-to'g'ri qidirish.
+  // Tovarlar yuklanmagan/eskirgan bo'lsa ham skaner ishlaydi.
+  async function tovarniApidanTopish(kod: string): Promise<Tovar | null> {
+    const n = kod.trim()
+    if (!n) return null
+    try {
+      const r = await fetch(`/api/tovarlar/by-shtrix/${encodeURIComponent(n)}`)
+      if (!r.ok) return null
+      const data = await r.json()
+      if (!data || !data.id) return null
+      const tovar: Tovar = {
+        id: data.id,
+        nomi: data.nomi,
+        sotishNarxi: Number(data.sotishNarxi),
+        kelishNarxi: Number(data.kelishNarxi),
+        birlik: data.birlik,
+        qoldiq: Number(data.qoldiq ?? 0),
+        shtrixKod: data.shtrixKod ?? null,
+      }
+      // Topilgan tovarni local cache'ga qo'shamiz — keyingi skanlar tezlashadi
+      setTovarlar(prev => prev.some(t => t.id === tovar.id) ? prev : [tovar, ...prev])
+      return tovar
+    } catch {
+      return null
+    }
+  }
+
   const skanerniOchish = useCallback(async () => {
     setSkanerOchiq(true)
     oxirgiSkanRef.current = ''
@@ -193,8 +222,16 @@ export default function SotuvPage() {
               savatQoshRef.current(topilgan)
               toast.success(`${topilgan.nomi} qo'shildi`)
             } else {
-              setQidiruv(n)
-              toast.error(`Tovar topilmadi: ${n}`)
+              // Local'da yo'q — API'dan qidiramiz (tovarlar yuklanmagan yoki yangi qo'shilgan bo'lishi mumkin)
+              tovarniApidanTopish(n).then(t => {
+                if (t) {
+                  savatQoshRef.current(t)
+                  toast.success(`${t.nomi} qo'shildi`)
+                } else {
+                  setQidiruv(n)
+                  toast.error(`Tovar topilmadi: ${n}`)
+                }
+              })
             }
           },
           () => {}
@@ -211,22 +248,44 @@ export default function SotuvPage() {
   const [saqlanganiSavatlar, setSaqlanganiSavatlar] = useState<SaqlanganiSavat[]>([])
   const [saqlanganiModal, setSaqlanganiModal] = useState(false)
 
-  useEffect(() => {
-    async function yuklash() {
-      const [tv, mj, sz, sd, sh] = await Promise.all([
-        fetch('/api/tovarlar').then(r => r.json()),
-        fetch('/api/mijozlar').then(r => r.json()),
-        fetch('/api/sozlamalar').then(r => r.json()),
-        fetch('/api/sherik-dokonlar').then(r => r.json()),
-        fetch('/api/sheriklar').then(r => r.json()),
-      ])
-      setTovarlar(tv.tovarlar || [])
-      setMijozlar(mj || [])
-      setDokonInfo(sz || {})
-      setSherikDokonlar(Array.isArray(sd) ? sd : [])
-      setSheriklar(Array.isArray(sh) ? sh : [])
+  const tovarlarniYuklash = useCallback(async () => {
+    setTovarlarYuklanmoqda(true)
+    setTovarlarXato(null)
+    try {
+      const r = await fetch('/api/tovarlar')
+      if (!r.ok) {
+        const errBody = await r.json().catch(() => ({}))
+        throw new Error(errBody.xato || `Server xatosi (${r.status})`)
+      }
+      const tv = await r.json()
+      setTovarlar(Array.isArray(tv.tovarlar) ? tv.tovarlar : [])
+    } catch (e: any) {
+      setTovarlarXato(e?.message || 'Tovarlarni yuklashda xato')
+      toast.error(e?.message || 'Tovarlarni yuklab bo\'lmadi')
+    } finally {
+      setTovarlarYuklanmoqda(false)
     }
-    yuklash()
+  }, [])
+
+  useEffect(() => {
+    async function yuklashQoshimcha() {
+      try {
+        const [mj, sz, sd, sh] = await Promise.all([
+          fetch('/api/mijozlar').then(r => r.json()).catch(() => []),
+          fetch('/api/sozlamalar').then(r => r.json()).catch(() => ({})),
+          fetch('/api/sherik-dokonlar').then(r => r.json()).catch(() => []),
+          fetch('/api/sheriklar').then(r => r.json()).catch(() => []),
+        ])
+        setMijozlar(Array.isArray(mj) ? mj : [])
+        setDokonInfo(sz && typeof sz === 'object' ? sz : {})
+        setSherikDokonlar(Array.isArray(sd) ? sd : [])
+        setSheriklar(Array.isArray(sh) ? sh : [])
+      } catch {
+        // qo'shimcha ma'lumotlar muhim emas — sotuv ishlay beradi
+      }
+    }
+    tovarlarniYuklash()
+    yuklashQoshimcha()
     fetch('/chek.png').then(r => r.blob()).then(blob => new Promise<string>(resolve => {
       const reader = new FileReader()
       reader.onload = () => resolve(reader.result as string)
@@ -238,6 +297,7 @@ export default function SotuvPage() {
     // Saqlangan savatlarni yuklash
     const drafts = localStorage.getItem('saqlangan-savatlar')
     if (drafts) { try { setSaqlanganiSavatlar(JSON.parse(drafts)) } catch {} }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const filteredTovarlar = tovarlar.filter(t =>
@@ -785,6 +845,48 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
           </div>
         )}
         <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl">
+          {tovarlarYuklanmoqda ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="p-3 bg-gray-50 dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 animate-pulse">
+                  <div className="h-3.5 bg-gray-200 dark:bg-neutral-700 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-gray-200 dark:bg-neutral-700 rounded w-1/2 mb-1.5" />
+                  <div className="h-2.5 bg-gray-200 dark:bg-neutral-700 rounded w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : tovarlarXato ? (
+            <div className="p-8 text-center">
+              <AlertTriangle size={36} className="mx-auto mb-3 text-red-500 opacity-70" />
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Tovarlarni yuklab bo&apos;lmadi</p>
+              <p className="text-xs mt-1 text-gray-500 dark:text-gray-400 mb-3">{tovarlarXato}</p>
+              <button
+                onClick={tovarlarniYuklash}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition"
+              >
+                <RotateCcw size={14} />
+                Qayta urinish
+              </button>
+            </div>
+          ) : tovarlar.length === 0 ? (
+            <div className="p-8 text-center">
+              <ShoppingCart size={36} className="mx-auto mb-3 text-gray-300 dark:text-gray-700" />
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Tovarlar yo&apos;q</p>
+              <p className="text-xs mt-1 text-gray-500 dark:text-gray-400 mb-3">Avval Tovarlar bo&apos;limidan mahsulot qo&apos;shing</p>
+              <a
+                href="/tovarlar"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition"
+              >
+                Tovarlar bo&apos;limiga o&apos;tish
+              </a>
+            </div>
+          ) : korsatiladiganTovarlar.length === 0 ? (
+            <div className="p-8 text-center">
+              <Search size={36} className="mx-auto mb-3 text-gray-300 dark:text-gray-700" />
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Hech narsa topilmadi</p>
+              <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">&laquo;{qidiruv}&raquo; bo&apos;yicha tovar yo&apos;q</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3">
             {korsatiladiganTovarlar.map(t => (
               <button
@@ -801,6 +903,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
               </button>
             ))}
           </div>
+          )}
         </div>
       </div>
 
