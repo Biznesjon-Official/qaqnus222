@@ -46,7 +46,15 @@ let _floodUntil = 0
 
 // Rate limit — xabarlar orasida minimal kutish
 let _lastSendTime = 0
-const MIN_SEND_INTERVAL = 3000 // 3 soniya
+const MIN_SEND_INTERVAL = 3000 // 3 soniya (account-level)
+
+// Queue worker config
+const PEER_FLOOD_HOURS = 24 // PEER_FLOOD kelganda Telegram 24+ soat tutadi (3 emas)
+const RETRY_BACKOFF_SECS = [30, 90, 270] // attempt 1 fail → 30s, 2 → 90s, 3 → 270s
+const QUEUE_BATCH_SIZE = 5 // bir tick'da max 5 ta xabar (yetarli xajm uchun)
+
+// Queue worker tick'i orasidagi global lock
+let _queueTickRunning = false
 
 // ─── Entity cache — DB da saqlash/yuklash ────────────────────────────────────
 
@@ -151,7 +159,7 @@ async function getClient(): Promise<TelegramClient | null> {
         new StringSession(session),
         parseInt(apiId),
         apiHash,
-        { connectionRetries: 5, retryDelay: 1000 }
+        { connectionRetries: 5, retryDelay: 1000, floodSleepThreshold: 0 }
       )
 
       await client.connect()
@@ -294,11 +302,13 @@ async function sendMessageToPhone(
       return { ok: false, queued: true, xato: `Telegram cheklovi: ${seconds}s kutish kerak` }
     }
 
-    // PEER_FLOOD — akkaunt spam filtri, bir necha soat o'tgach o'tadi
+    // PEER_FLOOD — akkaunt spam filtri.
+    // Telegram bu holatda 24-72 soat saqlaydi. 3 soatda qayta urinish → yana PEER_FLOOD.
+    // 24 soatga to'xtatamiz va batch'ni umuman bekor qilamiz.
     if (msg.includes('PEER_FLOOD')) {
-      console.error('[Telegram] PEER_FLOOD — akkaunt cheklandi, 3 soatdan keyin qayta uriniladi')
-      await saveFloodTimer(Date.now() + 3 * 60 * 60 * 1000) // 3 soat
-      return { ok: false, queued: true, xato: 'Telegram spam filtri: 3 soatdan keyin avtomatik qayta yuboriladi' }
+      console.error(`[Telegram] PEER_FLOOD — akkaunt cheklandi, ${PEER_FLOOD_HOURS} soatdan keyin qayta uriniladi`)
+      await saveFloodTimer(Date.now() + PEER_FLOOD_HOURS * 60 * 60 * 1000)
+      return { ok: false, queued: true, xato: `Telegram spam filtri: ${PEER_FLOOD_HOURS} soatdan keyin avtomatik qayta yuboriladi` }
     }
 
     if (msg.includes('PHONE_NOT_OCCUPIED')) {
@@ -317,60 +327,12 @@ async function sendMessageToPhone(
   }
 }
 
-// ─── Queued xabarlarni avtomatik qayta yuborish ──────────────────────────────
+// ─── Eski API uchun alias (legacy) ───────────────────────────────────────────
+// queueWorkerTick fayl pastida aniqlangan — bu wrapper export bo'yicha
+// orqaga moslik uchun mavjud. Yangi kod queueWorkerTick'ni to'g'ridan-to'g'ri chaqirsin.
 
 export async function queuedXabarlarniYuborish(): Promise<void> {
-  // Flood bo'lsa — hali vaqt kelmagan
-  if (isFlooded()) {
-    console.log(`[Queue] Flood davom etyapti, ${floodSecsLeft()}s qoldi`)
-    return
-  }
-
-  const queuedLogs = await prisma.bildirishnomLog.findMany({
-    where: { status: 'queued' },
-    orderBy: { sana: 'asc' },
-    take: 20, // bir marta max 20 ta
-    include: { mijoz: { select: { telefon: true } } },
-  })
-
-  if (queuedLogs.length === 0) return
-  console.log(`[Queue] ${queuedLogs.length} ta queued xabar qayta yuborilmoqda...`)
-
-  let yuborilgan = 0
-  for (const log of queuedLogs) {
-    if (isFlooded()) {
-      console.log(`[Queue] Flood qayta keldi, ${floodSecsLeft()}s to'xtatildi`)
-      break
-    }
-
-    const telefon = log.telegramTarget || log.mijoz.telefon
-    if (!telefon || !log.xabarMatni) {
-      await prisma.bildirishnomLog.update({
-        where: { id: log.id },
-        data: { status: 'failed', xato: 'Telefon yoki matn yo\'q' },
-      }).catch(() => {})
-      continue
-    }
-
-    const natija = await sendMessageToPhone(telefon, log.xabarMatni)
-    await prisma.bildirishnomLog.update({
-      where: { id: log.id },
-      data: {
-        status: natija.ok ? 'sent' : natija.queued ? 'queued' : 'failed',
-        yuborildi: natija.ok,
-        xato: natija.xato,
-        urinishSoni: natija.ok || natija.queued ? log.urinishSoni : log.urinishSoni + 1,
-        yuborilganSana: natija.ok ? new Date() : log.yuborilganSana,
-      },
-    }).catch(() => {})
-
-    if (natija.ok) {
-      yuborilgan++
-      console.log(`[Queue] Yuborildi: ${telefon}`)
-    }
-  }
-
-  if (yuborilgan > 0) console.log(`[Queue] Yakunlandi: ${yuborilgan} ta yuborildi`)
+  return queueWorkerTick()
 }
 
 // ─── Scheduler uchun — kunlik eslatma (shaxsiy raqamdan) ─────────────────────
@@ -480,10 +442,10 @@ export async function nasiyaEslatmalarYuborish() {
 
     if (natija.ok) {
       yuborilgan++
-      console.log(`[Scheduler] Xabar yuborildi: ${nasiya.mijoz.ism} (${xabarTuri})`)
+      console.log(`[Scheduler] Queue'ga qo'shildi: ${nasiya.mijoz.ism} (${xabarTuri})`)
     } else {
       xatolik++
-      console.error(`[Scheduler] Xabar xatosi: ${nasiya.mijoz.ism} — ${natija.xato}`)
+      console.error(`[Scheduler] Queue xatosi: ${nasiya.mijoz.ism} — ${natija.xato}`)
     }
 
     // Muddati o'tganlarni yangilash
@@ -511,7 +473,7 @@ export async function telegramConnect(apiId: number, apiHash: string, phone: str
       new StringSession(''),
       apiId,
       apiHash,
-      { connectionRetries: 3 }
+      { connectionRetries: 3, floodSleepThreshold: 0 }
     )
     await client.connect()
 
@@ -560,7 +522,7 @@ export async function telegramVerify(
       new StringSession(tempSession || ''),
       apiId,
       apiHash,
-      { connectionRetries: 3 }
+      { connectionRetries: 3, floodSleepThreshold: 0 }
     )
     await client.connect()
 
@@ -692,7 +654,11 @@ async function getMahsulotlarMatni(sotuvId: string | null, maxQator: number = 10
   return '\n📦 Mahsulotlar:\n' + qatorlar.join('\n')
 }
 
-// ─── Markazlashtirilgan log + yuborish ───────────────────────────────────────
+// ─── Markazlashtirilgan log: queue'ga qo'yish (yuborish darhol emas) ─────────
+//
+// Eski versiya darhol API'ga uradi → bir vaqtda ko'p sotuv bo'lsa burst yuboriladi.
+// Yangi versiya faqat DB log yaratadi — queue worker har 5s'da 1 ta yuboradi.
+// Bu shaxsiy MTProto akkaunt uchun yagona barqaror yondashuv.
 
 async function xabarYuborVaSaqla(params: {
   nasiyaId: string | null
@@ -701,7 +667,6 @@ async function xabarYuborVaSaqla(params: {
   xabar: string
   telefon: string
 }): Promise<{ ok: boolean; xato?: string; logId?: string }> {
-  // 1. Log yaratish — pending status
   const log = await prisma.bildirishnomLog.create({
     data: {
       nasiyaId: params.nasiyaId,
@@ -711,28 +676,161 @@ async function xabarYuborVaSaqla(params: {
       telegramTarget: params.telefon,
       status: 'pending',
       urinishSoni: 0,
+      keyingiUrinish: new Date(), // darhol jo'natilishga tayyor
     },
-  }).catch(() => null)
+  }).catch((e) => {
+    console.error('[Telegram] Log yaratish xatosi:', e)
+    return null
+  })
 
-  // 2. Yuborish
-  const natija = await sendMessageToPhone(params.telefon, params.xabar)
+  if (!log) return { ok: false, xato: 'Log yaratib bo\'lmadi' }
+  return { ok: true, logId: log.id }
+}
 
-  // 3. Log yangilash
-  // queued = flood bor, keyinroq qayta uriniladi (failed emas)
-  if (log) {
-    await prisma.bildirishnomLog.update({
-      where: { id: log.id },
-      data: {
-        status: natija.ok ? 'sent' : natija.queued ? 'queued' : 'failed',
-        yuborildi: natija.ok,
-        xato: natija.xato,
-        urinishSoni: natija.ok || natija.queued ? 0 : 1,
-        yuborilganSana: natija.ok ? new Date() : null,
+// ─── Queue worker: bitta tick, max QUEUE_BATCH_SIZE xabar yuboradi ──────────
+//
+// Pattern: pending/queued/retry holatdagi xabarlarni keyingiUrinish vaqti
+// kelganda bittadan yuboradi. Rate limit (3s) + flood timer + max attempts.
+
+export async function queueWorkerTick(): Promise<void> {
+  if (_queueTickRunning) return // re-entrant himoyasi
+  _queueTickRunning = true
+
+  try {
+    if (!(await isTelegramEnabled())) return
+
+    if (isFlooded()) {
+      // Flood davom etyapti — hech narsa qilmaymiz
+      return
+    }
+
+    const now = new Date()
+    const candidates = await prisma.bildirishnomLog.findMany({
+      where: {
+        status: { in: ['pending', 'queued'] },
+        OR: [
+          { keyingiUrinish: null },
+          { keyingiUrinish: { lte: now } },
+        ],
       },
-    }).catch(() => {})
-  }
+      orderBy: { sana: 'asc' },
+      take: QUEUE_BATCH_SIZE,
+      include: { mijoz: { select: { telefon: true } } },
+    })
 
-  return { ...natija, logId: log?.id }
+    if (candidates.length === 0) return
+
+    for (const log of candidates) {
+      if (isFlooded()) {
+        // Flood orada keldi — qolgan xabarlarni qoldiramiz
+        console.log(`[Queue] Flood orada keldi, ${floodSecsLeft()}s qoldi`)
+        break
+      }
+
+      const telefon = log.telegramTarget || log.mijoz?.telefon
+      if (!telefon || !log.xabarMatni) {
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: { status: 'failed', xato: 'Telefon yoki matn yo\'q' },
+        }).catch(() => {})
+        continue
+      }
+
+      // 'sending' markeri — concurrent worker'lardan himoya
+      await prisma.bildirishnomLog.update({
+        where: { id: log.id },
+        data: { status: 'sending', urinishSoni: log.urinishSoni + 1 },
+      }).catch(() => {})
+
+      const natija = await sendMessageToPhone(telefon, log.xabarMatni)
+
+      if (natija.ok) {
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: {
+            status: 'sent',
+            yuborildi: true,
+            xato: null,
+            yuborilganSana: new Date(),
+            keyingiUrinish: null,
+          },
+        }).catch(() => {})
+        console.log(`[Queue] Yuborildi: ${telefon} (urinish #${log.urinishSoni + 1})`)
+        continue
+      }
+
+      // Xato — turini aniqlash
+      const xato = natija.xato || ''
+      const isPermanentFail =
+        /topilmadi|not found|ro'yxatdan o'tmagan|PHONE_NOT_OCCUPIED/i.test(xato)
+      const isFloodErr = natija.queued === true
+
+      if (isPermanentFail) {
+        // PHONE_NOT_OCCUPIED — qayta urinmaymiz, darhol failed
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: {
+            status: 'failed',
+            xato: xato.slice(0, 500),
+            keyingiUrinish: null,
+          },
+        }).catch(() => {})
+        console.warn(`[Queue] Failed (permanent): ${telefon} — ${xato.slice(0, 80)}`)
+        continue
+      }
+
+      if (isFloodErr) {
+        // Flood — bu xabarni queued holatda qoldirib, urinishSoni'ni -1 qilamiz
+        // (bu urinish hisobga olinmaydi — bir nechta retry'da failure'ga ketmaslik uchun).
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: {
+            status: 'queued',
+            urinishSoni: log.urinishSoni, // qaytarib qo'yamiz
+            xato: xato.slice(0, 500),
+            keyingiUrinish: new Date(_floodUntil),
+          },
+        }).catch(() => {})
+        console.warn(`[Queue] Flood: ${telefon} — keyingi urinish ${floodSecsLeft()}s dan keyin`)
+        break // qolgan xabarlarni hozir urinmaymiz
+      }
+
+      // Transient xato — exponential backoff bilan retry
+      const attempt = log.urinishSoni + 1 // increment qilingan urinishSoni
+      const maxAttempts = log.maxUrinish || 3
+
+      if (attempt >= maxAttempts) {
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: {
+            status: 'failed',
+            xato: xato.slice(0, 500),
+            keyingiUrinish: null,
+          },
+        }).catch(() => {})
+        console.error(`[Queue] Failed after ${attempt} attempts: ${telefon} — ${xato.slice(0, 80)}`)
+        continue
+      }
+
+      const backoffIdx = Math.min(attempt - 1, RETRY_BACKOFF_SECS.length - 1)
+      const backoffSecs = RETRY_BACKOFF_SECS[backoffIdx]
+      const nextRetry = new Date(Date.now() + backoffSecs * 1000)
+
+      await prisma.bildirishnomLog.update({
+        where: { id: log.id },
+        data: {
+          status: 'queued',
+          xato: xato.slice(0, 500),
+          keyingiUrinish: nextRetry,
+        },
+      }).catch(() => {})
+      console.log(`[Queue] Retry #${attempt}/${maxAttempts} for ${telefon} in ${backoffSecs}s`)
+    }
+  } catch (e) {
+    console.error('[Queue] Tick xatosi:', e)
+  } finally {
+    _queueTickRunning = false
+  }
 }
 
 // ─── Bildirishnoma funksiyalari ──────────────────────────────────────────────
@@ -846,21 +944,23 @@ export async function xabarQaytaYuborish(logId: string): Promise<{ ok: boolean; 
   const telefon = log.telegramTarget || log.mijoz.telefon
   if (!telefon) return { ok: false, xato: "Mijozda telefon raqam yo'q" }
 
-  const natija = await sendMessageToPhone(telefon, log.xabarMatni)
-
+  // Queue'ga qaytarish — worker keyingi tick'da yuboradi.
+  // Counter va xato'ni reset qilamiz (foydalanuvchi qayta urinishni so'radi).
   await prisma.bildirishnomLog.update({
     where: { id: logId },
     data: {
-      status: natija.ok ? 'sent' : natija.queued ? 'queued' : 'failed',
-      yuborildi: natija.ok,
-      xato: natija.xato,
-      urinishSoni: natija.ok || natija.queued ? log.urinishSoni : { increment: 1 },
-      yuborilganSana: natija.ok ? new Date() : log.yuborilganSana,
+      status: 'pending',
+      xato: null,
+      urinishSoni: 0,
+      keyingiUrinish: new Date(),
       telegramTarget: telefon,
     },
   }).catch(() => {})
 
-  return natija
+  // Darhol tick chaqiramiz — agar boshqa worker ishlamayotgan bo'lsa
+  queueWorkerTick().catch(() => {})
+
+  return { ok: true }
 }
 
 // ─── Qo'lda yangi xabar yuborish (manual) ────────────────────────────────────

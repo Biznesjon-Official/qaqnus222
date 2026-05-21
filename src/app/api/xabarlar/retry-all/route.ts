@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
-import { xabarQaytaYuborish } from '@/lib/telegram'
+import { queueWorkerTick } from '@/lib/telegram'
 
-// POST — Barcha xato xabarlarni qayta yuborish
+// POST — Barcha xato/queued xabarlarni queue'ga qaytarib qo'yish
+// (worker har 5s'da birma-bir yuboradi — rate limit'ga rioya qilinadi)
 export async function POST(_req: NextRequest) {
   try {
     const session = await auth()
@@ -11,26 +12,26 @@ export async function POST(_req: NextRequest) {
       return NextResponse.json({ xato: "Ruxsat yo'q" }, { status: 403 })
     }
 
-    const xatolar = await prisma.bildirishnomLog.findMany({
-      where: { status: { in: ['failed', 'queued'] }, xabarMatni: { not: null } },
-      select: { id: true },
-      take: 100,
+    const result = await prisma.bildirishnomLog.updateMany({
+      where: {
+        status: { in: ['failed', 'queued'] },
+        xabarMatni: { not: null },
+      },
+      data: {
+        status: 'pending',
+        xato: null,
+        urinishSoni: 0,
+        keyingiUrinish: new Date(),
+      },
     })
 
-    let yuborilgan = 0
-    let xatolik = 0
-
-    for (const x of xatolar) {
-      const natija = await xabarQaytaYuborish(x.id)
-      if (natija.ok) yuborilgan++
-      else xatolik++
-    }
+    // Darhol bitta tick chaqiramiz — worker keyingi 5s ichida olib yuboradi
+    queueWorkerTick().catch(() => {})
 
     return NextResponse.json({
       ok: true,
-      jami: xatolar.length,
-      yuborilgan,
-      xatolik,
+      qayta_navbatga: result.count,
+      izoh: 'Xabarlar queue\'ga qaytarildi. Worker har 5 soniyada birma-bir yuboradi.',
     })
   } catch (e) {
     console.error('[Xabar retry-all]', e)

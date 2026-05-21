@@ -619,10 +619,12 @@ model BildirishnomLog {
   xabarTuri      String   // "nasiya_yaratildi", "qarz_qoshildi", "tolov_qilindi", "3_kun", "2_kun", "1_kun", "muddati_otgan"
   xabarMatni     String?  // Yuborilgan xabarning to'liq matni
   telegramTarget String?  // Yuborilgan telefon raqam
-  status         String   @default("pending") // "pending", "sent", "failed", "queued"
+  status         String   @default("pending") // "pending", "sending", "sent", "failed", "queued"
   yuborildi      Boolean  @default(false)
   xato           String?
   urinishSoni    Int      @default(0)
+  maxUrinish     Int      @default(3)        // Maksimal urinishlar soni — keyin 'failed'
+  keyingiUrinish DateTime?                   // Exponential backoff: next retry time
   sana           DateTime @default(now())
   yuborilganSana DateTime?
 
@@ -630,6 +632,7 @@ model BildirishnomLog {
   mijoz          Mijoz    @relation(fields: [mijozId], references: [id])
 
   @@index([status, sana])
+  @@index([status, keyingiUrinish])
   @@index([xabarTuri])
   @@map("bildirishnom_loglar")
 }
