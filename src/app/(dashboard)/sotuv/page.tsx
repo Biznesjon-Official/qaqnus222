@@ -128,6 +128,7 @@ export default function SotuvPage() {
   // Til (lotin / kirill)
   const [til, setTil] = useState<'lotin' | 'kirill'>('lotin')
   const [logoBase64, setLogoBase64] = useState<string>('')
+  const [telegramQrBase64, setTelegramQrBase64] = useState<string>('')
 
   // Barcode skaner
   const [skanerOchiq, setSkanerOchiq] = useState(false)
@@ -286,11 +287,14 @@ export default function SotuvPage() {
     }
     tovarlarniYuklash()
     yuklashQoshimcha()
-    fetch('/chek.png').then(r => r.blob()).then(blob => new Promise<string>(resolve => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.readAsDataURL(blob)
-    })).then(setLogoBase64).catch(() => {})
+    const blobToBase64 = (url: string) =>
+      fetch(url).then(r => r.blob()).then(blob => new Promise<string>(resolve => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(blob)
+      }))
+    blobToBase64('/chek.png').then(setLogoBase64).catch(() => {})
+    blobToBase64('/telegramqr.png').then(setTelegramQrBase64).catch(() => {})
     // Oxirgi sotuv localStorage dan yuklash
     const saved = localStorage.getItem('oxirgi-sotuv')
     if (saved) { try { setOxirgiSotuv(JSON.parse(saved)) } catch {} }
@@ -667,6 +671,10 @@ ${kassirHtml}
 <div class="sep"></div>
 <table>${tolov}</table>
 ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz - 1}px">${chekMatn}</div>` : ''}
+${telegramQrBase64 ? `<div class="sep"></div>
+<div class="center" style="font-size:${sz - 1}px;margin-top:2mm">${t('Telegram kanalimiz')}</div>
+<div class="center" style="margin-top:1mm"><img src="${telegramQrBase64}" alt="Telegram QR" style="width:25mm;height:25mm;display:inline-block" /></div>
+<div class="center" style="font-size:${sz - 2}px;margin-top:1mm;color:#333">${t("QR-kodni skanerlang")}</div>` : ''}
 <div class="sep"></div>
 <div class="center" style="font-size:10px">${t('Rahmat')}!</div>
 </div>
@@ -1275,6 +1283,16 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
                   <>
                     <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
                     <div style={{ textAlign: 'center', fontSize: 11 }}>{chekMatn}</div>
+                  </>
+                )}
+                {telegramQrBase64 && (
+                  <>
+                    <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+                    <div style={{ textAlign: 'center', fontSize: 11, marginTop: 4 }}>{t('Telegram kanalimiz')}</div>
+                    <div style={{ textAlign: 'center', marginTop: 4 }}>
+                      <img src={telegramQrBase64} alt="Telegram QR" style={{ width: 110, height: 110, display: 'inline-block' }} />
+                    </div>
+                    <div style={{ textAlign: 'center', fontSize: 10, marginTop: 2, color: '#333' }}>{t("QR-kodni skanerlang")}</div>
                   </>
                 )}
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
