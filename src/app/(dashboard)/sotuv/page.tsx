@@ -641,14 +641,17 @@ export default function SotuvPage() {
     return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${t('Chek')} ${s.chekRaqami}</title>
 <style>
   @page{size:76mm auto;margin:0mm}
-  html{margin:0;padding:0}
-  html,body{height:auto!important;overflow:visible!important;margin:0!important;padding:0!important}
+  html{margin:0;padding:0;background:#fff}
+  html,body{height:auto!important;overflow:visible!important}
   *{page-break-inside:avoid!important;break-inside:avoid!important}
-  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;font-weight:bold;width:76mm;max-width:100%;margin:0 auto!important;padding:2mm 5mm;color:#000;background:#fff;box-sizing:border-box;word-break:break-word}
+  body{margin:0!important;padding:0!important;background:#fff}
+  .chek{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;font-weight:bold;width:76mm;max-width:100%;margin:3mm auto;padding:3mm 4mm;color:#000;background:#fff;box-sizing:border-box;word-break:break-word;border:1.5px solid #000;border-radius:2mm}
+  @media print{.chek{margin:0;border:1.5px solid #000}}
   table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px;font-weight:bold}
   .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:3px 0}
   .total td{font-weight:bold;font-size:${sz + 2}px}
 </style></head><body>
+<div class="chek">
 ${logoHtml}
 <div class="center bold" style="font-size:${sz + 2}px">${dokonNomi}</div>
 ${manzil ? `<div class="center">${manzil}</div>` : ''}
@@ -666,6 +669,7 @@ ${kassirHtml}
 ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz - 1}px">${chekMatn}</div>` : ''}
 <div class="sep"></div>
 <div class="center" style="font-size:10px">${t('Rahmat')}!</div>
+</div>
 </body></html>`
   }
 
