@@ -624,7 +624,10 @@ export default function SotuvPage() {
       const miqdor = Number(item.miqdor)
       const narx = formatSum(item.birlikNarxi)
       const jami = formatSum(item.jami)
-      return `<tr><td style="font-weight:600">${nomi}</td><td style="text-align:right">${miqdor} x ${narx}</td></tr><tr><td></td><td style="text-align:right;font-weight:bold">${jami}</td></tr>`
+      // Nomi to'liq qator oladi, ikkinchi qatorda miqdor × narx (chap) va jami (o'ng)
+      return `<tr><td colspan="2" style="font-weight:600;padding-top:3px">${nomi}</td></tr>`
+        + `<tr><td style="white-space:nowrap;color:#444">${miqdor} × ${narx}</td>`
+        + `<td style="text-align:right;font-weight:bold;white-space:nowrap">${jami}</td></tr>`
     }).join('') || ''
     const chegirmaHtml = Number(s.chegirma) > 0
       ? `<tr><td>${t('Chegirma')}:</td><td style="text-align:right;color:#666">-${formatSum(s.chegirma)}</td></tr>` : ''
@@ -641,7 +644,7 @@ export default function SotuvPage() {
   html{margin:0;padding:0}
   html,body{height:auto!important;overflow:visible!important;margin:0!important;padding:0!important}
   *{page-break-inside:avoid!important;break-inside:avoid!important}
-  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;font-weight:bold;width:76mm;margin:0!important;margin-top:0!important;padding:0 3mm;color:#000;background:#fff}
+  body{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;font-weight:bold;width:76mm;max-width:100%;margin:0 auto!important;padding:2mm 5mm;color:#000;background:#fff;box-sizing:border-box;word-break:break-word}
   table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px;font-weight:bold}
   .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:3px 0}
   .total td{font-weight:bold;font-size:${sz + 2}px}
@@ -670,7 +673,7 @@ ${chekMatn ? `<div class="sep"></div><div class="center" style="font-size:${sz -
     const html = chekHtml(s)
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
     const url = URL.createObjectURL(blob)
-    const win = window.open(url, '_blank', 'width=250,height=600,toolbar=no,menubar=no,location=no,status=no')
+    const win = window.open(url, '_blank', 'width=340,height=640,toolbar=no,menubar=no,location=no,status=no')
     if (!win) { URL.revokeObjectURL(url); return }
     win.addEventListener('load', () => {
       setTimeout(() => {
