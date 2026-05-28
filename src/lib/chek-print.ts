@@ -106,11 +106,10 @@ export function buildChekHtml(opts: ChekPrintOptions): string {
 <style>
   @page{size:80mm auto;margin:0mm}
   html{margin:0;padding:0;background:#fff}
-  html,body{height:auto!important;overflow:visible!important}
-  *{page-break-inside:avoid!important;break-inside:avoid!important}
-  body{margin:0!important;padding:0!important;background:#fff}
+  html,body{height:auto!important;overflow:visible!important;margin:0;padding:0;background:#fff}
   .chek{font-family:'Courier New',Consolas,monospace;font-size:${sz}px;font-weight:bold;width:80mm;max-width:100%;margin:3mm auto;padding:3mm 3mm;color:#000;background:#fff;box-sizing:border-box;word-break:break-word;border:1.5px solid #000;border-radius:2mm}
-  @media print{.chek{margin:0;border:1.5px solid #000;width:80mm}}
+  /* Thermal printerda border kerak emas — qog'oz uzluksiz, page-break border'ni takrorlaydi */
+  @media print{.chek{margin:0;padding:2mm 3mm;width:80mm;border:none;border-radius:0}}
   table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1px 0;font-size:${sz}px;font-weight:bold}
   .center{text-align:center}.bold{font-weight:bold}.sep{border-top:1px dashed #000;margin:3px 0}
   .total td{font-weight:bold;font-size:${sz + 2}px}
