@@ -111,7 +111,8 @@ export function buildChekHtml(opts: ChekPrintOptions): string {
   /* Print: kontent qog'ozning to'liq kengligini egallaydi (printer driver qog'oz kengligini belgilaydi) */
   @media print{
     html,body{width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;padding:0!important}
-    .chek{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:2mm 3mm!important;border:none!important;border-radius:0!important;box-sizing:border-box!important}
+    /* Chap padding 6mm — Xprinter'ning chap "dead zone" uchun (3mm yetmas, harflar kesilib qoladi) */
+    .chek{width:100%!important;max-width:none!important;min-width:0!important;margin:0!important;padding:2mm 3mm 2mm 6mm!important;border:none!important;border-radius:0!important;box-sizing:border-box!important}
     /* Browser scaling'ni o'chirish */
     @page{size:80mm auto;margin:0}
   }
