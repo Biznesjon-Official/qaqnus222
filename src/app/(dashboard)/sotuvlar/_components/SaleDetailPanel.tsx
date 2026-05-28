@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
-import { X, ChevronLeft, ChevronRight, Printer, Link as LinkIcon, Undo2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { X, ChevronLeft, ChevronRight, Printer, Link as LinkIcon, Undo2, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { formatSum } from '@/lib/utils'
+import { buildChekHtml, chekChopEtish, type ChekDokonInfo } from '@/lib/chek-print'
 import type { SotuvQatori } from '../_types'
 
 interface Props {
@@ -13,7 +15,41 @@ interface Props {
   onNext: () => void
 }
 
+// Module-level cache — bir sahifa hayoti davomida fetch qilingan resurslar
+let _dokonInfoCache: ChekDokonInfo | null = null
+let _qrCache: string = ''
+let _qrLoading: Promise<string> | null = null
+
+async function loadDokonInfo(): Promise<ChekDokonInfo> {
+  if (_dokonInfoCache) return _dokonInfoCache
+  try {
+    const r = await fetch('/api/sozlamalar')
+    const data = await r.json()
+    _dokonInfoCache = data && typeof data === 'object' ? data : {}
+    return _dokonInfoCache!
+  } catch {
+    return {}
+  }
+}
+
+async function loadQr(): Promise<string> {
+  if (_qrCache) return _qrCache
+  if (_qrLoading) return _qrLoading
+  _qrLoading = fetch('/telegramqr.png')
+    .then(r => r.blob())
+    .then(blob => new Promise<string>(resolve => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.readAsDataURL(blob)
+    }))
+    .then(b64 => { _qrCache = b64; return b64 })
+    .catch(() => '')
+  return _qrLoading
+}
+
 export function SaleDetailPanel({ open, sotuv, onClose, onPrev, onNext }: Props) {
+  const [printing, setPrinting] = useState(false)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -28,6 +64,40 @@ export function SaleDetailPanel({ open, sotuv, onClose, onPrev, onNext }: Props)
   if (!open || !sotuv) return null
 
   const chekLink = `/chek/${sotuv.chekRaqami}`
+
+  async function chekniChopEtish() {
+    if (!sotuv) return
+    setPrinting(true)
+    try {
+      const [dokonInfo, qrBase64] = await Promise.all([loadDokonInfo(), loadQr()])
+      const html = buildChekHtml({
+        data: {
+          chekRaqami: sotuv.chekRaqami,
+          sana: sotuv.sana,
+          tarkiblar: sotuv.tarkiblar.map(tk => ({
+            tovar: { nomi: tk.tovar.nomi },
+            miqdor: tk.miqdor,
+            birlikNarxi: tk.birlikNarxi,
+            jami: tk.jami,
+          })),
+          chegirma: sotuv.chegirma,
+          yakuniySumma: sotuv.yakuniySumma,
+          tolovUsuli: sotuv.tolovUsuli,
+          naqdTolangan: (sotuv as any).naqdTolangan,
+          kartaTolangan: (sotuv as any).kartaTolangan,
+          mijoz: sotuv.mijoz ? { ism: sotuv.mijoz.ism } : null,
+          kassir: { telefon: (sotuv.kassir as any).telefon || null },
+        },
+        dokonInfo,
+        telegramQrBase64: qrBase64,
+      })
+      chekChopEtish(html)
+    } catch (e: any) {
+      toast.error(e?.message || 'Chek chop etilmadi')
+    } finally {
+      setPrinting(false)
+    }
+  }
 
   return (
     <div
@@ -146,23 +216,25 @@ export function SaleDetailPanel({ open, sotuv, onClose, onPrev, onNext }: Props)
           )}
 
           <div className="flex gap-2 pt-2 border-t border-gray-100 dark:border-neutral-800">
-            <a
-              href={chekLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700"
+            <button
+              type="button"
+              onClick={chekniChopEtish}
+              disabled={printing}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-600 text-white text-sm rounded-xl hover:bg-red-700 disabled:opacity-60"
             >
-              <Printer size={14} /> Chek
-            </a>
+              {printing ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+              {printing ? 'Tayyorlanmoqda...' : 'Chek chop etish'}
+            </button>
             <button
               type="button"
               onClick={() => {
                 const url = window.location.origin + chekLink
                 void navigator.clipboard?.writeText(url)
+                toast.success('Link nusxalandi')
               }}
               className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 border border-gray-200 dark:border-neutral-700 text-gray-700 dark:text-gray-300 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-neutral-800"
             >
-              <LinkIcon size={14} /> Linkni nusxalash
+              <LinkIcon size={14} /> Link nusxalash
             </button>
           </div>
         </div>
