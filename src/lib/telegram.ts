@@ -99,12 +99,17 @@ async function saveEntityCache(): Promise<void> {
 async function loadFloodTimer(): Promise<void> {
   try {
     const row = await prisma.sozlama.findUnique({ where: { kalit: 'telegram_flood_until' } })
-    if (!row?.qiymat) return
+    if (!row?.qiymat) {
+      // DB'da flood timer yo'q - in-memory'ni ham tozalash (manual clear ishlashi uchun)
+      _floodUntil = 0
+      return
+    }
     const until = parseInt(row.qiymat)
     if (until > Date.now()) {
       _floodUntil = until
-      const secsLeft = Math.round((until - Date.now()) / 1000)
-      console.log(`[Telegram] Flood timer yuklandi: ${secsLeft}s qoldi`)
+    } else {
+      // DB'da eski flood timer - tugagan, tozalaymiz
+      _floodUntil = 0
     }
   } catch {}
 }
@@ -737,6 +742,10 @@ export async function queueWorkerTick(): Promise<void> {
 
   try {
     if (!(await isTelegramEnabled())) return
+
+    // Cache, flood timer va cache-only rejim'ni avval yuklash
+    // (getClient lazy chaqiriladi - har tick boshida sozlamalarni yangilaymiz).
+    await Promise.all([loadEntityCache(), loadFloodTimer(), loadCacheOnlyMode()])
 
     // Eskirgan xabarlarni avtomat 'expired' qilish (max 3 kun navbatda kutadi).
     // Reminder turlari uchun: ertalabki cron ishlamasa, ertaga yangi bo'lganda yuboriladi.
