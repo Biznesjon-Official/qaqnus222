@@ -128,6 +128,33 @@ function floodSecsLeft(): number {
   return Math.max(0, Math.round((_floodUntil - Date.now()) / 1000))
 }
 
+// Cache-only mode: faqat cache'dagi telefon raqamlarga xabar yuborish (ImportContacts'ni o'tkazib yuborish).
+// Bu PEER_FLOOD risk'ini keskin kamaytiradi - cache hit'lar 0 API call qiladi.
+// telegram_cache_only_until sozlama'sida millisekund timestamp saqlanadi.
+let _cacheOnlyUntil = 0
+
+async function loadCacheOnlyMode(): Promise<void> {
+  try {
+    const row = await prisma.sozlama.findUnique({ where: { kalit: 'telegram_cache_only_until' } })
+    if (!row?.qiymat) { _cacheOnlyUntil = 0; return }
+    _cacheOnlyUntil = parseInt(row.qiymat) || 0
+    if (_cacheOnlyUntil > Date.now()) {
+      const hLeft = Math.round((_cacheOnlyUntil - Date.now()) / 3600000)
+      console.log(`[Telegram] Cache-only mode FAOL: ${hLeft} soat qoldi`)
+    }
+  } catch {}
+}
+
+function isCacheOnlyMode(): boolean {
+  return _cacheOnlyUntil > Date.now()
+}
+
+function isPhoneCached(telefon: string | null | undefined): boolean {
+  if (!telefon) return false
+  const clean = telefon.replace(/[\s\-()]/g, '')
+  return _entityCache.has(clean)
+}
+
 async function getClient(): Promise<TelegramClient | null> {
   // Agar client tayyor bo'lsa — qaytarish
   if (_client && _clientReady) {
@@ -164,8 +191,8 @@ async function getClient(): Promise<TelegramClient | null> {
       await client.connect()
       _client = client
       _clientReady = true
-      // Entity cache va flood timer DB dan yuklash
-      await Promise.all([loadEntityCache(), loadFloodTimer()])
+      // Entity cache, flood timer va cache-only rejim DB dan yuklash
+      await Promise.all([loadEntityCache(), loadFloodTimer(), loadCacheOnlyMode()])
       console.log('[Telegram] Client ulandi (singleton)')
       return client
     } catch (e) {
@@ -768,6 +795,12 @@ export async function queueWorkerTick(): Promise<void> {
 
     if (candidates.length === 0) return
 
+    const cacheOnly = isCacheOnlyMode()
+    if (cacheOnly) {
+      const hLeft = Math.round((_cacheOnlyUntil - Date.now()) / 3600000)
+      console.log(`[Queue] Cache-only rejim: faqat cache'dagi mijozlarga yuboriladi (${hLeft} soat qoldi)`)
+    }
+
     for (const log of candidates) {
       if (isFlooded()) {
         // Flood orada keldi — qolgan xabarlarni qoldiramiz
@@ -780,6 +813,19 @@ export async function queueWorkerTick(): Promise<void> {
         await prisma.bildirishnomLog.update({
           where: { id: log.id },
           data: { status: 'failed', xato: 'Telefon yoki matn yo\'q' },
+        }).catch(() => {})
+        continue
+      }
+
+      // Cache-only mode: yangi mijoz uchun ImportContacts qilmaslik (PEER_FLOOD risk)
+      if (cacheOnly && !isPhoneCached(telefon)) {
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: {
+            status: 'queued',
+            keyingiUrinish: new Date(_cacheOnlyUntil),
+            xato: 'Cache-only rejim - keyingi cycle\'da yuboriladi',
+          },
         }).catch(() => {})
         continue
       }
