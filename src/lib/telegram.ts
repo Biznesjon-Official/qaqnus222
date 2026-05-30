@@ -36,9 +36,10 @@ let _client: TelegramClient | null = null
 let _clientReady = false
 let _connectPromise: Promise<TelegramClient | null> | null = null
 
-// Entity cache — telefon raqamdan Telegram user ID ga (DB da saqlanadi)
+// Entity cache — telefon raqamdan Telegram user ID ga (DB da saqlanadi).
+// CACHE ABADIY: bir marta resolve qilingan mijoz keyin hech qachon qayta resolve qilinmaydi.
+// Bu PEER_FLOOD risk'ni keskin kamaytiradi (har xabar uchun API call yo'q).
 const _entityCache = new Map<string, { userId: bigint; accessHash: bigint; cachedAt: number }>()
-const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 soat
 let _entityCacheLoaded = false
 
 // Flood timer — PEER_FLOOD kelganda shu vaqtgacha kutish
@@ -65,17 +66,15 @@ async function loadEntityCache(): Promise<void> {
     const row = await prisma.sozlama.findUnique({ where: { kalit: 'telegram_entity_cache' } })
     if (!row?.qiymat) return
     const data = JSON.parse(row.qiymat) as Record<string, { userId: string; accessHash: string; cachedAt: number }>
-    const now = Date.now()
+    // ABADIY cache — TTL tekshirilmaydi. Bir marta resolve qilingan mijoz abadiy qoladi.
     for (const [phone, val] of Object.entries(data)) {
-      if (now - val.cachedAt < CACHE_TTL) {
-        _entityCache.set(phone, {
-          userId: BigInt(val.userId),
-          accessHash: BigInt(val.accessHash),
-          cachedAt: val.cachedAt,
-        })
-      }
+      _entityCache.set(phone, {
+        userId: BigInt(val.userId),
+        accessHash: BigInt(val.accessHash),
+        cachedAt: val.cachedAt,
+      })
     }
-    console.log(`[Telegram] Entity cache yuklandi: ${_entityCache.size} ta raqam`)
+    console.log(`[Telegram] Entity cache yuklandi: ${_entityCache.size} ta raqam (abadiy)`)
   } catch (e) {
     console.error('[Telegram] Entity cache yuklash xatosi:', e)
   }
@@ -192,71 +191,75 @@ async function waitForRateLimit(): Promise<void> {
 }
 
 // ─── Telefon raqam → Telegram entity resolve ────────────────────────────────
+//
+// Strategiya (moysklad pattern + kontaktsiz):
+//  1. Cache check — abadiy cache, bir marta resolve qilingan mijoz keyin qayta yo'q
+//  2. Cache yo'q bo'lsa: ImportContacts (random clientId, 3s delay) → entity oling
+//     → keyin kontaktni o'chirish (sizning Telegram ilovangizda mijozlar to'planmasin)
+//     → entity FOREVER cache'ga
+//  3. Keyingi safar shu mijoz uchun: faqat cache hit, hech qanday API call yo'q
+//
+// Bu PEER_FLOOD risk'ni keskin kamaytiradi: har xabar uchun avval 1-2 API
+// (Resolve + Import + Delete) edi, endi 0 API (cache) yoki 2 API (faqat 1-marta).
 
 async function resolvePhone(client: TelegramClient, telefon: string): Promise<Api.TypeUser | null> {
   const cleanPhone = telefon.replace(/[\s\-()]/g, '')
 
-  // 1. Avval cache dan qidirish
+  // 1) Abadiy cache — bir marta resolve qilingan mijoz keyin qayta API call talab qilmaydi
   const cached = _entityCache.get(cleanPhone)
-  if (cached && Date.now() - cached.cachedAt < CACHE_TTL) {
+  if (cached) {
     try {
       const inputUser = new Api.InputUser({ userId: cached.userId as any, accessHash: cached.accessHash as any })
       const result = await client.invoke(new Api.users.GetUsers({ id: [inputUser] }))
       if (result.length > 0) return result[0]
+      // GetUsers bo'sh qaytsa, cache buzilgan — qayta resolve
+      _entityCache.delete(cleanPhone)
     } catch {
       _entityCache.delete(cleanPhone)
     }
   }
 
-  // 2. ResolvePhone — kontakt SAQLAMAYDI, faqat user ID oladi
-  try {
-    const resolved = await client.invoke(new Api.contacts.ResolvePhone({ phone: cleanPhone }))
-    if (resolved.users && resolved.users.length > 0) {
-      const user = resolved.users[0] as any
-      if (user.id && user.accessHash) {
-        _entityCache.set(cleanPhone, {
-          userId: BigInt(user.id),
-          accessHash: BigInt(user.accessHash),
-          cachedAt: Date.now(),
-        })
-        saveEntityCache().catch(() => {})
-      }
-      return resolved.users[0]
-    }
-  } catch (e: any) {
-    if (e.message?.includes('PHONE_NOT_OCCUPIED')) return null
-    // ResolvePhone ishlamasa — ImportContacts + darhol o'chirish
-  }
+  // 2) ImportContacts — random clientId va 3 sekund delay (Telegram spam pattern'ini buzish)
+  await new Promise(resolve => setTimeout(resolve, 3000))
 
-  // 3. Fallback: ImportContacts, lekin darhol kontaktni o'chirish
-  const result = await client.invoke(
-    new Api.contacts.ImportContacts({
-      contacts: [
-        new Api.InputPhoneContact({
-          clientId: 0 as any,
-          phone: cleanPhone,
-          firstName: '_',
-          lastName: '',
-        }),
-      ],
-    })
-  )
+  const randomClientId = Math.floor(Math.random() * 0x7FFFFFFF)
+
+  let result
+  try {
+    result = await client.invoke(
+      new Api.contacts.ImportContacts({
+        contacts: [
+          new Api.InputPhoneContact({
+            clientId: randomClientId as any,
+            phone: cleanPhone,
+            firstName: 'Mijoz',
+            lastName: '',
+          }),
+        ],
+      })
+    )
+  } catch (e: any) {
+    if (e.message?.includes('PHONE_NOT_OCCUPIED') || e.message?.includes('PHONE_NUMBER_INVALID')) {
+      return null
+    }
+    throw e
+  }
 
   if (!result.users || result.users.length === 0) return null
 
   const user = result.users[0] as any
 
-  // Kontaktni darhol o'chirish — kontaktlar ro'yxatini iflostirmaslik uchun
   if (user.id && user.accessHash) {
+    // 3) Kontaktni o'chirish — Telegram kontakt ro'yxatida mijoz qolmasin
     const inputUser = new Api.InputUser({ userId: user.id as any, accessHash: user.accessHash as any })
     await client.invoke(new Api.contacts.DeleteContacts({ id: [inputUser] })).catch(() => {})
 
+    // 4) Entity ABADIY cache'ga — keyingi xabar yuborilganda API call kerak emas
     _entityCache.set(cleanPhone, {
       userId: BigInt(user.id),
       accessHash: BigInt(user.accessHash),
       cachedAt: Date.now(),
     })
-    // DB ga saqlash (async, kutmaymiz)
     saveEntityCache().catch(() => {})
   }
 
