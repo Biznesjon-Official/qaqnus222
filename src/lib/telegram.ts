@@ -421,12 +421,21 @@ export async function nasiyaEslatmalarYuborish() {
 
     if (!xabarTuri || !xabarMatni) continue
 
-    // Bugun allaqachon yuborilganmi?
+    // Cross-day dedup: bu nasiya uchun shu turdagi xabar bormi?
+    // (1) Bugun yaratilgan — yangi log kerak emas
+    // (2) Hali yuborilmagan (pending/queued/sending) — backlog'ga yana qo'shmaymiz,
+    //     aks holda xabarlar to'planib mijozni chalkashtiradi.
+    // (3) Oxirgi 7 kun ichida muvaffaqiyatli yuborilgan — qaytarishga hojat yo'q
+    const ettiKunOldin = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const allaqachon = await prisma.bildirishnomLog.findFirst({
       where: {
         nasiyaId: nasiya.id,
         xabarTuri,
-        sana: { gte: bugun },
+        OR: [
+          { sana: { gte: bugun } },                                       // bugun yaratilgan
+          { status: { in: ['pending', 'queued', 'sending'] } },           // hali yuborilmagan
+          { status: 'sent', yuborilganSana: { gte: ettiKunOldin } },      // yaqinda yuborilgan
+        ],
       },
     })
     if (allaqachon) continue
@@ -698,6 +707,42 @@ export async function queueWorkerTick(): Promise<void> {
 
   try {
     if (!(await isTelegramEnabled())) return
+
+    // Eskirgan xabarlarni avtomat 'expired' qilish (max 3 kun navbatda kutadi).
+    // Reminder turlari uchun: ertalabki cron ishlamasa, ertaga yangi bo'lganda yuboriladi.
+    // Sotuv turlari uchun: 3 kun kechikkan tasdiq mijozni chalkashtiradi.
+    const expireBeforeReminder = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1 kun (eslatma uchun)
+    const expireBeforeSale = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)     // 3 kun (sotuv uchun)
+
+    const expiredReminders = await prisma.bildirishnomLog.updateMany({
+      where: {
+        status: { in: ['pending', 'queued'] },
+        xabarTuri: { in: ['muddati_otgan', '1_kun', '2_kun', '3_kun'] },
+        sana: { lt: expireBeforeReminder },
+      },
+      data: {
+        status: 'expired',
+        xato: 'Eskirgan (1 kundan ortiq) - mijozni chalkashtirmaslik uchun yuborilmadi',
+        keyingiUrinish: null,
+      },
+    }).catch(() => ({ count: 0 }))
+
+    const expiredSales = await prisma.bildirishnomLog.updateMany({
+      where: {
+        status: { in: ['pending', 'queued'] },
+        xabarTuri: { in: ['nasiya_yaratildi', 'qarz_qoshildi', 'tolov_qilindi'] },
+        sana: { lt: expireBeforeSale },
+      },
+      data: {
+        status: 'expired',
+        xato: 'Eskirgan (3 kundan ortiq) - mijozni chalkashtirmaslik uchun yuborilmadi',
+        keyingiUrinish: null,
+      },
+    }).catch(() => ({ count: 0 }))
+
+    if (expiredReminders.count + expiredSales.count > 0) {
+      console.log(`[Queue] Eskirgan xabarlar: ${expiredReminders.count} eslatma + ${expiredSales.count} sotuv -> expired`)
+    }
 
     if (isFlooded()) {
       // Flood davom etyapti — hech narsa qilmaymiz
