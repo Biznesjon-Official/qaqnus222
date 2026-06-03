@@ -142,14 +142,18 @@ enum Joylashuv {
 // MIJOZLAR
 // ========================
 model Mijoz {
-  id          String   @id @default(cuid())
-  ism         String
-  telefon     String?
-  manzil      String?
-  izoh        String?
-  maxsus_kod  String?  @unique
-  telegram_id String?  @unique
-  yaratilgan  DateTime @default(now())
+  id            String   @id @default(cuid())
+  ism           String
+  telefon       String?
+  manzil        String?
+  izoh          String?
+  maxsus_kod    String?  @unique
+  telegram_id   String?  @unique
+  // Telegram'da topilmagan mijozlar uchun flag — qayta urinmaslik (PEER_FLOOD risk).
+  // Birinchi "Telegram yo'q" xato'sida true qilinadi, mijoz ulanmagunicha shu qoladi.
+  // Admin qo'lda false qilib qaytarishi mumkin (mijoz Telegram qo'shsa).
+  telegramYoq   Boolean  @default(false)
+  yaratilgan    DateTime @default(now())
 
   sotuvlar        Sotuv[]
   nasiyalar       Nasiya[]

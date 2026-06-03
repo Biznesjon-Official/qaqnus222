@@ -384,7 +384,7 @@ export async function nasiyaEslatmalarYuborish() {
       holati: { in: ['OCHIQ', 'MUDDATI_OTGAN'] },
       ochirilgan: false,
       muddat: { not: null },
-      mijoz: { telefon: { not: null } },
+      mijoz: { telefon: { not: null }, telegramYoq: false },
     },
     include: {
       mijoz: true,
@@ -398,6 +398,9 @@ export async function nasiyaEslatmalarYuborish() {
 
   for (const nasiya of nasiyalar) {
     if (!nasiya.mijoz.telefon || !nasiya.muddat) continue
+    // Mijoz Telegram'da yo'q deb belgilangan bo'lsa — o'tkazib yuboramiz
+    // (qayta-qayta urinmaymiz — PEER_FLOOD risk va vaqt sarflash).
+    if (nasiya.mijoz.telegramYoq) continue
 
     const muddat = new Date(nasiya.muddat)
     muddat.setHours(0, 0, 0, 0)
@@ -799,7 +802,7 @@ export async function queueWorkerTick(): Promise<void> {
       },
       orderBy: { sana: 'asc' },
       take: QUEUE_BATCH_SIZE,
-      include: { mijoz: { select: { telefon: true } } },
+      include: { mijoz: { select: { telefon: true, telegramYoq: true } } },
     })
 
     if (candidates.length === 0) return
@@ -822,6 +825,19 @@ export async function queueWorkerTick(): Promise<void> {
         await prisma.bildirishnomLog.update({
           where: { id: log.id },
           data: { status: 'failed', xato: 'Telefon yoki matn yo\'q' },
+        }).catch(() => {})
+        continue
+      }
+
+      // Mijoz Telegram'da yo'q deb belgilangan bo'lsa — qayta urinmaymiz
+      if (log.mijoz?.telegramYoq) {
+        await prisma.bildirishnomLog.update({
+          where: { id: log.id },
+          data: {
+            status: 'failed',
+            xato: 'Mijoz Telegramda yo\'q (avval belgilangan)',
+            keyingiUrinish: null,
+          },
         }).catch(() => {})
         continue
       }
@@ -878,7 +894,17 @@ export async function queueWorkerTick(): Promise<void> {
             keyingiUrinish: null,
           },
         }).catch(() => {})
-        console.warn(`[Queue] Failed (permanent): ${telefon} — ${xato.slice(0, 80)}`)
+
+        // Mijozni "Telegram yo'q" deb belgilash — kelajakda qayta urinmaslik
+        // (cron, manual yuborish — barchasi shu flag bilan o'tkazib yuborishadi)
+        if (log.mijozId) {
+          await prisma.mijoz.update({
+            where: { id: log.mijozId },
+            data: { telegramYoq: true },
+          }).catch(() => {})
+        }
+
+        console.warn(`[Queue] Failed (permanent): ${telefon} — mijoz Telegramda yo'q deb belgilandi`)
         continue
       }
 
