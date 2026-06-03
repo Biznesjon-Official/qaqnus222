@@ -7,6 +7,7 @@ import {
   MessageSquare, CheckCircle, XCircle, Clock, RotateCcw, RefreshCw,
   Eye, X, ChevronLeft, ChevronRight, Filter, Search, Send, Trash2, Zap, ExternalLink,
 } from 'lucide-react'
+import { xatonyTahlil } from '@/lib/xabar-xato'
 
 // ─── Turlar ──────────────────────────────────────────────────────────────────
 
@@ -79,37 +80,58 @@ function formatVaqt(sana: string) {
 // ─── Status badge ────────────────────────────────────────────────────────────
 
 function StatusBadge({ status, xato }: { status: string; xato: string | null }) {
-  if (status === 'sent') {
+  // Inline qisqa sabab — har status uchun (sent'dan tashqari)
+  const tahlil = status !== 'sent' ? xatonyTahlil(xato) : null
+  const inlineReason = tahlil?.shortLabel ?? null
+  const fullTitle = tahlil?.fullText ?? xato ?? ''
+
+  const badge = (() => {
+    if (status === 'sent') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400">
+          <CheckCircle size={12} /> Yuborildi
+        </span>
+      )
+    }
+    if (status === 'failed') {
+      return (
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+          title={fullTitle}
+        >
+          <XCircle size={12} /> Xatolik
+        </span>
+      )
+    }
+    if (status === 'queued') {
+      return (
+        <span
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
+          title={fullTitle || 'Flood — avtomatik qayta yuboriladi'}
+        >
+          <Clock size={12} /> Navbatda
+        </span>
+      )
+    }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400">
-        <CheckCircle size={12} /> Yuborildi
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400">
+        <Clock size={12} /> Kutmoqda
       </span>
     )
-  }
-  if (status === 'failed') {
-    return (
-      <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400"
-        title={xato || ''}
-      >
-        <XCircle size={12} /> Xatolik
-      </span>
-    )
-  }
-  if (status === 'queued') {
-    return (
-      <span
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
-        title={xato || 'Flood — avtomatik qayta yuboriladi'}
-      >
-        <Clock size={12} /> Navbatda
-      </span>
-    )
-  }
+  })()
+
+  if (!inlineReason) return badge
+
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium bg-yellow-50 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400">
-      <Clock size={12} /> Kutmoqda
-    </span>
+    <div className="inline-flex flex-col items-center gap-0.5 max-w-[12rem]">
+      {badge}
+      <span
+        className="text-[10px] leading-tight text-gray-500 dark:text-gray-400 line-clamp-1 max-w-full"
+        title={fullTitle}
+      >
+        {inlineReason}
+      </span>
+    </div>
   )
 }
 
@@ -680,8 +702,8 @@ export default function XabarlarPage() {
                     </p>
                   </td>
 
-                  {/* Holat */}
-                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                  {/* Holat — badge + inline qisqa sabab (xatonyTahlil orqali) */}
+                  <td className="px-4 py-3 text-center align-middle">
                     <StatusBadge status={x.status} xato={x.xato} />
                   </td>
 
