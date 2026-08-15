@@ -10,6 +10,27 @@ export function formatSum(summa: number | string) {
   return new Intl.NumberFormat('uz-UZ').format(n) + " so'm"
 }
 
+/**
+ * Pul summasini valyuta bilan formatlaydi.
+ * - UZS: "150 000 so'm" (uz-UZ locale, formatSum bilan mos)
+ * - USD: "$150" yoki "$150.55" (en-US locale, decimal saqlanadi)
+ *
+ * @param summa - raqam yoki raqamli string
+ * @param valyuta - 'UZS' yoki 'USD' (default 'UZS')
+ */
+export function formatPul(summa: number | string, valyuta: 'UZS' | 'USD' = 'UZS'): string {
+  const raw = typeof summa === 'string' ? parseFloat(summa) : summa
+  const n = Number.isFinite(raw) ? raw : 0
+  if (valyuta === 'USD') {
+    const formatted = n.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    })
+    return `$${formatted}`
+  }
+  return new Intl.NumberFormat('uz-UZ').format(n) + " so'm"
+}
+
 export function formatSana(sana: Date | string) {
   const d = typeof sana === 'string' ? new Date(sana) : sana
   const kun = String(d.getDate()).padStart(2, '0')

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { formatSum, formatSana } from '@/lib/utils'
+import { formatSana, formatPul } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag, Banknote, Clock, PlusCircle } from 'lucide-react'
+import { Plus, X, Trash2, ChevronDown, ChevronUp, ShoppingBag, Banknote, Clock, PlusCircle, DollarSign } from 'lucide-react'
 import Combobox from '@/components/ui/combobox'
 import MoneyInput from '@/components/ui/money-input'
 import ViewToggle from '@/components/ViewToggle'
@@ -31,6 +31,8 @@ interface XaridQarz {
   sana: string
 }
 
+type Valyuta = 'UZS' | 'USD'
+
 interface Xarid {
   id: string
   sana: string
@@ -38,6 +40,7 @@ interface Xarid {
   tolangan: number
   qoldiqQarz: number
   izoh: string | null
+  valyuta: Valyuta
   taminotchi: { id: string; nomi: string; manzil?: string | null; kontaktShaxs?: string | null } | null
   tarkiblar: XaridTarkibi[]
   tolovlar: XaridTolov[]
@@ -56,8 +59,10 @@ export default function XaridlarPage() {
   const [modal, setModal] = useState(false)
   const [view, setView] = useState<'table' | 'card'>('table')
   const [taminotchiFilter, setTaminotchiFilter] = useState('')
+  const [valyutaFilter, setValyutaFilter] = useState<'' | Valyuta>('')
   const [danFilter, setDanFilter] = useState('')
   const [gachaFilter, setGachaFilter] = useState('')
+  const [summary, setSummary] = useState<{ uzsQarz: number; usdQarz: number }>({ uzsQarz: 0, usdQarz: 0 })
   const [kengaytirilgan, setKengaytirilgan] = useState<string | null>(null)
   const [tolovModal, setTolovModal] = useState<Xarid | null>(null)
   const [tolovForm, setTolovForm] = useState({ summa: '', tolovUsuli: 'NAQD', izoh: '' })
@@ -70,10 +75,11 @@ export default function XaridlarPage() {
   const [taminotchiSaqlanmoqda, setTaminotchiSaqlanmoqda] = useState(false)
 
   // Form state
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{ taminotchiId: string; tolangan: string; izoh: string; valyuta: Valyuta }>({
     taminotchiId: '',
     tolangan: '',
     izoh: '',
+    valyuta: 'UZS',
   })
   const [tarkiblar, setTarkiblar] = useState([
     { tovarNomi: '', miqdor: '', birlikNarxi: '' }
@@ -82,7 +88,9 @@ export default function XaridlarPage() {
 
   // Yangi qarz (tovarsiz) modali
   const [yangiQarzModal, setYangiQarzModal] = useState(false)
-  const [yangiQarzForm, setYangiQarzForm] = useState({ taminotchiId: '', summa: '', izoh: '' })
+  const [yangiQarzForm, setYangiQarzForm] = useState<{ taminotchiId: string; summa: string; izoh: string; valyuta: Valyuta }>({
+    taminotchiId: '', summa: '', izoh: '', valyuta: 'UZS',
+  })
   const [yangiQarzSaqlanmoqda, setYangiQarzSaqlanmoqda] = useState(false)
 
   useEffect(() => {
@@ -100,6 +108,7 @@ export default function XaridlarPage() {
     setYuklanmoqda(true)
     const params = new URLSearchParams()
     if (taminotchiFilter) params.set('taminotchiId', taminotchiFilter)
+    if (valyutaFilter) params.set('valyuta', valyutaFilter)
     if (danFilter) params.set('dan', danFilter)
     if (gachaFilter) params.set('gacha', gachaFilter)
     const data = await fetch(`/api/xaridlar?${params}`).then(r => r.json())
@@ -107,7 +116,21 @@ export default function XaridlarPage() {
     setYuklanmoqda(false)
   }
 
-  useEffect(() => { yuklash() }, [taminotchiFilter, danFilter, gachaFilter])
+  async function yuklaSummary() {
+    try {
+      const data = await fetch('/api/xaridlar/summary').then(r => r.json())
+      setSummary({
+        uzsQarz: Number(data?.uzsQarz || 0),
+        usdQarz: Number(data?.usdQarz || 0),
+      })
+    } catch {
+      // Sukut bilan o'tib ketamiz — UI buzilmaydi
+    }
+  }
+
+  useEffect(() => { yuklash() }, [taminotchiFilter, valyutaFilter, danFilter, gachaFilter])
+  // Summary har xaridlar yangilangan paytda qayta yuklanadi (har valyutada qarz aniq)
+  useEffect(() => { yuklaSummary() }, [xaridlar])
 
   function tarkibQoshish() {
     setTarkiblar(t => [...t, { tovarNomi: '', miqdor: '', birlikNarxi: '' }])
@@ -142,6 +165,7 @@ export default function XaridlarPage() {
           taminotchiId: form.taminotchiId || null,
           tolangan: form.tolangan,
           izoh: form.izoh,
+          valyuta: form.valyuta,
           tarkiblar: validTarkiblar.map(t => ({
             tovarNomi: t.tovarNomi,
             miqdor: parseFloat(t.miqdor),
@@ -153,7 +177,7 @@ export default function XaridlarPage() {
       if (!res.ok) { toast.error(json.xato || 'Xatolik'); return }
       toast.success('Xarid qayd etildi!')
       setModal(false)
-      setForm({ taminotchiId: '', tolangan: '', izoh: '' })
+      setForm({ taminotchiId: '', tolangan: '', izoh: '', valyuta: 'UZS' })
       setTarkiblar([{ tovarNomi: '', miqdor: '', birlikNarxi: '' }])
       yuklash()
     } finally {
@@ -175,6 +199,7 @@ export default function XaridlarPage() {
           taminotchiId: yangiQarzForm.taminotchiId,
           rejim: 'qarz',
           qarzSumma: summa,
+          valyuta: yangiQarzForm.valyuta,
           izoh: yangiQarzForm.izoh || null,
         }),
       })
@@ -182,7 +207,7 @@ export default function XaridlarPage() {
       if (!res.ok) { toast.error(json.xato || 'Xatolik'); return }
       toast.success('Qarz qayd etildi!')
       setYangiQarzModal(false)
-      setYangiQarzForm({ taminotchiId: '', summa: '', izoh: '' })
+      setYangiQarzForm({ taminotchiId: '', summa: '', izoh: '', valyuta: 'UZS' })
       yuklash()
     } finally {
       setYangiQarzSaqlanmoqda(false)
@@ -297,6 +322,28 @@ export default function XaridlarPage() {
 
   return (
     <div className="space-y-4">
+      {/* Per-currency qarz summary kartalar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Banknote size={16} className="text-blue-600" />
+            <p className="text-xs text-gray-500 dark:text-gray-500 font-medium">So&apos;mda jami qarz</p>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {formatPul(summary.uzsQarz, 'UZS')}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <DollarSign size={16} className="text-green-600" />
+            <p className="text-xs text-gray-500 dark:text-gray-500 font-medium">Dollarda jami qarz</p>
+          </div>
+          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            {formatPul(summary.usdQarz, 'USD')}
+          </p>
+        </div>
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3">
         <select
@@ -307,6 +354,16 @@ export default function XaridlarPage() {
           {taminotchiFilterOptions.map(o => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
+        </select>
+        <select
+          value={valyutaFilter}
+          onChange={e => setValyutaFilter(e.target.value as '' | Valyuta)}
+          className="px-3 py-2.5 bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+          aria-label="Valyuta filter"
+        >
+          <option value="">Hammasi (valyuta)</option>
+          <option value="UZS">So&apos;m (UZS)</option>
+          <option value="USD">Dollar (USD)</option>
         </select>
         <input
           type="date"
@@ -372,13 +429,23 @@ export default function XaridlarPage() {
                       <td className="px-4 py-3 text-gray-900 dark:text-gray-100 text-sm whitespace-nowrap">
                         {x.taminotchi ? (
                           <div>
-                            <div className="font-medium">{x.taminotchi.nomi}</div>
+                            <div className="font-medium flex items-center gap-1.5">
+                              <span>{x.taminotchi.nomi}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${x.valyuta === 'USD' ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'}`}>
+                                {x.valyuta}
+                              </span>
+                            </div>
                             {x.taminotchi.kontaktShaxs && (
                               <div className="text-gray-400 dark:text-gray-600 text-xs">{x.taminotchi.kontaktShaxs}</div>
                             )}
                           </div>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-600 italic">Noma&apos;lum</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-400 dark:text-gray-600 italic">Noma&apos;lum</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${x.valyuta === 'USD' ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'}`}>
+                              {x.valyuta}
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -386,10 +453,10 @@ export default function XaridlarPage() {
                           {x.tarkiblar.length} ta
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100 font-semibold text-sm whitespace-nowrap">{formatSum(x.jamiSumma)}</td>
-                      <td className="px-4 py-3 text-right text-green-600 text-sm hidden md:table-cell whitespace-nowrap">{formatSum(x.tolangan)}</td>
+                      <td className="px-4 py-3 text-right text-gray-900 dark:text-gray-100 font-semibold text-sm whitespace-nowrap">{formatPul(x.jamiSumma, x.valyuta)}</td>
+                      <td className="px-4 py-3 text-right text-green-600 text-sm hidden md:table-cell whitespace-nowrap">{formatPul(x.tolangan, x.valyuta)}</td>
                       <td className={`px-4 py-3 text-right font-semibold text-sm whitespace-nowrap ${x.qoldiqQarz > 0 ? 'text-red-600' : 'text-gray-400 dark:text-gray-600'}`}>
-                        {x.qoldiqQarz > 0 ? formatSum(x.qoldiqQarz) : '—'}
+                        {x.qoldiqQarz > 0 ? formatPul(x.qoldiqQarz, x.valyuta) : '—'}
                       </td>
                       <td className="px-4 py-3 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
@@ -432,8 +499,8 @@ export default function XaridlarPage() {
                             {x.tarkiblar.map(t => (
                               <div key={t.id} className="flex items-center justify-between text-sm gap-4">
                                 <span className="text-gray-800 dark:text-gray-200 font-medium">{t.tovarNomi}</span>
-                                <span className="text-gray-500 dark:text-gray-500 text-xs">{t.miqdor} dona × {formatSum(t.birlikNarxi)}</span>
-                                <span className="text-gray-900 dark:text-gray-100 font-semibold">{formatSum(t.jami)}</span>
+                                <span className="text-gray-500 dark:text-gray-500 text-xs">{t.miqdor} dona × {formatPul(t.birlikNarxi, x.valyuta)}</span>
+                                <span className="text-gray-900 dark:text-gray-100 font-semibold">{formatPul(t.jami, x.valyuta)}</span>
                               </div>
                             ))}
                             {x.izoh && <p className="text-gray-400 dark:text-gray-600 text-xs mt-1">Izoh: {x.izoh}</p>}
@@ -444,7 +511,7 @@ export default function XaridlarPage() {
                                   <div key={q.id} className="flex items-center justify-between text-sm gap-4">
                                     <span className="text-gray-500 dark:text-gray-400 text-xs">{formatSana(q.sana)}</span>
                                     {q.izoh && <span className="text-gray-400 text-xs flex-1 truncate">{q.izoh}</span>}
-                                    <span className="text-red-600 font-semibold">+{formatSum(q.summa)}</span>
+                                    <span className="text-red-600 font-semibold">+{formatPul(q.summa, x.valyuta)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -457,7 +524,7 @@ export default function XaridlarPage() {
                                     <span className="text-gray-500 dark:text-gray-400 text-xs">{formatSana(t.sana)}</span>
                                     <span className="text-xs text-gray-400">{t.tolovUsuli === 'NAQD' ? 'Naqd' : 'Karta'}</span>
                                     {t.izoh && <span className="text-gray-400 text-xs flex-1 truncate">{t.izoh}</span>}
-                                    <span className="text-green-600 font-semibold">{formatSum(t.summa)}</span>
+                                    <span className="text-green-600 font-semibold">{formatPul(t.summa, x.valyuta)}</span>
                                   </div>
                                 ))}
                               </div>
@@ -485,9 +552,14 @@ export default function XaridlarPage() {
             <div key={x.id} className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-2xl p-4 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm">
-                    {x.taminotchi?.nomi || <span className="text-gray-400 italic">Noma&apos;lum ta&apos;minotchi</span>}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-gray-900 dark:text-gray-100 font-semibold text-sm truncate">
+                      {x.taminotchi?.nomi || <span className="text-gray-400 italic">Noma&apos;lum ta&apos;minotchi</span>}
+                    </p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold shrink-0 ${x.valyuta === 'USD' ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'}`}>
+                      {x.valyuta}
+                    </span>
+                  </div>
                   <p className="text-gray-400 dark:text-gray-600 text-xs mt-0.5">{formatSana(x.sana)}</p>
                 </div>
                 <span className="text-xs bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-lg shrink-0">
@@ -498,16 +570,16 @@ export default function XaridlarPage() {
               <div className="mt-3 pt-3 border-t border-gray-100 dark:border-neutral-800 grid grid-cols-3 gap-2 text-center">
                 <div>
                   <p className="text-gray-400 dark:text-gray-600 text-xs">Jami</p>
-                  <p className="text-gray-900 dark:text-gray-100 font-bold text-sm">{formatSum(x.jamiSumma)}</p>
+                  <p className="text-gray-900 dark:text-gray-100 font-bold text-sm">{formatPul(x.jamiSumma, x.valyuta)}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 dark:text-gray-600 text-xs">To&apos;langan</p>
-                  <p className="text-green-600 font-medium text-sm">{formatSum(x.tolangan)}</p>
+                  <p className="text-green-600 font-medium text-sm">{formatPul(x.tolangan, x.valyuta)}</p>
                 </div>
                 <div>
                   <p className="text-gray-400 dark:text-gray-600 text-xs">Qarz</p>
                   <p className={`font-semibold text-sm ${x.qoldiqQarz > 0 ? 'text-red-600' : 'text-gray-400 dark:text-gray-600'}`}>
-                    {x.qoldiqQarz > 0 ? formatSum(x.qoldiqQarz) : '—'}
+                    {x.qoldiqQarz > 0 ? formatPul(x.qoldiqQarz, x.valyuta) : '—'}
                   </p>
                 </div>
               </div>
@@ -517,7 +589,7 @@ export default function XaridlarPage() {
                 {x.tarkiblar.slice(0, 3).map(t => (
                   <div key={t.id} className="flex items-center justify-between text-xs">
                     <span className="text-gray-600 dark:text-gray-400 truncate flex-1">{t.tovarNomi}</span>
-                    <span className="text-gray-400 dark:text-gray-600 shrink-0 ml-2">{t.miqdor} × {formatSum(t.birlikNarxi)}</span>
+                    <span className="text-gray-400 dark:text-gray-600 shrink-0 ml-2">{t.miqdor} × {formatPul(t.birlikNarxi, x.valyuta)}</span>
                   </div>
                 ))}
                 {x.tarkiblar.length > 3 && (
@@ -569,9 +641,15 @@ export default function XaridlarPage() {
               </button>
             </div>
             <form onSubmit={tolovQilish} className="p-5 space-y-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-sm text-gray-500 dark:text-gray-400 space-y-0.5">
                 <p>Ta&apos;minotchi: <span className="font-medium text-gray-900 dark:text-gray-100">{tolovModal.taminotchi?.nomi || "Noma'lum"}</span></p>
-                <p>Qoldiq qarz: <span className="font-bold text-red-600">{formatSum(tolovModal.qoldiqQarz)}</span></p>
+                <p className="flex items-center gap-2">
+                  Valyuta:
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${tolovModal.valyuta === 'USD' ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'}`}>
+                    {tolovModal.valyuta}
+                  </span>
+                </p>
+                <p>Qoldiq qarz: <span className="font-bold text-red-600">{formatPul(tolovModal.qoldiqQarz, tolovModal.valyuta)}</span></p>
               </div>
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">To&apos;lov summasi *</label>
@@ -580,6 +658,7 @@ export default function XaridlarPage() {
                   onChange={v => setTolovForm(f => ({ ...f, summa: v }))}
                   placeholder="0"
                   required
+                  valyuta={tolovModal.valyuta}
                 />
               </div>
               <div>
@@ -638,6 +717,29 @@ export default function XaridlarPage() {
             </div>
 
             <form onSubmit={xaridSaqlash} className="p-5 space-y-4">
+              {/* Valyuta toggle */}
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Valyuta</label>
+                <div className="flex gap-2" role="group" aria-label="Valyuta tanlash">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, valyuta: 'UZS', tolangan: '' }))}
+                    aria-pressed={form.valyuta === 'UZS'}
+                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition ${form.valyuta === 'UZS' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'}`}
+                  >
+                    So&apos;m (UZS)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, valyuta: 'USD', tolangan: '' }))}
+                    aria-pressed={form.valyuta === 'USD'}
+                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition ${form.valyuta === 'USD' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'}`}
+                  >
+                    Dollar (USD)
+                  </button>
+                </div>
+              </div>
+
               {/* Ta'minotchi */}
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Ta&apos;minotchi</label>
@@ -703,6 +805,7 @@ export default function XaridlarPage() {
                           onChange={v => tarkibOzgartirish(idx, 'birlikNarxi', v)}
                           placeholder="Narx"
                           required={idx === 0}
+                          valyuta={form.valyuta}
                         />
                       </div>
                       {tarkiblar.length > 1 && (
@@ -715,7 +818,7 @@ export default function XaridlarPage() {
                 </div>
                 {jamiHisob > 0 && (
                   <p className="text-right text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    Jami: <span className="font-bold text-gray-900 dark:text-gray-100">{formatSum(jamiHisob)}</span>
+                    Jami: <span className="font-bold text-gray-900 dark:text-gray-100">{formatPul(jamiHisob, form.valyuta)}</span>
                   </p>
                 )}
               </div>
@@ -738,10 +841,11 @@ export default function XaridlarPage() {
                   value={form.tolangan}
                   onChange={v => setForm(f => ({ ...f, tolangan: v }))}
                   placeholder="0"
+                  valyuta={form.valyuta}
                 />
                 {jamiHisob > 0 && parseFloat(form.tolangan || '0') < jamiHisob && (
                   <p className="text-xs text-amber-600 mt-1">
-                    Qoldiq qarz: {formatSum(jamiHisob - parseFloat(form.tolangan || '0'))}
+                    Qoldiq qarz: {formatPul(jamiHisob - parseFloat(form.tolangan || '0'), form.valyuta)}
                   </p>
                 )}
               </div>
@@ -792,6 +896,29 @@ export default function XaridlarPage() {
               </button>
             </div>
             <form onSubmit={yangiQarzSaqlash} className="p-5 space-y-4">
+              {/* Valyuta toggle */}
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Valyuta</label>
+                <div className="flex gap-2" role="group" aria-label="Valyuta tanlash">
+                  <button
+                    type="button"
+                    onClick={() => setYangiQarzForm(f => ({ ...f, valyuta: 'UZS', summa: '' }))}
+                    aria-pressed={yangiQarzForm.valyuta === 'UZS'}
+                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition ${yangiQarzForm.valyuta === 'UZS' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'}`}
+                  >
+                    So&apos;m (UZS)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setYangiQarzForm(f => ({ ...f, valyuta: 'USD', summa: '' }))}
+                    aria-pressed={yangiQarzForm.valyuta === 'USD'}
+                    className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition ${yangiQarzForm.valyuta === 'USD' ? 'bg-green-600 text-white' : 'bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-neutral-700'}`}
+                  >
+                    Dollar (USD)
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">
                   Ta&apos;minotchi <span className="text-red-500">*</span>
@@ -828,6 +955,7 @@ export default function XaridlarPage() {
                   required
                   min={1}
                   placeholder="0"
+                  valyuta={yangiQarzForm.valyuta}
                 />
                 <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
                   Tovarsiz qarz yozish — pul qarzga olish yoki avvalgi hisobni ko&apos;chirish uchun.
@@ -945,15 +1073,20 @@ export default function XaridlarPage() {
           <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl dark:shadow-none dark:border dark:border-neutral-800 w-full max-w-md">
             <div className="p-5 border-b border-gray-200 dark:border-neutral-800 flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <h3 className="text-gray-900 dark:text-gray-100 font-semibold">Qarz qo&apos;shish</h3>
+                <h3 className="text-gray-900 dark:text-gray-100 font-semibold flex items-center gap-2">
+                  Qarz qo&apos;shish
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${qarzModal.valyuta === 'USD' ? 'bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'}`}>
+                    {qarzModal.valyuta}
+                  </span>
+                </h3>
                 <p className="text-gray-500 dark:text-gray-500 text-sm">
                   {qarzModal.taminotchi?.nomi}
                   {qarzModal.taminotchi?.kontaktShaxs && <span className="text-gray-400"> — {qarzModal.taminotchi.kontaktShaxs}</span>}
                 </p>
                 <div className="flex gap-3 mt-1 text-xs flex-wrap">
-                  <span className="text-gray-400">Jami: {formatSum(qarzModal.jamiSumma)}</span>
-                  <span className="text-green-600">To&apos;langan: {formatSum(qarzModal.tolangan)}</span>
-                  <span className="text-red-600 font-semibold">Qoldiq: {formatSum(qarzModal.qoldiqQarz)}</span>
+                  <span className="text-gray-400">Jami: {formatPul(qarzModal.jamiSumma, qarzModal.valyuta)}</span>
+                  <span className="text-green-600">To&apos;langan: {formatPul(qarzModal.tolangan, qarzModal.valyuta)}</span>
+                  <span className="text-red-600 font-semibold">Qoldiq: {formatPul(qarzModal.qoldiqQarz, qarzModal.valyuta)}</span>
                 </div>
               </div>
               <button
@@ -974,6 +1107,7 @@ export default function XaridlarPage() {
                   required
                   min={1}
                   placeholder="0"
+                  valyuta={qarzModal.valyuta}
                 />
               </div>
               <div>
@@ -1012,14 +1146,14 @@ export default function XaridlarPage() {
                     {qarzModal.qarzTarixi.map(q => (
                       <div key={q.id} className="flex items-center justify-between gap-2 py-2 border-b border-gray-100 dark:border-neutral-800 last:border-0">
                         <div className="flex-1 min-w-0">
-                          <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{formatSum(q.summa)}</p>
+                          <p className="text-gray-900 dark:text-gray-100 text-sm font-medium">{formatPul(q.summa, qarzModal.valyuta)}</p>
                           <p className="text-gray-400 dark:text-gray-600 text-xs">
                             {formatSana(q.sana)}
                             {q.izoh && ` • ${q.izoh}`}
                           </p>
                         </div>
                         <span className="text-red-600 text-xs font-medium shrink-0 bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-lg">
-                          +{formatSum(q.summa)}
+                          +{formatPul(q.summa, qarzModal.valyuta)}
                         </span>
                       </div>
                     ))}

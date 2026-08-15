@@ -11,9 +11,13 @@ export async function GET(req: NextRequest) {
     const taminotchiId = searchParams.get('taminotchiId') || ''
     const dan = searchParams.get('dan') || ''
     const gacha = searchParams.get('gacha') || ''
+    const valyutaQuery = searchParams.get('valyuta') || ''
 
     const where: any = {}
     if (taminotchiId) where.taminotchiId = taminotchiId
+    if (valyutaQuery === 'UZS' || valyutaQuery === 'USD') {
+      where.valyuta = valyutaQuery
+    }
     if (dan || gacha) {
       where.sana = {}
       if (dan) where.sana.gte = new Date(dan)
@@ -50,7 +54,10 @@ export async function POST(req: NextRequest) {
     const foydalanuvchiId = (session.user as any).id
     const data = await req.json()
 
-    const { taminotchiId, tarkiblar, tolangan, izoh, rejim, qarzSumma } = data
+    const { taminotchiId, tarkiblar, tolangan, izoh, rejim, qarzSumma, valyuta } = data
+
+    // Valyutani tasdiqlash — faqat 'UZS' yoki 'USD'; default 'UZS'
+    const tasdiqlanganValyuta: 'UZS' | 'USD' = valyuta === 'USD' ? 'USD' : 'UZS'
 
     // Faqat qarz rejimi (tovarsiz)
     if (rejim === 'qarz') {
@@ -66,6 +73,7 @@ export async function POST(req: NextRequest) {
             tolangan: 0,
             qoldiqQarz: qarz,
             izoh: izoh || 'Qarz',
+            valyuta: tasdiqlanganValyuta,
             foydalanuvchiId,
           },
           include: {
@@ -105,6 +113,7 @@ export async function POST(req: NextRequest) {
         tolangan: tolanganSumma,
         qoldiqQarz,
         izoh: izoh || null,
+        valyuta: tasdiqlanganValyuta,
         foydalanuvchiId,
         tarkiblar: {
           create: tarkiblar.map((t: { tovarNomi: string; miqdor: number; birlikNarxi: number }) => ({

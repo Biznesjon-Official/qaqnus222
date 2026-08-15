@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ERP Tizim — Biznes boshqaruv tizimi</title>
+<style>
+  :root {
+    --navy: #1E2761;
+    --navy-dark: #141B47;
+    --ice: #CADCFC;
+    --teal: #028090;
+    --teal-light: #E0F7FA;
+    --green: #2E7D32;
+    --green-light: #E8F5E9;
+    --amber: #F57C00;
+    --amber-light: #FFF3E0;
+    --red: #D32F2F;
+    --red-light: #FFEBEE;
+    --bg: #F8F9FB;
+    --white: #FFFFFF;
+    --border: #E2E8F0;
+    --text: #212121;
+    --text-muted: #64748B;
+    --shadow: 0 4px 16px rgba(20, 27, 71, 0.08);
+    --shadow-lg: 0 8px 32px rgba(20, 27, 71, 0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+  }
+
+  /* ==== NAV ==== */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; color: var(--navy); font-size: 16px;
+  }
+  .nav-brand .logo {
+    width: 32px; height: 32px;
+    background: var(--teal);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 900; font-size: 18px;
+  }
+  .nav-links { display: flex; gap: 4px; flex-wrap: wrap; }
+  .nav-links a {
+    padding: 6px 12px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .nav-links a:hover { background: var(--teal-light); color: var(--teal); }
+
+  /* ==== SECTIONS ==== */
+  .section {
+    min-height: 100vh;
+    padding: 100px 5vw 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    scroll-snap-align: start;
+  }
+  .section-inner { max-width: 1280px; margin: 0 auto; width: 100%; }
+
+  /* ==== HERO ==== */
+  .hero {
+    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 40%; height: 6px;
+    background: var(--teal);
+  }
+  .hero-logo {
+    width: 96px; height: 96px;
+    background: var(--teal);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 56px; font-weight: 900;
+    margin-bottom: 24px;
+  }
+  .hero-eyebrow {
+    color: var(--ice);
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .hero h1 {
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+  .hero-tagline {
+    color: var(--ice);
+    font-size: clamp(18px, 2.5vw, 28px);
+    font-style: italic;
+    margin-bottom: 48px;
+  }
+  .hero-features {
+    display: flex; flex-wrap: wrap; gap: 32px;
+  }
+  .hero-feature {
+    display: flex; align-items: center; gap: 10px;
+    color: white; font-weight: 600; font-size: 15px;
+  }
+  .hero-feature::before {
+    content: ''; width: 12px; height: 12px;
+    background: var(--teal); border-radius: 50%;
+  }
+
+  /* ==== PAGE HEADER ==== */
+  .page-header {
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+  .page-header .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    background: var(--teal); border-radius: 50%;
+    margin-right: 12px; vertical-align: middle;
+  }
+  .page-header h2 {
+    display: inline-block;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 900;
+    color: var(--navy);
+    letter-spacing: -1px;
+    vertical-align: middle;
+  }
+  .page-header .sub {
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 16px;
+  }
+
+  /* ==== STAT CARDS ==== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .stat-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 28px 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    border-top: 4px solid var(--teal);
+  }
+  .stat-card.green { border-top-color: var(--green); }
+  .stat-card.navy { border-top-color: var(--navy); }
+  .stat-num {
+    font-size: 64px;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--teal);
+    letter-spacing: -2px;
+  }
+  .stat-card.green .stat-num { color: var(--green); }
+  .stat-card.navy .stat-num { color: var(--navy); }
+  .stat-label {
+    margin-top: 12px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* ==== FEATURE LIST ==== */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .feature-row {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+  .feature-num {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    background: var(--teal-light);
+    color: var(--teal);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 18px;
+  }
+  .feature-row h3 { font-size: 16px; color: var(--text); margin-bottom: 4px; }
+  .feature-row p { color: var(--text-muted); font-size: 13px; }
+
+  /* ==== 19 GRID ==== */
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .module-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    border-top: 3px solid var(--teal);
+    cursor: default;
+    transition: transform 0.2s;
+  }
+  .module-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+  .module-card .num {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--teal);
+  }
+  .module-card .name {
+    font-size: 14px; font-weight: 700;
+    color: var(--text); margin-top: 4px;
+  }
+  .module-card.color-navy { border-top-color: var(--navy); }
+  .module-card.color-navy .num { color: var(--navy); }
+  .module-card.color-green { border-top-color: var(--green); }
+  .module-card.color-green .num { color: var(--green); }
+  .module-card.color-red { border-top-color: var(--red); }
+  .module-card.color-red .num { color: var(--red); }
+  .module-card.color-amber { border-top-color: var(--amber); }
+  .module-card.color-amber .num { color: var(--amber); }
+
+  .legend {
+    margin-top: 24px;
+    display: flex; flex-wrap: wrap; gap: 20px; align-items: center;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .legend-dot {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  /* ==== SECTION CARDS (detail pages) ==== */
+  .section-cards {
+    display: grid;
+    gap: 20px;
+  }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 768px) {
+    .cols-2, .cols-3 { grid-template-columns: 1fr; }
+  }
+
+  .section-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid var(--teal);
+    position: relative;
+  }
+  .section-card.color-navy { border-left-color: var(--navy); }
+  .section-card.color-green { border-left-color: var(--green); }
+  .section-card.color-red { border-left-color: var(--red); }
+  .section-card.color-amber { border-left-color: var(--amber); }
+
+  .section-card-header {
+    display: flex; gap: 14px; align-items: center;
+    margin-bottom: 16px;
+  }
+  .section-card-num {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    background: var(--teal);
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 16px;
+  }
+  .section-card.color-navy .section-card-num { background: var(--navy); }
+  .section-card.color-green .section-card-num { background: var(--green); }
+  .section-card.color-red .section-card-num { background: var(--red); }
+  .section-card.color-amber .section-card-num { background: var(--amber); }
+
+  .section-card-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-card-intro {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+  .section-card h4 {
+    font-size: 13px;
+    color: var(--navy);
+    margin: 12px 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .section-card ul {
+    list-style: none; padding: 0;
+  }
+  .section-card li {
+    padding: 4px 0;
+    padding-left: 20px;
+    color: var(--text);
+    font-size: 14px;
+    position: relative;
+  }
+  .section-card li::before {
+    content: '';
+    position: absolute;
+    left: 4px; top: 11px;
+    width: 6px; height: 6px;
+    background: var(--teal);
+    border-radius: 50%;
+  }
+  .section-card.color-navy li::before { background: var(--navy); }
+  .section-card.color-green li::before { background: var(--green); }
+  .section-card.color-red li::before { background: var(--red); }
+  .section-card.color-amber li::before { background: var(--amber); }
+
+  .section-card .why {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .section-card .why strong { color: var(--text); font-style: normal; }
+
+  /* ==== XARIDLAR — VALYUTA HIGHLIGHT ==== */
+  .currency-panel {
+    background: var(--navy);
+    color: white;
+    border-radius: 16px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .currency-panel .badge {
+    display: inline-block;
+    background: var(--teal);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+  .currency-panel h3 {
+    font-size: 32px;
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .currency-panel .sub {
+    color: var(--ice);
+    font-style: italic;
+    margin-bottom: 24px;
+  }
+  .currency-cards { display: grid; gap: 12px; }
+  .currency-card {
+    background: white;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .currency-card .label {
+    font-size: 11px; letter-spacing: 2px;
+    color: var(--text-muted); font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .currency-card .amount {
+    font-size: 28px; font-weight: 900;
+    color: var(--navy);
+  }
+  .currency-card.usd .amount { color: var(--green); }
+  .currency-card .desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .currency-panel .footer-note {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--ice);
+    font-style: italic;
+  }
+
+  /* ==== TIMELINE (Nasiya) ==== */
+  .timeline {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .timeline h3 {
+    color: var(--navy);
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+  .timeline-step {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 12px 0;
+    position: relative;
+  }
+  .timeline-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 19px; top: 50px; bottom: 0;
+    width: 2px;
+    background: var(--border);
+    border-style: dashed;
+  }
+  .timeline-num {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    color: white; font-weight: 900; font-size: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1;
+  }
+  .timeline-step.s1 .timeline-num { background: var(--teal); }
+  .timeline-step.s2 .timeline-num { background: var(--amber); }
+  .timeline-step.s3 .timeline-num { background: var(--green); }
+  .timeline-step.s4 .timeline-num { background: var(--navy); }
+  .timeline-step h4 { font-size: 15px; }
+  .timeline-step p { color: var(--text-muted); font-size: 13px; }
+
+  /* ==== BPMN ==== */
+  .bpmn-container {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .bpmn-container svg { width: 100%; min-width: 980px; height: auto; display: block; }
+
+  .bpmn-legend {
+    margin-top: 20px;
+    display: flex; flex-wrap: wrap; gap: 24px; justify-content: center;
+    font-size: 13px; color: var(--text-muted);
+  }
+  .bpmn-legend-item { display: flex; align-items: center; gap: 8px; }
+
+  /* ==== HISOBOTLAR (REPORTS) ==== */
+  .reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .report-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    border-top: 3px solid var(--teal);
+  }
+  .report-card.green { border-top-color: var(--green); }
+  .report-card.navy { border-top-color: var(--navy); }
+  .report-card.red { border-top-color: var(--red); }
+  .report-card.amber { border-top-color: var(--amber); }
+  .report-card h4 { font-size: 15px; margin-bottom: 6px; }
+  .report-card p { font-size: 13px; color: var(--text-muted); }
+
+  /* ==== CTA ==== */
+  .cta {
+    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+    color: white;
+  }
+  .cta h2 {
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 900;
+    margin-bottom: 8px;
+  }
+  .cta-eyebrow { color: var(--ice); font-style: italic; margin-bottom: 32px; font-size: 16px; }
+  .benefits-list { display: flex; flex-direction: column; gap: 16px; max-width: 800px; }
+  .benefit {
+    display: flex; gap: 20px; align-items: flex-start;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border-left: 3px solid var(--teal);
+  }
+  .benefit-num {
+    flex-shrink: 0;
+    width: 44px; height: 44px;
+    background: var(--teal);
+    border-radius: 50%;
+    color: white; font-weight: 900; font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .benefit h3 { color: white; font-size: 18px; }
+  .benefit p { color: var(--ice); font-size: 14px; margin-top: 2px; }
+
+  .cta-footer {
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--ice);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  /* ==== PRINT ==== */
+  @media print {
+    .nav { display: none; }
+    .section { min-height: auto; padding: 40px; page-break-after: always; }
+  }
+
+  /* ==== MOBILE ==== */
+  @media (max-width: 720px) {
+    .nav { padding: 10px 16px; }
+    .nav-links a { padding: 4px 8px; font-size: 12px; }
+    .section { padding: 90px 16px 40px; }
+    .hero-features { gap: 16px; flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">
+    <div class="logo">E</div>
+    <span>ERP Tizim</span>
+  </div>
+  <div class="nav-links">
+    <a href="#hero">Bosh</a>
+    <a href="#overview">Ko'rinish</a>
+    <a href="#modules">19 ta bo'lim</a>
+    <a href="#xaridlar">Xaridlar</a>
+    <a href="#hisobotlar">Hisobotlar</a>
+    <a href="#bpmn">BPMN</a>
+    <a href="#cta">Xulosa</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="section hero" id="hero">
+  <div class="section-inner">
+    <div class="hero-logo">E</div>
+    <div class="hero-eyebrow">Biznes boshqaruv tizimi</div>
+    <h1>ERP Tizim</h1>
+    <p class="hero-tagline">Do'koningiz uchun to'liq raqamli yechim — bir tizimda hammasi</p>
+    <div class="hero-features">
+      <div class="hero-feature">19 ta bo'lim</div>
+      <div class="hero-feature">Real-time hisobot</div>
+      <div class="hero-feature">USD / UZS valyuta</div>
+      <div class="hero-feature">Telegram bot</div>
+    </div>
+  </div>
+</section>
+
+<!-- OVERVIEW -->
+<section class="section" id="overview">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Tizim nima qiladi?</h2>
+      <p class="sub">Sizning biznesingizni boshidan oxirigacha boshqaradi</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-num">19</div>
+        <div class="stat-label">Ta bo'lim</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-num">50+</div>
+        <div class="stat-label">Funksiya</div>
+      </div>
+      <div class="stat-card navy">
+        <div class="stat-num">24/7</div>
+        <div class="stat-label">Ishlash</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:22px;color:var(--navy);margin-bottom:16px;">Nimani hal qiladi?</h3>
+    <div class="features-grid">
+      <div class="feature-row">
+        <div class="feature-num">1</div>
+        <div>
+          <h3>Sotuv va kassa</h3>
+          <p>Tez kassa ekrani, chek chiqarish, qaytarish</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">2</div>
+        <div>
+          <h3>Ombor nazorati</h3>
+          <p>Real-time qoldiq, kirim/chiqim, o'tkazma</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">3</div>
+        <div>
+          <h3>Nasiya boshqaruv</h3>
+          <p>Mijoz qarzlari, to'lov muddati, eslatma</p>
+        </div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-num">4</div>
+        <div>
+          <h3>Hisobotlar</h3>
+          <p>Foyda, ABC tahlil, o'lik qoldiq, valyuta bo'yicha</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 19 MODULES GRID -->
+<section class="section" id="modules">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>19 ta bo'lim — bir qarashda</h2>
+      <p class="sub">Har bir bo'lim — alohida funksiya, ammo bir tizimda birlashgan</p>
+    </div>
+
+    <div class="modules-grid">
+      <div class="module-card color-navy"><div class="num">01</div><div class="name">Login</div></div>
+      <div class="module-card"><div class="num">02</div><div class="name">Dashboard</div></div>
+      <div class="module-card color-green"><div class="num">03</div><div class="name">Tovarlar</div></div>
+      <div class="module-card color-green"><div class="num">04</div><div class="name">Ombor</div></div>
+      <div class="module-card color-red"><div class="num">05</div><div class="name">Sotuv (kassa)</div></div>
+      <div class="module-card color-red"><div class="num">06</div><div class="name">Sotuvlar tarixi</div></div>
+      <div class="module-card color-amber"><div class="num">07</div><div class="name">Xaridlar</div></div>
+      <div class="module-card color-amber"><div class="num">08</div><div class="name">Nasiyalar</div></div>
+      <div class="module-card"><div class="num">09</div><div class="name">Mijozlar</div></div>
+      <div class="module-card"><div class="num">10</div><div class="name">Sotuvchilar</div></div>
+      <div class="module-card"><div class="num">11</div><div class="name">Agentlar</div></div>
+      <div class="module-card color-navy"><div class="num">12</div><div class="name">Taminotchilar</div></div>
+      <div class="module-card color-navy"><div class="num">13</div><div class="name">Sheriklar</div></div>
+      <div class="module-card color-navy"><div class="num">14</div><div class="name">Sherikdan olish</div></div>
+      <div class="module-card color-green"><div class="num">15</div><div class="name">Buyurtmalar</div></div>
+      <div class="module-card color-amber"><div class="num">16</div><div class="name">Xarajatlar</div></div>
+      <div class="module-card"><div class="num">17</div><div class="name">Xabarlar</div></div>
+      <div class="module-card color-red"><div class="num">18</div><div class="name">Hisobotlar</div></div>
+      <div class="module-card color-navy"><div class="num">19</div><div class="name">Sozlamalar</div></div>
+    </div>
+
+    <div class="legend">
+      <strong style="color:var(--text);">Rang qo'llanmasi:</strong>
+      <span><span class="legend-dot" style="background:var(--navy);"></span>Tizim</span>
+      <span><span class="legend-dot" style="background:var(--teal);"></span>Foydalanuvchi</span>
+      <span><span class="legend-dot" style="background:var(--green);"></span>Mahsulot</span>
+      <span><span class="legend-dot" style="background:var(--red);"></span>Sotuv</span>
+      <span><span class="legend-dot" style="background:var(--amber);"></span>Moliya</span>
+    </div>
+  </div>
+</section>
+
+<!-- LOGIN + DASHBOARD -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Tizimga kirish va Bosh sahifa</h2>
+      <p class="sub">Boshlanish va umumiy nazorat</p>
+    </div>
+
+    <div class="section-cards cols-2">
+      <div class="section-card color-navy">
+        <div class="section-card-header">
+          <div class="section-card-num">1</div>
+          <div class="section-card-title">Tizimga kirish (Login)</div>
+        </div>
+        <p class="section-card-intro">Foydalanuvchi tizimga kiradi va o'z roliga qarab ko'rishi mumkin bo'lgan bo'limlar avtomatik ochiladi.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Email yoki telefon raqami bilan kirish</li>
+          <li>Parolni unutgan bo'lsa — tiklash</li>
+          <li>Bir foydalanuvchi har do'konga alohida kira oladi</li>
+          <li>Xavfsiz seans (30 kun)</li>
+          <li>Avtomatik chiqish (xavfsizlik uchun)</li>
+          <li>Telegram orqali tasdiqlash</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> faqat ruxsat berilgan xodimlar tizimga kira oladi va har biri o'z ishini ko'radi.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-num">2</div>
+          <div class="section-card-title">Bosh sahifa (Dashboard)</div>
+        </div>
+        <p class="section-card-intro">Do'koningizning bugungi holati bir ekranda. Telefonni qo'lga olishingiz bilan — bugun nima bo'layotganini ko'rasiz.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Bugun nechta sotuv bo'lganini ko'rish</li>
+          <li>Bugun qancha pul tushganini ko'rish</li>
+          <li>Eng ko'p sotilgan tovarlarni ko'rish</li>
+          <li>Qaysi mijoz qancha qarz ekanini ko'rish</li>
+          <li>Ombor qoldig'i tugayotgan tovarlar</li>
+          <li>Oyma-oy / haftalik diagramma</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> do'kon egasi ish joyida bo'lmay turib ham, do'konning real holatini telefondan ko'ra oladi.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOVARLAR + OMBOR -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Tovarlar va Ombor</h2>
+      <p class="sub">Mahsulot katalogi va qoldiq nazorati</p>
+    </div>
+
+    <div class="section-cards cols-2">
+      <div class="section-card color-green">
+        <div class="section-card-header">
+          <div class="section-card-num">3</div>
+          <div class="section-card-title">Tovarlar (Mahsulot katalogi)</div>
+        </div>
+        <p class="section-card-intro">Do'koningizdagi har bir mahsulotni alohida kartochka qilib saqlash.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Yangi tovar qo'shish (nomi, narxi, rasm)</li>
+          <li>Shtrix-kod (barcode) bilan ishlash</li>
+          <li>Tovarni kategoriyaga ajratish</li>
+          <li>Sotuv narxi va xarid narxini saqlash</li>
+          <li>Tovarni tahrirlash yoki o'chirish</li>
+          <li>Excel orqali yuzlab tovarni bir vaqtda yuklash</li>
+          <li>Tovarni qidirish (nomi yoki kod orqali)</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> bir marta tovarni kiritsangiz, butun tizim shu ma'lumotdan foydalanadi.</div>
+      </div>
+
+      <div class="section-card color-green">
+        <div class="section-card-header">
+          <div class="section-card-num">4</div>
+          <div class="section-card-title">Ombor (Qoldiq nazorati)</div>
+        </div>
+        <p class="section-card-intro">Har bir tovardan nechta dona bor — real vaqtda ko'rinadi.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Joriy qoldiqni ko'rish (har tovar bo'yicha)</li>
+          <li>Kirim qilish — yangi tovar olib kelinganda</li>
+          <li>Chiqim qilish — sotilganda yoki yo'qotilganda</li>
+          <li>Bir do'kondan ikkinchisiga o'tkazma</li>
+          <li>Inventarizatsiya — fizik sanoq</li>
+          <li>Tugab qolayotgan tovarlar haqida ogohlantirish</li>
+          <li>Harakat tarixi (kim, qachon, nimani o'zgartirgan)</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> omborchi va kassir bir vaqtda ishlasa ham — qoldiq aniq qoladi.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOTUV + SOTUVLAR TARIXI -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Sotuv va Tarix</h2>
+      <p class="sub">Kassa ekrani — biznesning yuragi</p>
+    </div>
+
+    <div class="section-cards cols-2">
+      <div class="section-card color-red">
+        <div class="section-card-header">
+          <div class="section-card-num">5</div>
+          <div class="section-card-title">Sotuv (Kassa ekrani)</div>
+        </div>
+        <p class="section-card-intro">Mijoz keldi → tovarni tanlang → pulni qabul qiling → chek bering. Hammasi 30 soniyada.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Shtrix-kod skanerlash bilan tovar qo'shish</li>
+          <li>Qo'lda tovar tanlash (qidiruv yoki ro'yxat)</li>
+          <li>Bir nechta tovarni bitta chekga jamlash</li>
+          <li>Chegirma berish (foiz yoki summa)</li>
+          <li>To'lov: naqd, karta, aralash, nasiyaga</li>
+          <li>Mijozni tanlash (nasiya uchun)</li>
+          <li>Chek chiqarish (chop etish yoki SMS)</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> tezroq sotuv = ko'proq mijoz xizmati. Kassirni kompyuter eksperti bo'lishi shart emas.</div>
+      </div>
+
+      <div class="section-card color-red">
+        <div class="section-card-header">
+          <div class="section-card-num">6</div>
+          <div class="section-card-title">Sotuvlar tarixi</div>
+        </div>
+        <p class="section-card-intro">O'tgan barcha savdolar — 1 yil oldin ham, kecha ham — bir joyda saqlanadi.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Sana bo'yicha filtrlash (bugun, hafta, oy)</li>
+          <li>Kassir bo'yicha filtrlash</li>
+          <li>Mijoz bo'yicha filtrlash</li>
+          <li>Bitta chekni ochib ko'rish</li>
+          <li>Qaytarish (vozvrat) — tovarni qaytarib olish</li>
+          <li>Chekni qayta chop etish</li>
+          <li>Excel orqali eksport qilish</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> "kim qachon nimani sotgan" savoliga bir bosishda javob.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- XARIDLAR — special slide with USD/UZS -->
+<section class="section" id="xaridlar">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Xaridlar — Ta'minotchidan tovar olish</h2>
+      <p class="sub">Endi USD va UZS ham qo'llab-quvvatlanadi</p>
+    </div>
+
+    <div class="section-cards" style="grid-template-columns: 2fr 1fr;">
+      <div class="section-card color-amber">
+        <div class="section-card-header">
+          <div class="section-card-num">7</div>
+          <div class="section-card-title">Xaridlar boshqaruvi</div>
+        </div>
+        <p class="section-card-intro">Ta'minotchidan tovar olganda — qachon, qancha pul, qarzga yoki naqd, dollardami yoki so'mda — hammasi yoziladi.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Yangi xarid kiritish (tovarlar ro'yxati bilan)</li>
+          <li><strong>Valyutani tanlash: SO'M (UZS) yoki DOLLAR (USD)</strong></li>
+          <li>Bir qismini to'lash, qolganini qarzga olish</li>
+          <li>Mavjud qarzga to'lov qabul qilish</li>
+          <li>Yangi qarz yozish (tovarsiz, masalan pul qarz)</li>
+          <li>Filtrlash: ta'minotchi, valyuta, sana bo'yicha</li>
+          <li>Har xaridning batafsil tarkibini ko'rish</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> chet eldan dollar bilan tovar olasizmi? Mahalliy ta'minotchidan so'mda? Endi ikkalasi ham aralashtirilmasdan saqlanadi.</div>
+      </div>
+
+      <div class="currency-panel">
+        <span class="badge">YANGI</span>
+        <h3>Ikki valyuta</h3>
+        <p class="sub">USD va UZS — alohida hisob</p>
+        <div class="currency-cards">
+          <div class="currency-card">
+            <div class="label">SO'M qarz</div>
+            <div class="amount">3 500 000 so'm</div>
+            <div class="desc">Mahalliy ta'minotchilar</div>
+          </div>
+          <div class="currency-card usd">
+            <div class="label">DOLLAR qarz</div>
+            <div class="amount">$ 250</div>
+            <div class="desc">Chet el ta'minotchilar</div>
+          </div>
+        </div>
+        <div class="footer-note">Aralashtirilmaydi — har valyuta o'z hisobida</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NASIYALAR -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Nasiyalar — Mijoz qarzlari</h2>
+      <p class="sub">Kim, qancha, qachon to'laydi — hammasi ko'rinib turadi</p>
+    </div>
+
+    <div class="section-cards cols-2">
+      <div class="section-card color-amber">
+        <div class="section-card-header">
+          <div class="section-card-num">8</div>
+          <div class="section-card-title">Nasiya boshqaruv</div>
+        </div>
+        <p class="section-card-intro">Mijozga tovar nasiyaga (qarzga) bersangiz — qancha pul qarzdor, qachon to'lashi kerak, hammasi shu yerda.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Yangi nasiya ochish (mijoz, summa, muddat)</li>
+          <li>Bo'lib-bo'lib to'lov qabul qilish</li>
+          <li>To'liq to'lov qabul qilish</li>
+          <li>Nasiya tarixini ko'rish</li>
+          <li>Muddati o'tgan nasiyalarni ajratish</li>
+          <li>Mijozga SMS / Telegram eslatma yuborish</li>
+          <li>Nasiyalarni Excel'ga eksport qilish</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> mijoz "men to'laganman" desa — sistema "yo'q, qoldi" deb aniq isbotlaydi. Yo'qotilgan pul yo'q.</div>
+      </div>
+
+      <div class="timeline">
+        <h3>Nasiya hayot tsikli</h3>
+        <div class="timeline-step s1">
+          <div class="timeline-num">1</div>
+          <div>
+            <h4>Nasiya ochish</h4>
+            <p>Mijoz tovar oladi, summa va muddat belgilanadi</p>
+          </div>
+        </div>
+        <div class="timeline-step s2">
+          <div class="timeline-num">2</div>
+          <div>
+            <h4>Holat: AKTIV</h4>
+            <p>Sistema kuzatadi, muddat keladi</p>
+          </div>
+        </div>
+        <div class="timeline-step s3">
+          <div class="timeline-num">3</div>
+          <div>
+            <h4>To'lov qabul</h4>
+            <p>Bo'lib-bo'lib yoki to'liq to'lov</p>
+          </div>
+        </div>
+        <div class="timeline-step s4">
+          <div class="timeline-num">4</div>
+          <div>
+            <h4>Holat: YOPILGAN</h4>
+            <p>To'lov tugadi, mijoz haqi qolmadi</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MIJOZLAR + XODIMLAR -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Mijozlar va Xodimlar</h2>
+      <p class="sub">Sizning mijozingiz va sizning jamoangiz</p>
+    </div>
+
+    <div class="section-cards cols-3">
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-num">9</div>
+          <div class="section-card-title">Mijozlar bazasi</div>
+        </div>
+        <p class="section-card-intro">Har bir mijozni alohida kartochka.</p>
+        <ul>
+          <li>Ism, telefon, manzil</li>
+          <li>Sotuv tarixi (qachon, nimani olgan)</li>
+          <li>Joriy qarzi</li>
+          <li>Tug'ilgan kuni — bayram tabrigi</li>
+          <li>Mijozlarni Excel'ga eksport</li>
+        </ul>
+        <div class="why">Mijoz qaytib kelganda — kim ekanini bilib, eski savdo tarixini ko'rasiz.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-num">10</div>
+          <div class="section-card-title">Sotuvchilar</div>
+        </div>
+        <p class="section-card-intro">Do'kon ichidagi sotuvchi xodimlar.</p>
+        <ul>
+          <li>Yangi sotuvchi qo'shish</li>
+          <li>Har sotuvchining sotuv natijasi</li>
+          <li>Qaysi sotuvchi qancha sotgani</li>
+          <li>Bonus / foiz hisob-kitobi</li>
+          <li>Sotuvchini bloklash</li>
+        </ul>
+        <div class="why">Kim eng yaxshi ishlayotganini raqamlar bilan ko'rasiz.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-num">11</div>
+          <div class="section-card-title">Agentlar</div>
+        </div>
+        <p class="section-card-intro">Ko'chada yurib mijoz topadigan agentlar.</p>
+        <ul>
+          <li>Yangi agent qo'shish</li>
+          <li>Agent topgan mijozlar</li>
+          <li>Agent buyurtmalari</li>
+          <li>Komissiya hisob-kitobi</li>
+          <li>Agentning faollik darajasi</li>
+        </ul>
+        <div class="why">Do'kon ichida emas, tashqarida ishlovchilar uchun.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HAMKORLAR -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Hamkorlar tizimi</h2>
+      <p class="sub">Ta'minotchi, sherik do'konlar — alohida boshqariladi</p>
+    </div>
+
+    <div class="section-cards cols-3">
+      <div class="section-card color-navy">
+        <div class="section-card-header">
+          <div class="section-card-num">12</div>
+          <div class="section-card-title">Taminotchilar</div>
+        </div>
+        <p class="section-card-intro">Sizga tovar yetkazib beruvchilar.</p>
+        <ul>
+          <li>Yangi ta'minotchi qo'shish</li>
+          <li>Aloqa: telefon, manzil, kontakt shaxs</li>
+          <li>Ta'minotchi qarzi</li>
+          <li>Xarid tarixi</li>
+          <li>Eng faol ta'minotchilar</li>
+        </ul>
+        <div class="why">Kimdan qancha tovar olganingizni va kimga qancha qarzdor ekanligingizni bir joyda ko'rasiz.</div>
+      </div>
+
+      <div class="section-card color-navy">
+        <div class="section-card-header">
+          <div class="section-card-num">13</div>
+          <div class="section-card-title">Sheriklar</div>
+        </div>
+        <p class="section-card-intro">Hamkor do'konlar (boshqa do'konlar).</p>
+        <ul>
+          <li>Sherik do'kon qo'shish</li>
+          <li>Sherikning ombor qoldig'i</li>
+          <li>O'tkazma tarixi</li>
+          <li>O'zaro hisob-kitob</li>
+          <li>Sherik qarzi</li>
+        </ul>
+        <div class="why">2 ta filialingiz bor — har birini sherik sifatida qo'shib, o'rtada tovar yuborish.</div>
+      </div>
+
+      <div class="section-card color-navy">
+        <div class="section-card-header">
+          <div class="section-card-num">14</div>
+          <div class="section-card-title">Sherikdan olish</div>
+        </div>
+        <p class="section-card-intro">Sherik do'kondan tovar qabul qilish.</p>
+        <ul>
+          <li>Yangi qabul yozish</li>
+          <li>Tovarlar va miqdor</li>
+          <li>To'lov yoki qarz holati</li>
+          <li>Sherikga qarz hisob-kitobi</li>
+          <li>Tovar avtomatik omborga kiradi</li>
+        </ul>
+        <div class="why">Filial 1 → Filial 2 ga tovar berdi — bu yerda yoziladi.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BUYURTMALAR + XARAJATLAR -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Buyurtmalar va Xarajatlar</h2>
+      <p class="sub">Mijoz buyurtmasi va do'kon chiqimlari</p>
+    </div>
+
+    <div class="section-cards cols-2">
+      <div class="section-card color-green">
+        <div class="section-card-header">
+          <div class="section-card-num">15</div>
+          <div class="section-card-title">Buyurtmalar</div>
+        </div>
+        <p class="section-card-intro">Mijoz oldindan buyurtma bersa — bu yerda yoziladi va kuzatib boriladi.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Yangi buyurtma qabul qilish</li>
+          <li>Mijoz va tovarlar ro'yxati</li>
+          <li>Buyurtma holati: KUTILMOQDA, TAYYOR, BERILGAN</li>
+          <li>Sotuvchi yoki agent kim qabul qilganini</li>
+          <li>Buyurtmani bekor qilish</li>
+          <li>Buyurtmadan sotuv yaratish</li>
+          <li>Yetkazib berish manzili</li>
+        </ul>
+        <div class="why"><strong>Misol:</strong> mijoz "ertaga 10 ta non kerak" desa — buyurtma yoziladi, ertaga chop etib beriladi.</div>
+      </div>
+
+      <div class="section-card color-amber">
+        <div class="section-card-header">
+          <div class="section-card-num">16</div>
+          <div class="section-card-title">Xarajatlar</div>
+        </div>
+        <p class="section-card-intro">Do'koningiz har oy nimaga pul sarflaydi — ijara, elektr, maosh, yoqilg'i va h.k.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Yangi xarajat yozish</li>
+          <li>Kategoriya: ijara, transport, maosh, soliq</li>
+          <li>Sana va summa</li>
+          <li>Izoh va tegishli hujjat</li>
+          <li>Oylik xarajatlar tahlili</li>
+          <li>Kategoriya bo'yicha grafika</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> "Daromad katta, lekin pul yo'q" muammosini hal qiladi. Sof foyda = sotuv - xarajat.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HISOBOTLAR -->
+<section class="section" id="hisobotlar">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Hisobotlar — biznesingizning oynasi</h2>
+      <p class="sub">Raqamlar yolg'on gapirmaydi</p>
+    </div>
+
+    <div class="section-card color-red" style="margin-bottom:24px;">
+      <div class="section-card-header">
+        <div class="section-card-num">18</div>
+        <div class="section-card-title">7+ turdagi hisobotlar</div>
+      </div>
+      <p class="section-card-intro">Sotuv, foyda, ABC, o'lik qoldiq, nasiya aging — hammasini bir bosish bilan ko'rasiz.</p>
+    </div>
+
+    <div class="reports-grid">
+      <div class="report-card green">
+        <h4>Sotuv dinamikasi</h4>
+        <p>Kun, hafta, oy bo'yicha sotuv grafigi. O'sish trendi ko'rinadi.</p>
+      </div>
+      <div class="report-card green">
+        <h4>Foyda tahlili</h4>
+        <p>Daromad - xarajat = sof foyda. Davr bo'yicha taqqoslash.</p>
+      </div>
+      <div class="report-card">
+        <h4>ABC tahlil</h4>
+        <p>A — eng ko'p sotiladi, B — o'rtacha, C — kam. Qaysiga e'tibor berish kerak.</p>
+      </div>
+      <div class="report-card amber">
+        <h4>O'lik qoldiq</h4>
+        <p>30 / 60 / 90 kun sotilmagan tovarlar. Qaytarish yoki chegirma.</p>
+      </div>
+      <div class="report-card red">
+        <h4>Nasiya aging</h4>
+        <p>Mijoz qarzlari yoshi: 0-30 kun, 30-60, 60-90, 90+. Kechikkanlarga eslatma.</p>
+      </div>
+      <div class="report-card amber">
+        <h4>Qaytarishlar</h4>
+        <p>Qaysi tovar ko'p qaytariladi. Sifat muammosi yoki noto'g'ri tavsif?</p>
+      </div>
+      <div class="report-card navy">
+        <h4>Ta'minotchi qarzi</h4>
+        <p>Siz qaysi ta'minotchiga qancha qarzdorsiz. Valyuta bo'yicha alohida.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOZLAMALAR + XABARLAR -->
+<section class="section">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Sozlamalar va Xabarlar</h2>
+      <p class="sub">Tizimni o'zingizga moslang</p>
+    </div>
+
+    <div class="section-cards cols-2">
+      <div class="section-card color-navy">
+        <div class="section-card-header">
+          <div class="section-card-num">19</div>
+          <div class="section-card-title">Sozlamalar</div>
+        </div>
+        <p class="section-card-intro">Tizimni o'z biznesingizga moslash va xodimlarni boshqarish.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Yangi xodim (foydalanuvchi) qo'shish</li>
+          <li>Rolni belgilash: Admin, Kassir, Omborchi, Sotuvchi</li>
+          <li>Har rolga huquq berish</li>
+          <li>Do'kon ma'lumotlari (nomi, manzil, logotip)</li>
+          <li>Chek shabloni</li>
+          <li>Valyuta sozlamalari</li>
+          <li>Telegram bot ulash</li>
+          <li>Backup (zaxira nusxa)</li>
+        </ul>
+        <div class="why"><strong>Muhim:</strong> faqat egasi (admin) bu yerga kira oladi.</div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-num">17</div>
+          <div class="section-card-title">Xabarlar (Telegram bot)</div>
+        </div>
+        <p class="section-card-intro">Tizim avtomatik xabar yuboradi — siz Telegram'da olasiz.</p>
+        <h4>Kim nima qila oladi</h4>
+        <ul>
+          <li>Telegram bot orqali xabar olish</li>
+          <li>Kunlik hisobot — har kuni 21:00 da</li>
+          <li>Qarz muddati keldi — eslatma</li>
+          <li>Tovar tugab qoldi — ogohlantirish</li>
+          <li>Katta sotuv bo'ldi — bildirishnoma</li>
+          <li>Mijoz tug'ilgan kuni</li>
+          <li>Eski xabarlar tarixi</li>
+        </ul>
+        <div class="why"><strong>Nega muhim:</strong> do'kondan tashqarida bo'lsangiz ham — muhim narsalardan xabardor.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BPMN -->
+<section class="section" id="bpmn">
+  <div class="section-inner">
+    <div class="page-header">
+      <span class="dot"></span><h2>Use Case: Sotuv jarayoni (BPMN)</h2>
+      <p class="sub">Mijoz keldi → tovar oldi → ketdi. Sistema ichida nima sodir bo'ladi.</p>
+    </div>
+
+    <div class="bpmn-container">
+      <svg viewBox="0 0 1100 480" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748B"/>
+          </marker>
+        </defs>
+
+        <!-- Pool header (vertical) -->
+        <rect x="0" y="40" width="50" height="400" fill="#1E2761"/>
+        <text x="25" y="240" fill="white" font-size="13" font-weight="700" letter-spacing="3" text-anchor="middle" transform="rotate(-90 25 240)">SOTUV JARAYONI</text>
+
+        <!-- Lanes -->
+        <!-- MIJOZ lane -->
+        <rect x="50" y="40" width="50" height="135" fill="#E0F7FA" stroke="#E2E8F0"/>
+        <text x="75" y="107" fill="#028090" font-size="11" font-weight="700" letter-spacing="2" text-anchor="middle" transform="rotate(-90 75 107)">MIJOZ</text>
+        <rect x="100" y="40" width="1000" height="135" fill="white" stroke="#E2E8F0"/>
+
+        <!-- KASSIR lane -->
+        <rect x="50" y="175" width="50" height="135" fill="#FFF3E0" stroke="#E2E8F0"/>
+        <text x="75" y="242" fill="#F57C00" font-size="11" font-weight="700" letter-spacing="2" text-anchor="middle" transform="rotate(-90 75 242)">KASSIR</text>
+        <rect x="100" y="175" width="1000" height="135" fill="white" stroke="#E2E8F0"/>
+
+        <!-- SISTEMA lane -->
+        <rect x="50" y="310" width="50" height="135" fill="#CADCFC" stroke="#E2E8F0"/>
+        <text x="75" y="377" fill="#1E2761" font-size="11" font-weight="700" letter-spacing="2" text-anchor="middle" transform="rotate(-90 75 377)">SISTEMA</text>
+        <rect x="100" y="310" width="1000" height="135" fill="white" stroke="#E2E8F0"/>
+
+        <!-- ===== ELEMENTS ===== -->
+        <!-- 1. Start event (MIJOZ) -->
+        <circle cx="170" cy="107" r="22" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2"/>
+        <text x="170" y="155" font-size="10" fill="#64748B" font-style="italic" text-anchor="middle">Mijoz keladi</text>
+
+        <!-- 2. Tovar tanlaydi (MIJOZ) -->
+        <rect x="265" y="80" width="120" height="55" rx="8" fill="white" stroke="#028090" stroke-width="2"/>
+        <text x="325" y="100" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">Tovarni</text>
+        <text x="325" y="118" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">tanlaydi</text>
+
+        <!-- 3. Shtrix-kod (KASSIR) — under Tovarni -->
+        <rect x="265" y="215" width="120" height="55" rx="8" fill="white" stroke="#F57C00" stroke-width="2"/>
+        <text x="325" y="235" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">Shtrix-kod</text>
+        <text x="325" y="253" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">skanerlash</text>
+
+        <!-- 4. Qidirish (SISTEMA) -->
+        <rect x="430" y="350" width="120" height="55" rx="8" fill="white" stroke="#1E2761" stroke-width="2"/>
+        <text x="490" y="370" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">Tovar va</text>
+        <text x="490" y="388" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">qoldiq qidirish</text>
+
+        <!-- 5. Gateway (SISTEMA) -->
+        <polygon points="630,350 670,377 630,404 590,377" fill="#FFF3E0" stroke="#F57C00" stroke-width="2"/>
+        <text x="630" y="384" font-size="20" font-weight="700" fill="#F57C00" text-anchor="middle">?</text>
+        <text x="630" y="425" font-size="10" font-style="italic" fill="#64748B" text-anchor="middle">Qoldiq bor?</text>
+
+        <!-- 6. Chekka qo'shish (KASSIR) -->
+        <rect x="715" y="215" width="120" height="55" rx="8" fill="white" stroke="#F57C00" stroke-width="2"/>
+        <text x="775" y="235" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">Chekka</text>
+        <text x="775" y="253" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">qo'shish</text>
+
+        <!-- 7. To'lov qabul qilish (KASSIR) -->
+        <rect x="855" y="215" width="120" height="55" rx="8" fill="white" stroke="#F57C00" stroke-width="2"/>
+        <text x="915" y="235" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">To'lov qabul</text>
+        <text x="915" y="253" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">qilish</text>
+
+        <!-- 8. Chek va stok (SISTEMA) -->
+        <rect x="855" y="350" width="120" height="55" rx="8" fill="white" stroke="#1E2761" stroke-width="2"/>
+        <text x="915" y="370" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">Chek va</text>
+        <text x="915" y="388" font-size="12" font-weight="700" fill="#212121" text-anchor="middle">stok yangilash</text>
+
+        <!-- 9. End event (MIJOZ) -->
+        <circle cx="1030" cy="107" r="22" fill="#FFEBEE" stroke="#D32F2F" stroke-width="4"/>
+        <text x="1030" y="155" font-size="10" fill="#64748B" font-style="italic" text-anchor="middle">Mijoz ketadi</text>
+
+        <!-- ===== ARROWS ===== -->
+        <!-- 1. Start → Tovar tanlaydi -->
+        <line x1="192" y1="107" x2="262" y2="107" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- 2. Tovar → Shtrix (vertical down) -->
+        <line x1="325" y1="135" x2="325" y2="212" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- 3. Shtrix → Qidirish (diagonal) -->
+        <line x1="385" y1="270" x2="430" y2="375" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- 4. Qidirish → Gateway -->
+        <line x1="550" y1="377" x2="588" y2="377" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- 5. Gateway → Chekka (diagonal up + Ha label) -->
+        <line x1="670" y1="370" x2="715" y2="270" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="700" y="320" font-size="11" font-style="italic" fill="#2E7D32" font-weight="700">Ha</text>
+        <!-- 6. Chekka → To'lov (horizontal in kassir) -->
+        <line x1="835" y1="242" x2="852" y2="242" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- 7. To'lov → Chek va stok (diagonal down) -->
+        <line x1="915" y1="270" x2="915" y2="347" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- 8. Chek va stok → End (long curve up to Mijoz lane) -->
+        <path d="M 975 377 Q 1030 377 1030 130" stroke="#64748B" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+      </svg>
+    </div>
+
+    <div class="bpmn-legend">
+      <div class="bpmn-legend-item">
+        <svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5"/></svg>
+        Boshlanish
+      </div>
+      <div class="bpmn-legend-item">
+        <svg width="32" height="20"><rect x="2" y="4" width="28" height="14" rx="3" fill="white" stroke="#1E2761" stroke-width="1.5"/></svg>
+        Vazifa
+      </div>
+      <div class="bpmn-legend-item">
+        <svg width="20" height="20"><polygon points="10,2 18,10 10,18 2,10" fill="#FFF3E0" stroke="#F57C00" stroke-width="1.5"/></svg>
+        Tanlov
+      </div>
+      <div class="bpmn-legend-item">
+        <svg width="20" height="20"><circle cx="10" cy="10" r="8" fill="#FFEBEE" stroke="#D32F2F" stroke-width="2.5"/></svg>
+        Tugash
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section cta" id="cta">
+  <div class="section-inner">
+    <h2>Nega bu ERP tizim?</h2>
+    <p class="cta-eyebrow">5 ta asosiy foyda</p>
+
+    <div class="benefits-list">
+      <div class="benefit">
+        <div class="benefit-num">1</div>
+        <div>
+          <h3>Tezlik</h3>
+          <p>Sotuv 30 soniyada. Hisobot bir bosishda. Vaqt — pul.</p>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">2</div>
+        <div>
+          <h3>Aniqlik</h3>
+          <p>Kassir xato qila olmaydi. Sistema har raqamni tekshiradi.</p>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">3</div>
+        <div>
+          <h3>Ko'rinish</h3>
+          <p>Do'koningiz holati telefoningizda. 24/7. Istalgan joydan.</p>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">4</div>
+        <div>
+          <h3>Boshqaruv</h3>
+          <p>Xodimlar nima qilayotganini ko'rasiz. Yo'qotilgan pul yo'q.</p>
+        </div>
+      </div>
+      <div class="benefit">
+        <div class="benefit-num">5</div>
+        <div>
+          <h3>O'sish</h3>
+          <p>Hisobotlar — qaerda yaxshi, qaerda yomon ekanini ko'rsatadi.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-footer">
+      Demo so'rang — savollarga javob beramiz · © Biznes ERP tizim
+    </div>
+  </div>
+</section>
+
+<script>
+  // Smooth scroll for nav links (already via CSS scroll-behavior, but explicit for old browsers)
+  document.querySelectorAll('.nav a').forEach(link => {
+    link.addEventListener('click', e => {
+      const href = link.getAttribute('href');
+      if (href.startsWith('#')) {
+        e.preventDefault();
+        const target = document.querySelector(href);
+        if (target) target.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  });
+
+  // Highlight active section in nav while scrolling
+  const sections = document.querySelectorAll('section[id]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(l => {
+          l.style.background = l.getAttribute('href') === '#' + id ? 'var(--teal-light)' : '';
+          l.style.color = l.getAttribute('href') === '#' + id ? 'var(--teal)' : '';
+        });
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
