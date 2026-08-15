@@ -70,7 +70,7 @@ export default function NasiyalarPage() {
   const [qoshishForm, setQoshishForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '', sana: new Date().toISOString().slice(0, 10) })
   const [qoshishYuklash, setQoshishYuklash] = useState(false)
   const [qarzQoshishModal, setQarzQoshishModal] = useState<Nasiya | null>(null)
-  const [qarzQoshishForm, setQarzQoshishForm] = useState({ summa: '' })
+  const [qarzQoshishForm, setQarzQoshishForm] = useState({ summa: '', muddat: '' })
   const [qarzQoshishYuklash, setQarzQoshishYuklash] = useState(false)
   const [tahrirlashModal, setTahrirlashModal] = useState<Nasiya | null>(null)
   const [tahrirlashForm, setTahrirlashForm] = useState({ ism: '', manzil: '', telefon: '', qarz: '', muddat: '', sana: '' })
@@ -168,12 +168,12 @@ export default function NasiyalarPage() {
       const res = await fetch(`/api/nasiyalar/${qarzQoshishModal.id}/qarz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ summa: qarzQoshishForm.summa }),
+        body: JSON.stringify({ summa: qarzQoshishForm.summa, muddat: qarzQoshishForm.muddat || null }),
       })
       if (res.ok) {
         toast.success('Qarz qo\'shildi!')
         setQarzQoshishModal(null)
-        setQarzQoshishForm({ summa: '' })
+        setQarzQoshishForm({ summa: '', muddat: '' })
         yuklash()
       } else {
         const data = await res.json().catch(() => ({}))
@@ -403,7 +403,7 @@ export default function NasiyalarPage() {
                             </button>
                           )}
                           <button
-                            onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
+                            onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '', muddat: n.muddat ? n.muddat.slice(0, 10) : '' }) }}
                             className="inline-flex items-center p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition"
                             title="Qarz qo'shish">
                             <PlusCircle size={14} />
@@ -493,7 +493,7 @@ export default function NasiyalarPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '' }) }}
+                    onClick={() => { setQarzQoshishModal(n); setQarzQoshishForm({ summa: '', muddat: n.muddat ? n.muddat.slice(0, 10) : '' }) }}
                     className="px-3 py-2 text-blue-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 border border-blue-200 dark:border-blue-900/30 rounded-xl transition"
                     title="Qarz qo'shish">
                     <PlusCircle size={15} />
@@ -616,11 +616,19 @@ export default function NasiyalarPage() {
                 <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Qo&apos;shiladigan summa *</label>
                 <MoneyInput
                   value={qarzQoshishForm.summa}
-                  onChange={v => setQarzQoshishForm({ summa: v })}
+                  onChange={v => setQarzQoshishForm(f => ({ ...f, summa: v }))}
                   required
                   min={1}
                   placeholder="0"
                 />
+              </div>
+              <div>
+                <label className="text-gray-700 dark:text-gray-300 text-sm mb-1 block font-medium">Yangi muddat (qaytarish sanasi)</label>
+                <DateInput
+                  value={qarzQoshishForm.muddat}
+                  onChange={v => setQarzQoshishForm(f => ({ ...f, muddat: v }))}
+                />
+                <p className="text-xs text-gray-400 mt-1">Bo&apos;sh qoldirilsa, eski muddat saqlanadi.</p>
               </div>
               <div className="flex gap-3">
                 <button type="button" onClick={() => setQarzQoshishModal(null)}

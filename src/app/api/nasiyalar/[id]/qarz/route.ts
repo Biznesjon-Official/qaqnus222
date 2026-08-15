@@ -10,7 +10,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const session = await auth()
     if (!session) return NextResponse.json({ xato: 'Ruxsat yo\'q' }, { status: 401 })
 
-    const { summa } = await req.json()
+    const { summa, muddat } = await req.json()
     const qoshilganSumma = new Prisma.Decimal(summa || 0)
     if (qoshilganSumma.lte(0)) {
       return NextResponse.json({ xato: 'Summa kiritilishi shart' }, { status: 400 })
@@ -31,6 +31,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           jamiQarz: yangiJamiQarz,
           qoldiq: yangiQoldiq,
           holati: 'OCHIQ',
+          // Yangi qarz qo'shilganda muddat ham yangilanadi (bo'sh bo'lsa — eski muddat saqlanadi)
+          ...(muddat ? { muddat: new Date(muddat) } : {}),
         },
       })
 
